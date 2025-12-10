@@ -1,0 +1,14 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Final Fantasy Fan Site</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" th:href="@{../styles/css/main.css}" />
+</head>
+<body>
+    <div th:fragment="copyright">
+        &copy; 2024-<span th:text="${currentYear}"></span> Martijn Jansen. All rights reserved. Version <span th:text="${versionNumber}"></span> (<span th:text="${applicationDate}"></span>)
+    </div>
+</body>
+</html>

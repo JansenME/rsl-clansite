@@ -1,0 +1,29 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+	<head>
+		<title>Raid Shadow Legends Fan Site</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" th:href="@{../styles/css/main.css}" />
+	</head>
+	<body>
+		<div id="page-wrapper">
+				<section id="header">
+					<div th:insert="~{inserts/nav :: nav}" class="container">
+					</div>
+
+					<div id="banner">
+						<div class="container">
+							<p>This is a website, in case you did not know yet! And if you did know, it is still a website.</p>
+						</div>
+					</div>
+				</section>
+
+				<section id="content">
+				</section>
+
+				<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+				</div>
+		</div>
+	</body>
+</html>
