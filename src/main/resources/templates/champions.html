@@ -18,7 +18,12 @@
 				<div class="container">
 					<section>
 						<p>Amount of champions in database is <span style="font-weight:bold;" th:text="${champions.size()}"></span> out of a total of <span style="font-weight:bold;" th:text="${amountOfChampions}"></span>. Only <span style="font-weight:bold;" th:text="${championsToGo}"></span> to go!</p>
-						<form action="#" th:action="@{/champions}" th:object="${filtersWrapper}" method="POST">
+						<form action="#"
+							  th:action="@{/champions}"
+							  th:object="${filtersWrapper}"
+							  method="POST"
+							  onsubmit="event.preventDefault(); return false;">
+
 							<input type="button" onclick="checkAll(true)" value="Check all">
 							<input type="button" onclick="checkAll(false)" value="Clear all">
 
