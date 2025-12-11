@@ -4,12 +4,10 @@ function applyChampionFilters() {
     const searchInput = document.getElementById('champion-search');
     const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
-    // Filter selection variables (using 'data-filter-name' for consistency)
     const selectedRarities = Array.from(document.querySelectorAll('.filter-rarity:checked')).map(cb => cb.getAttribute('data-filter-name').trim());
     const selectedTypes = Array.from(document.querySelectorAll('.filter-type:checked')).map(cb => cb.getAttribute('data-filter-name').trim());
     const selectedAffinities = Array.from(document.querySelectorAll('.filter-affinity:checked')).map(cb => cb.getAttribute('data-filter-name').trim());
     const selectedFactions = Array.from(document.querySelectorAll('.filter-faction:checked')).map(cb => cb.getAttribute('data-filter-name').trim());
-    // FIX applied: using 'data-filter-name' for alliance
     const selectedAlliances = Array.from(document.querySelectorAll('.filter-alliance:checked')).map(cb => cb.getAttribute('data-filter-name').trim());
 
     const totalRarities = document.querySelectorAll('.filter-rarity').length;
@@ -34,11 +32,45 @@ function applyChampionFilters() {
         let passesFilters = true; // Local variable inside the loop
 
         // Checkbox Filters
-        if (selectedRarities.length !== totalRarities && !selectedRarities.includes(rarity)) { passesFilters = false; }
-        if (passesFilters && selectedTypes.length !== totalTypes && !selectedTypes.includes(type)) { passesFilters = false; }
-        if (passesFilters && selectedAffinities.length !== totalAffinities && !selectedAffinities.includes(affinity)) { passesFilters = false; }
-        if (passesFilters && selectedFactions.length !== totalFactions && !selectedFactions.includes(faction)) { passesFilters = false; }
-        if (passesFilters && selectedAlliances.length !== totalAlliances && !selectedAlliances.includes(alliance)) { passesFilters = false; }
+        // Helper function to check if filtering should be skipped for a category
+        const shouldSkipFilter = (selectedArray) => {
+            // Skips if the array is empty OR if all are selected (if you had the total logic)
+            // For now, only check if it is empty, as this is the failing state (Clear All)
+            return selectedArray.length === 0;
+        }
+
+        // Rarity Filter
+        if (!shouldSkipFilter(selectedRarities) && !selectedRarities.includes(rarity)) {
+            passesFilters = false;
+        }
+
+        // Type Filter
+        if (passesFilters && !shouldSkipFilter(selectedTypes) && !selectedTypes.includes(type)) {
+            passesFilters = false;
+        }
+
+        // Affinity Filter
+        if (passesFilters && !shouldSkipFilter(selectedAffinities) && !selectedAffinities.includes(affinity)) {
+            passesFilters = false;
+        }
+
+        // Faction Filter
+        if (passesFilters && !shouldSkipFilter(selectedFactions) && !selectedFactions.includes(faction)) {
+            passesFilters = false;
+        }
+
+        // Alliance Filter
+        if (passesFilters && !shouldSkipFilter(selectedAlliances) && !selectedAlliances.includes(alliance)) {
+            passesFilters = false;
+        }
+
+        // Search Filter (No change)
+        if (passesFilters && searchTerm.length > 0) {
+            const championName = card.getAttribute('data-name').toLowerCase();
+            if (!championName.includes(searchTerm)) {
+                passesFilters = false;
+            }
+        }
 
         // Search Filter
         if (passesFilters && searchTerm.length > 0) {
@@ -48,13 +80,11 @@ function applyChampionFilters() {
             }
         }
 
-        // Collect ALL champions that passed
         if (passesFilters) {
             allPassedCards.push(card);
         }
     });
 
-    // --- PHASE 2: SORTING & REORDERING ---
     const sortDropdown = document.getElementById('champion-sort');
     const sortMethod = sortDropdown ? sortDropdown.value : 'name_asc';
 
@@ -74,27 +104,22 @@ function applyChampionFilters() {
 
     const container = document.querySelector('.container section:nth-child(2) > div');
     if (container) {
-        // Re-insert ALL sorted cards into the DOM. This ensures they are in the correct order.
         allPassedCards.forEach(card => {
             container.appendChild(card);
         });
     }
 
-    // --- PHASE 3: DISPLAY ALL & STYLING ---
-    const visibleCards = []; // Now this array contains ALL filtered/sorted champions
+    const visibleCards = [];
 
-    // 1. Hide ALL champions first (clean slate)
     championCards.forEach(card => {
         card.style.display = 'none';
     });
 
-    // 2. Iterate through the sorted list and show ALL of them (no limit)
     allPassedCards.forEach((card) => {
         card.style.display = ''; // Show all
         visibleCards.push(card);
     });
 
-    // 3. Inject Stars (run on the visible subset)
     visibleCards.forEach(card => {
         const score = card.getAttribute('data-score');
         const placeholder = card.querySelector('.champion-rating-placeholder');
@@ -103,14 +128,10 @@ function applyChampionFilters() {
         }
     });
 
-    // Removed Sentinel Management
-
     const endTime = performance.now();
     const duration = (endTime - startTime).toFixed(3);
     console.log(`✅ Filter/Sort Logic Duration (${championCards.length} total, ${allPassedCards.length} displayed): ${duration} ms`);
 }
-
-// Removed resetDisplayLimit() function
 
 function createStarHtml(score) {
     const rating = parseFloat(score);
@@ -145,7 +166,7 @@ window.checkAll = (shouldCheck) => {
     filterCheckboxes.forEach(checkbox => {
         checkbox.checked = shouldCheck;
     });
-    // Removed resetDisplayLimit()
+
     applyChampionFilters();
 };
 
@@ -154,12 +175,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     filterCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', () => {
-            // Removed resetDisplayLimit()
             applyChampionFilters();
         });
     });
 
     applyChampionFilters();
 
-    // Removed Intersection Observer Setup
+    window.checkAll(true);
 });

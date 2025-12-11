@@ -3,7 +3,7 @@ package com.rsl.clansite.model.enums;
 public enum Type {
     ATTACK("Attack"),
     SUPPORT("Support"),
-    DEFENCE("Defence"),
+    DEFENSE("Defense"),
     HP("HP");
 
     private final String name;
@@ -20,7 +20,7 @@ public enum Type {
         return switch (name) {
             case "Attack" -> Type.ATTACK;
             case "Support" -> Type.SUPPORT;
-            case "Defence" -> Type.DEFENCE;
+            case "Defence" -> Type.DEFENSE;
             case "HP" -> Type.HP;
             default -> null;
         };
