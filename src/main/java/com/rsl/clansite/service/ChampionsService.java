@@ -211,6 +211,12 @@ public class ChampionsService {
     }
 
     private BaseStats getBaseStats(final String[] baseStatsFromCsv) {
+        if(baseStatsFromCsv == null || baseStatsFromCsv.length != 8) {
+            log.error("CSV Parsing Error: BaseStats field has " + (baseStatsFromCsv == null ? 0 : baseStatsFromCsv.length) + " fields. Expected 8. Returning default stats.");
+
+            return new BaseStats();
+        }
+
         return new BaseStats(
                 Integer.parseInt(baseStatsFromCsv[0]),
                 Integer.parseInt(baseStatsFromCsv[1]),
@@ -224,7 +230,12 @@ public class ChampionsService {
     }
 
     private Aura getAura(final String[] auraFromCsv) {
-        if(auraFromCsv[0].contains("null")) {
+        if (auraFromCsv == null || auraFromCsv.length == 0 || auraFromCsv[0].equalsIgnoreCase("null")) {
+            return null;
+        }
+
+        if (auraFromCsv.length != 4) {
+            log.error("CSV Parsing Error: Aura field has " + auraFromCsv.length + " fields. Expected 4. Raw data: " + Arrays.toString(auraFromCsv) + ". Returning null.");
             return null;
         }
 
