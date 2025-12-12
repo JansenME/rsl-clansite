@@ -38,62 +38,57 @@
 									<input type="text" id="name" th:field="*{name}" required />
 								</div>
 
-								<div class="form-group">
-									<label for="rarity">Rarity:</label>
-									<select id="rarity" th:field="*{rarity}" required>
-										<option value="">-- Select Rarity --</option>
-										<option th:each="r : ${rarities}"
-												th:value="${r.name()}"
-												th:text="${r.getName()}"></option>
-									</select>
-								</div>
+								<div class="identity-grid-4 form-grid-container">
+									<div class="form-group">
+										<label for="rarity">Rarity:</label>
+										<select id="rarity" th:field="*{rarity}" required>
+											<option value="">-- Select Rarity --</option>
+											<option th:each="r : ${rarities}"
+													th:value="${r.name()}"
+													th:text="${r.getName()}"></option>
+										</select>
+									</div>
 
-								<div class="form-group">
-									<label for="type">Type:</label>
-									<select id="type" th:field="*{type}" required>
-										<option value="">-- Select Type --</option>
-										<option th:each="t : ${types}"
-												th:value="${t.name()}"
-												th:text="${t.getName()}"></option>
-									</select>
-								</div>
+									<div class="form-group">
+										<label for="type">Type:</label>
+										<select id="type" th:field="*{type}" required>
+											<option value="">-- Select Type --</option>
+											<option th:each="t : ${types}"
+													th:value="${t.name()}"
+													th:text="${t.getName()}"></option>
+										</select>
+									</div>
 
-								<div class="form-group">
-									<label for="affinity">Affinity:</label>
-									<select id="affinity" th:field="*{affinity}" required>
-										<option value="">-- Select Affinity --</option>
-										<option th:each="a : ${affinities}"
-												th:value="${a.name()}"
-												th:text="${a.getName()}"></option>
-									</select>
-								</div>
+									<div class="form-group">
+										<label for="affinity">Affinity:</label>
+										<select id="affinity" th:field="*{affinity}" required>
+											<option value="">-- Select Affinity --</option>
+											<option th:each="a : ${affinities}"
+													th:value="${a.name()}"
+													th:text="${a.getName()}"></option>
+										</select>
+									</div>
 
-								<div class="form-group">
-									<label for="faction">Faction:</label>
-									<select id="faction" th:field="*{faction}" required>
-										<option value="">-- Select Faction --</option>
-										<option th:each="f : ${factions}"
-												th:value="${f.name()}"
-												th:text="${f.getName()}"></option>
-									</select>
+									<div class="form-group">
+										<label for="faction">Faction:</label>
+										<select id="faction" th:field="*{faction}" required>
+											<option value="">-- Select Faction --</option>
+											<option th:each="f : ${factions}"
+													th:value="${f.name()}"
+													th:text="${f.getName()}"></option>
+										</select>
+									</div>
 								</div>
-
+								<br />
 								<div class="form-group rating-group">
 									<label>Arena Score (Rating on HellHades):</label>
 									<div class="star-rating" id="arena-score-rating">
-
 										<label for="score-50" title="5.0 Stars" onclick="setScore(5.0, event)"></label>
-
 										<label for="score-40" title="4.0 Stars" onclick="setScore(4.0, event)"></label>
-
 										<label for="score-30" title="3.0 Stars" onclick="setScore(3.0, event)"></label>
-
 										<label for="score-20" title="2.0 Stars" onclick="setScore(2.0, event)"></label>
-
 										<label for="score-10" title="1.0 Stars" onclick="setScore(1.0, event)"></label>
-
 										<input type="hidden" id="finalArenaScore" th:field="*{arenaScore}" value="0.0"/>
-
 									</div>
 								</div>
 

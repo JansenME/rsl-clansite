@@ -5,28 +5,56 @@ function setupStarListeners() {
     if (!ratingContainer || !finalInput) return;
 
     ratingContainer.addEventListener('mousemove', (event) => {
-        const label = event.target;
+        const hoveredLabel = event.target;
 
-        if (label.tagName !== 'LABEL') {
-            ratingContainer.querySelectorAll('label').forEach(lbl => lbl.classList.remove('half-star-hover'));
+        ratingContainer.querySelectorAll('label').forEach(lbl => {
+            lbl.classList.remove('half-star-hover');
+
+            const originalTitle = lbl.getAttribute('data-original-title');
+            if (originalTitle) {
+                lbl.setAttribute('title', originalTitle);
+            }
+        });
+
+        if (hoveredLabel.tagName !== 'LABEL') {
             return;
         }
 
-        const rect = label.getBoundingClientRect();
+        const rect = hoveredLabel.getBoundingClientRect();
         const clickX = event.clientX - rect.left;
 
+        const fullScoreMatch = hoveredLabel.getAttribute('onclick').match(/setScore\((\d+\.\d)/);
+        if (!fullScoreMatch) return;
+
+        const fullScore = parseFloat(fullScoreMatch[1]);
+        const originalTitle = hoveredLabel.getAttribute('title');
+
+        if (!hoveredLabel.hasAttribute('data-original-title')) {
+            hoveredLabel.setAttribute('data-original-title', originalTitle);
+        }
+
         if (clickX < rect.width / 2) {
-            label.classList.add('half-star-hover');
+            hoveredLabel.classList.add('half-star-hover');
+
+            const halfScore = (fullScore - 0.5).toFixed(1);
+            hoveredLabel.setAttribute('title', `${halfScore} Stars`);
+
         } else {
-            label.classList.remove('half-star-hover');
         }
     });
 
     ratingContainer.addEventListener('mouseenter', () => {
         ratingContainer.classList.remove('half-score-visual');
-        ratingContainer.querySelectorAll('label').forEach(lbl => lbl.classList.remove('checked-star'));
+        ratingContainer.querySelectorAll('label').forEach(lbl => {
+            lbl.classList.remove('checked-star');
+            const originalTitle = lbl.getAttribute('data-original-title');
+            if (originalTitle) {
+                lbl.setAttribute('title', originalTitle);
+            }
+        });
     });
 
+    // On leaving, clear all hover effects and restore the actual score visuals
     ratingContainer.addEventListener('mouseleave', () => {
         ratingContainer.querySelectorAll('label').forEach(lbl => lbl.classList.remove('half-star-hover'));
 
