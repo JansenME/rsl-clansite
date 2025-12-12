@@ -1,3 +1,105 @@
+function setupStarListeners() {
+    const ratingContainer = document.getElementById('arena-score-rating');
+    const finalInput = document.getElementById('finalArenaScore');
+
+    if (!ratingContainer || !finalInput) return;
+
+    ratingContainer.addEventListener('mousemove', (event) => {
+        const label = event.target;
+
+        if (label.tagName !== 'LABEL') {
+            ratingContainer.querySelectorAll('label').forEach(lbl => lbl.classList.remove('half-star-hover'));
+            return;
+        }
+
+        const rect = label.getBoundingClientRect();
+        const clickX = event.clientX - rect.left;
+
+        if (clickX < rect.width / 2) {
+            label.classList.add('half-star-hover');
+        } else {
+            label.classList.remove('half-star-hover');
+        }
+    });
+
+    ratingContainer.addEventListener('mouseenter', () => {
+        ratingContainer.classList.remove('half-score-visual');
+        ratingContainer.querySelectorAll('label').forEach(lbl => lbl.classList.remove('checked-star'));
+    });
+
+    ratingContainer.addEventListener('mouseleave', () => {
+        ratingContainer.querySelectorAll('label').forEach(lbl => lbl.classList.remove('half-star-hover'));
+
+        const currentScore = parseFloat(finalInput.value);
+        if (!isNaN(currentScore)) {
+            updateVisuals(currentScore);
+        }
+    });
+}
+
+function setScore(fullScore, clickEvent) {
+    const finalInput = document.getElementById('finalArenaScore');
+    const ratingContainer = document.getElementById('arena-score-rating');
+
+    if (!finalInput || !ratingContainer) return;
+
+    let finalScore = fullScore;
+
+    if (clickEvent) {
+        const label = clickEvent.currentTarget;
+        const rect = label.getBoundingClientRect();
+
+        // Use clickEvent.clientX (or event.clientX if passed)
+        // Since the event variable isn't explicitly passed in your HTML,
+        // we must assume 'event' is the global event object available in the inline onclick:
+        const clickX = event.clientX - rect.left;
+
+        // CRITICAL FIX: Base the final score on the observed target value.
+        if (clickX < rect.width / 2) {
+            // Clicked left side (Targeting X.5): The desired score is 0.5 less than the label's value.
+            // e.g., Clicked 3.0 label -> finalScore = 2.5
+            finalScore = fullScore - 0.5;
+        } else {
+            // Clicked right side (Targeting X.0): The desired score is the label's value.
+            // e.g., Clicked 3.0 label -> finalScore = 3.0
+            finalScore = fullScore;
+        }
+    }
+
+    // Ensure the score is still within bounds (1.0 to 5.0)
+    finalScore = Math.max(1.0, Math.min(5.0, finalScore));
+    finalInput.value = finalScore.toFixed(1);
+
+    updateVisuals(finalScore);
+}
+
+function updateVisuals(score) {
+    const ratingContainer = document.getElementById('arena-score-rating');
+    const labels = ratingContainer ? ratingContainer.querySelectorAll('label') : [];
+
+    if (!ratingContainer || labels.length === 0) return;
+
+    let integerScore = Math.floor(score);
+
+    if (score % 1 !== 0) {
+        integerScore += 1;
+    }
+
+    const anchorId = 'score-' + (integerScore * 10).toFixed(0);
+    const anchorLabel = document.querySelector(`label[for="${anchorId}"]`);
+
+    labels.forEach(lbl => lbl.classList.remove('checked-star'));
+
+    if (anchorLabel) {
+        anchorLabel.classList.add('checked-star');
+    }
+
+    ratingContainer.classList.remove('half-score-visual');
+    if (score % 1 !== 0) {
+        ratingContainer.classList.add('half-score-visual');
+    }
+}
+
 function applyChampionFilters() {
     const startTime = performance.now();
 
@@ -206,6 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     applyChampionFilters();
     toggleAuraFields();
+    setupStarListeners();
 
     window.checkAll(true);
 });

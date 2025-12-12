@@ -205,3 +205,106 @@ tbody tr:hover {
     background-color: #f5f5f5;
     cursor: pointer;
 }
+
+/* ChampionEntry.html - FINAL CSS FOR JS CONTROLLED STARS */
+
+/* 1. Base Setup */
+.star-rating {
+    display: inline-block !important;
+    direction: rtl !important;
+    font-size: 30px !important;
+}
+
+/* 2. Hide Radio Buttons */
+.star-rating input {
+    display: none !important;
+}
+
+/* 3. Style the Labels (The star content) */
+.star-rating label {
+    font-size: 30px !important;
+    color: #ccc !important; /* Default Unfilled color */
+    cursor: pointer !important;
+    line-height: 1 !important;
+    display: inline-block !important;
+    padding: 0 2px !important;
+}
+
+/* 4. Star Content */
+.star-rating label:before {
+    content: '\2605' !important; /* Solid Star */
+}
+
+/* --- 5. PERSISTENCE LOGIC (Driven by JavaScript) --- */
+
+/* 5a. Persistence for the star that was clicked */
+.star-rating label.checked-star {
+    color: gold !important;
+}
+
+/* 5b. Persistence for the stars to the left (siblings after it in HTML) */
+.star-rating label.checked-star ~ label {
+    color: gold !important;
+}
+
+/* 5c. Fix for the half-click zone (optional visual cue) */
+.star-rating label.half-click-zone {
+    /* Example: Give the half-click side a lighter background or border */
+    border-left: 2px solid rgba(255, 255, 0, 0.5) !important;
+}
+
+
+/* --- 6. HOVER LOGIC (Temporary fill) --- */
+.star-rating label:hover,
+.star-rating label:hover ~ label {
+    color: gold !important;
+}
+
+/* CSS for Half-Star Visual (when JS adds the class) */
+.star-rating.half-score-visual label.checked-star:before {
+    /* Uses gradient to show half gold / half grey */
+    content: '\2605' !important;
+    color: transparent !important; /* Hide the Unicode star */
+
+    /* Using background clip to get the half fill */
+    background: linear-gradient(to right, #ccc 50%, gold 50%);
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
+
+/* ADD THIS TO YOUR CSS BLOCK */
+
+/* Half-star hover visual (temporary) */
+.star-rating label:hover {
+    color: gold !important;
+}
+
+/* 5c. Fix for the half-click zone (optional visual cue) - REMOVE THIS if not needed */
+.star-rating label.half-click-zone {
+    /* If you were using this, remove or adjust. */
+}
+
+/* CSS for Half-Star Visual (when JS adds the class) */
+.star-rating.half-score-visual label.checked-star:before {
+    /* Uses gradient to show half gold / half grey */
+    content: '\2605' !important;
+    color: transparent !important; /* Hide the Unicode star */
+
+    /* *** CRITICAL FIX: SWAP GRADIENT COLORS AND DIRECTION *** */
+    background: linear-gradient(to right, gold 50%, #ccc 50%);
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
+
+/* Add a rule for the visual half-star hover feedback */
+.star-rating label.half-star-hover:before {
+     /* Re-use the half-star CSS for the hover visual feedback */
+     content: '\2605' !important;
+     color: transparent !important;
+     background: linear-gradient(to right, gold 50%, #ccc 50%);
+     -webkit-background-clip: text !important;
+     background-clip: text !important;
+     -webkit-text-fill-color: transparent !important;
+}

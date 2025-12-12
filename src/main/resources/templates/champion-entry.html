@@ -78,9 +78,23 @@
 									</select>
 								</div>
 
-								<div class="form-group">
-									<label for="arenascore">Arena Score (Rating on HellHades):</label>
-									<input type="number" id="arenascore" th:field="*{arenaScore}" step="0.1" required placeholder="e.g., 4.5" />
+								<div class="form-group rating-group">
+									<label>Arena Score (Rating on HellHades):</label>
+									<div class="star-rating" id="arena-score-rating">
+
+										<label for="score-50" title="5.0 Stars" onclick="setScore(5.0, event)"></label>
+
+										<label for="score-40" title="4.0 Stars" onclick="setScore(4.0, event)"></label>
+
+										<label for="score-30" title="3.0 Stars" onclick="setScore(3.0, event)"></label>
+
+										<label for="score-20" title="2.0 Stars" onclick="setScore(2.0, event)"></label>
+
+										<label for="score-10" title="1.0 Stars" onclick="setScore(1.0, event)"></label>
+
+										<input type="hidden" id="finalArenaScore" th:field="*{arenaScore}" value="0.0"/>
+
+									</div>
 								</div>
 
 								<hr/>
