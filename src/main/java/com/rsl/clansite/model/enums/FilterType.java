@@ -17,13 +17,12 @@ public enum FilterType {
     }
 
     public static FilterType getFilterTypeByName(final String name) {
-        return switch (name) {
-            case "Rarity" -> FilterType.RARITY;
-            case "Type" -> FilterType.TYPE;
-            case "Affinity" -> FilterType.AFFINITY;
-            case "Faction" -> FilterType.FACTION;
-            case "Alliance" -> FilterType.ALLIANCE;
-            default -> null;
-        };
+        for(FilterType filterType : FilterType.values()) {
+            if(filterType.name.equalsIgnoreCase(name)) {
+                return filterType;
+            }
+        }
+
+        return null;
     }
 }

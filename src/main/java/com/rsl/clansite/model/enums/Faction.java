@@ -29,23 +29,12 @@ public enum Faction {
     }
 
     public static Faction getFactionByName(final String name) {
-        return switch (name) {
-            case "Banner Lords" -> Faction.BANNER_LORDS;
-            case "High Elves" -> Faction.HIGH_ELVES;
-            case "The Sacred Order" -> Faction.THE_SACRED_ORDER;
-            case "Barbarians" -> Faction.BARBARIANS;
-            case "Ogryn Tribes" -> Faction.OGRYN_TRIBES;
-            case "Lizardmen" -> Faction.LIZARDMEN;
-            case "Skinwalkers" -> Faction.SKINWALKERS;
-            case "Orcs" -> Faction.ORCS;
-            case "Demonspawn" -> Faction.DEMONSPAWN;
-            case "Undead Hordes" -> Faction.UNDEAD_HORDES;
-            case "Dark Elves" -> Faction.DARK_ELVES;
-            case "Knights Revenant" -> Faction.KNIGHTS_REVENANT;
-            case "Dwarves" -> Faction.DWARVES;
-            case "Shadowkin" -> Faction.SHADOWKIN;
-            case "Sylvan Watchers" -> Faction.SYLVAN_WATCHERS;
-            default -> null;
-        };
+        for(Faction faction : Faction.values()) {
+            if(faction.name.equalsIgnoreCase(name)) {
+                return faction;
+            }
+        }
+
+        return null;
     }
 }

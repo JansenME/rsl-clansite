@@ -19,14 +19,12 @@ public enum Rarity {
     }
 
     public static Rarity getRarityByName(final String name) {
-        return switch (name) {
-            case "Common" -> Rarity.COMMON;
-            case "Uncommon" -> Rarity.UNCOMMON;
-            case "Rare" -> Rarity.RARE;
-            case "Epic" -> Rarity.EPIC;
-            case "Legendary" -> Rarity.LEGENDARY;
-            case "Mythical" -> Rarity.MYTHICAL;
-            default -> null;
-        };
+        for(Rarity rarity : Rarity.values()) {
+            if(rarity.name.equalsIgnoreCase(name)) {
+                return rarity;
+            }
+        }
+
+        return null;
     }
 }

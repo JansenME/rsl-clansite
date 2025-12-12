@@ -17,12 +17,12 @@ public enum Alliance {
     }
 
     public static Alliance getAllianceByName(final String name) {
-        return switch (name) {
-            case "Telerian League" -> Alliance.TELERIAN_LEAGUE;
-            case "Gaellen Pact" -> Alliance.GAELLEN_PACT;
-            case "The Corrupted" -> Alliance.THE_CORRUPTED;
-            case "Nyresan Union" -> Alliance.NYRESAN_UNION;
-            default -> null;
-        };
+        for(Alliance alliance : Alliance.values()) {
+            if(alliance.name.equalsIgnoreCase(name)) {
+                return alliance;
+            }
+        }
+
+        return null;
     }
 }

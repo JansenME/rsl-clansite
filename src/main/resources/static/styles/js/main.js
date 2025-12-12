@@ -160,6 +160,31 @@ function createStarHtml(score) {
     return `<div class="arena-rating" style="margin: 0px 0; white-space: nowrap;">${starHtml}</div>`;
 }
 
+function toggleAuraFields() {
+    const checkbox = document.getElementById('auraExists');
+    const statSelect = document.getElementById('stat');
+    const locationSelect = document.getElementById('location');
+    const amountInput = document.getElementById('amount');
+
+    if (checkbox.checked) {
+        document.getElementById('aura-fields-container').style.display = 'block';
+
+        statSelect.required = true;
+        locationSelect.required = true;
+        amountInput.required = true;
+
+        amountInput.min = 1;
+    } else {
+        document.getElementById('aura-fields-container').style.display = 'none';
+
+        statSelect.required = false;
+        locationSelect.required = false;
+        amountInput.required = false;
+
+        amountInput.removeAttribute('min');
+    }
+}
+
 window.checkAll = (shouldCheck) => {
     const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
 
@@ -180,6 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     applyChampionFilters();
+    toggleAuraFields();
 
     window.checkAll(true);
 });

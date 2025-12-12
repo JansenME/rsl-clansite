@@ -17,12 +17,12 @@ public enum Type {
     }
 
     public static Type getTypeByName(final String name) {
-        return switch (name) {
-            case "Attack" -> Type.ATTACK;
-            case "Support" -> Type.SUPPORT;
-            case "Defence" -> Type.DEFENSE;
-            case "HP" -> Type.HP;
-            default -> null;
-        };
+        for(Type type : Type.values()) {
+            if(type.name.equalsIgnoreCase(name)) {
+                return type;
+            }
+        }
+
+        return null;
     }
 }

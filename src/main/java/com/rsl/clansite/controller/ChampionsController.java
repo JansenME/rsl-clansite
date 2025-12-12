@@ -1,9 +1,13 @@
 package com.rsl.clansite.controller;
 
+import com.rsl.clansite.exceptions.ChampionSaveException;
 import com.rsl.clansite.model.CompleteChampionsFilter;
+import com.rsl.clansite.model.dto.ChampionEntryDTO;
 import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.model.enums.Affinity;
 import com.rsl.clansite.model.enums.Alliance;
+import com.rsl.clansite.model.enums.AuraLocation;
+import com.rsl.clansite.model.enums.AuraStat;
 import com.rsl.clansite.model.enums.Faction;
 import com.rsl.clansite.model.enums.Rarity;
 import com.rsl.clansite.model.enums.Type;
@@ -14,8 +18,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +50,31 @@ public class ChampionsController {
         return "champions";
     }
 
+    @GetMapping("/new")
+    public String newChampionForm(Model model) {
+        fillModel(model);
+
+        model.addAttribute("newChampion", new ChampionEntryDTO(true));
+
+        return "champion-entry";
+    }
+
+    @PostMapping("/save")
+    public String saveChampion(@ModelAttribute("newChampion") ChampionEntryDTO dto, RedirectAttributes redirectAttributes) {
+        try {
+            championsService.saveNewChampion(dto);
+
+            redirectAttributes.addFlashAttribute("successMessage", "Champion '" + dto.getName() + "' saved to CSV (and Mongo if configured)!");
+        } catch (ChampionSaveException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            redirectAttributes.addFlashAttribute("newChampion", dto);
+
+            return "redirect:/champions/new";
+        }
+
+        return "redirect:/champions";
+    }
+
     @GetMapping("/saveChampsFromCsv")
     public ResponseEntity<List<ChampionEntity>> saveAllChampionsFromCsv() {
         return ResponseEntity.of(Optional.of(championsService.saveAllChampionsFromCsv()));
@@ -52,11 +85,13 @@ public class ChampionsController {
 
         int totalAmountOfChampions = 299+238+265+174;
 
-        model.addAttribute("rarities", Arrays.stream(Rarity.values()).toList());
-        model.addAttribute("types", Arrays.stream(Type.values()).toList());
-        model.addAttribute("affinities", Arrays.stream(Affinity.values()).toList());
-        model.addAttribute("factions", Arrays.stream(Faction.values()).toList());
-        model.addAttribute("alliances", Arrays.stream(Alliance.values()).toList());
+        model.addAttribute("rarities", Rarity.values());
+        model.addAttribute("types", Type.values());
+        model.addAttribute("affinities", Affinity.values());
+        model.addAttribute("factions", Faction.values());
+        model.addAttribute("alliances", Alliance.values());
+        model.addAttribute("auraStats", AuraStat.values());
+        model.addAttribute("auraLocations", AuraLocation.values());
 
         model.addAttribute("amountOfChampions", totalAmountOfChampions);
         model.addAttribute("championsToGo", totalAmountOfChampions - championsService.getAllChampions().size());

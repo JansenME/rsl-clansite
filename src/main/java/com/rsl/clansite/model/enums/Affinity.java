@@ -17,12 +17,12 @@ public enum Affinity {
     }
 
     public static Affinity getAffinityByName(final String name) {
-        return switch (name) {
-            case "Force" -> Affinity.FORCE;
-            case "Magic" -> Affinity.MAGIC;
-            case "Spirit" -> Affinity.SPIRIT;
-            case "Void" -> Affinity.VOID;
-            default -> null;
-        };
+        for(Affinity affinity : Affinity.values()) {
+            if(affinity.name.equalsIgnoreCase(name)) {
+                return affinity;
+            }
+        }
+
+        return null;
     }
 }

@@ -2,13 +2,16 @@ package com.rsl.clansite.service;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvException;
+import com.rsl.clansite.exceptions.ChampionSaveException;
 import com.rsl.clansite.model.Aura;
 import com.rsl.clansite.model.BaseStats;
 import com.rsl.clansite.model.Champion;
+import com.rsl.clansite.model.dto.ChampionEntryDTO;
 import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.model.enums.Affinity;
+import com.rsl.clansite.model.enums.AuraStat;
 import com.rsl.clansite.model.enums.Faction;
-import com.rsl.clansite.model.enums.Location;
+import com.rsl.clansite.model.enums.AuraLocation;
 import com.rsl.clansite.model.enums.Rarity;
 import com.rsl.clansite.model.enums.Type;
 import com.rsl.clansite.repository.ChampionRepository;
@@ -16,16 +19,22 @@ import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.Reader;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 @Slf4j
 @Service
@@ -49,6 +58,96 @@ public class ChampionsService {
         championRepository.saveAll(championEntities);
 
         return championEntities;
+    }
+
+    public void saveNewChampion(final ChampionEntryDTO dto) throws ChampionSaveException {
+        if(!StringUtils.hasText(dto.getName())) {
+            throw new ChampionSaveException("Champion name cannot be empty.");
+        }
+
+        ChampionEntity entity = mapDtoToEntity(dto);
+
+        try {
+            championRepository.save(entity);
+        } catch (Exception e) {
+            throw new ChampionSaveException("Failed to save to database: " + e.getMessage());
+        }
+
+        appendChampionToCsv(entity);
+    }
+
+    private ChampionEntity mapDtoToEntity(final ChampionEntryDTO dto) {
+        return new ChampionEntity(
+                ObjectId.get(),
+                dto.getName(),
+                dto.getRarity(),
+                dto.getType(),
+                dto.getAffinity(),
+                dto.getFaction(),
+                getBaseStatsFromDto(dto),
+                getAuraFromDTO(dto),
+                dto.getArenaScore(),
+                dto.getName().toLowerCase().replace(" ", "-") + ".png"
+        );
+    }
+
+    private BaseStats getBaseStatsFromDto(final ChampionEntryDTO dto) {
+        return new BaseStats(
+                dto.getHp(),
+                dto.getAttack(),
+                dto.getDefense(),
+                dto.getSpeed(),
+                dto.getCriticalRate(),
+                dto.getCriticalDamage(),
+                dto.getResistance(),
+                dto.getAccuracy()
+        );
+    }
+
+    private Aura getAuraFromDTO(final ChampionEntryDTO dto) {
+        if (!dto.isAuraExists()) {
+            return null;
+        }
+
+        return new Aura(
+            dto.isPercentageAura(),
+            dto.getAmount(),
+            dto.getStat(),
+            dto.getLocation()
+        );
+    }
+
+    private void appendChampionToCsv(final ChampionEntity entity) throws ChampionSaveException {
+        String csvFilePath = "src/main/resources/champions.csv";
+
+        String baseStatsString = entity.getBaseStats().toCsvString();
+        String auraString = entity.getAura() == null ? "null" : entity.getAura().toCsvString();
+
+        String csvLineFormat = "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%.1f,\"%s\"\n";
+
+        String csvLine = String.format(
+                Locale.US,
+                csvLineFormat,
+                entity.getName(),
+                entity.getRarity().getName(),
+                entity.getType().getName(),
+                entity.getAffinity().getName(),
+                entity.getFaction().getName(),
+                baseStatsString,
+                auraString,
+                entity.getArenaScore(),
+                entity.getImagename()
+        );
+
+        try (FileWriter fw = new FileWriter(csvFilePath, true);
+             BufferedWriter bw = new BufferedWriter(fw);
+             PrintWriter out = new PrintWriter(bw)) {
+
+            out.print(csvLine);
+
+        } catch (IOException e) {
+            throw new ChampionSaveException("Failed to append champion to CSV file!" + e.getMessage());
+        }
     }
 
     private List<Champion> mapEntitiesToChampions(final List<ChampionEntity> championEntities) {
@@ -131,10 +230,9 @@ public class ChampionsService {
 
         return new Aura(
                 Boolean.parseBoolean(auraFromCsv[0]),
-                Boolean.parseBoolean(auraFromCsv[1]),
-                Integer.parseInt(auraFromCsv[2]),
-                auraFromCsv[3],
-                Location.getLocationByName(auraFromCsv[4])
+                Integer.parseInt(auraFromCsv[1]),
+                AuraStat.getAuraStatByName(auraFromCsv[2]),
+                AuraLocation.getAuraLocationByName(auraFromCsv[3])
         );
     }
 }
