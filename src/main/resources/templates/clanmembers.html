@@ -18,7 +18,7 @@
 				<div class="container">
 					<section>
 						<div sec:authorize="isAuthenticated()">
-							<div style="display: flex; align-items: flex-start; margin-bottom: 20px;">
+							<div style="display: flex; align-items: flex-start; margin-bottom: 0px;">
 
 								<div th:if="${discordAvatarUrl}" style="margin-right: 15px;">
 									<img th:src="${discordAvatarUrl}"
@@ -38,12 +38,7 @@
 									</ul>
 								</div>
 							</div>
-
-							<p>
-							<form th:action="@{/perform_logout}" method="post">
-								<button type="submit">Logout</button>
-							</form>
-							</p>
+							<p><form th:action="@{/perform_logout}" method="post"><button type="submit">Logout</button></form></p>
 						</div>
 					</section>
 
