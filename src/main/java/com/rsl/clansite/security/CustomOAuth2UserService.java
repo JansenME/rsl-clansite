@@ -16,7 +16,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 @Slf4j
@@ -79,9 +81,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         Set<SimpleGrantedAuthority> authorities = mapRolesToAuthorities(userDiscordRoles);
 
+        Map<String, Object> updatedAttributes = new HashMap<>(oauth2User.getAttributes());
+        updatedAttributes.put("rawDiscordRoleIds", userDiscordRoles);
+
         return new DefaultOAuth2User(
                 authorities,
-                oauth2User.getAttributes(),
+                updatedAttributes,
                 "id"
         );
     }

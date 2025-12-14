@@ -18,6 +18,14 @@
 				<div class="container">
 					<section>
 						<div sec:authorize="isAuthenticated()">
+							<p>Logged in as: <span th:text="${discordUserName}">Discord User Name</span></p>
+
+							<p>Roles:
+								<span th:each="discordUserRole : ${discordUserRoles}">
+									<span th:text="${discordUserRole}"></span><br />
+							   	</span>
+							</p>
+
 							<p>
 								<form th:action="@{/perform_logout}" method="post">
 									<button type="submit">Logout</button>
