@@ -3,13 +3,17 @@ package com.rsl.clansite.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -25,6 +29,8 @@ public class DiscordRoleService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private Map<String, String> roleIdToNameMap = Collections.emptyMap();
+    @Getter
+    private List<String> orderedRoleIds = Collections.emptyList();
 
     @PostConstruct
     public void init() {
@@ -41,17 +47,28 @@ public class DiscordRoleService {
 
             JsonNode rolesNode = objectMapper.readTree(rolesJson);
             Map<String, String> tempMap = new HashMap<>();
+            List<RoleData> rolesList = new ArrayList<>();
 
             if (rolesNode.isArray()) {
                 for (JsonNode role : rolesNode) {
                     String id = role.get("id").asText();
                     String name = role.get("name").asText();
+                    int position = role.get("position").asInt();
+
                     tempMap.put(id, name);
+                    rolesList.add(new RoleData(id, position));
                 }
             }
-            this.roleIdToNameMap = Collections.unmodifiableMap(tempMap);
-            log.info("Successfully cached {} Discord roles.", this.roleIdToNameMap.size());
 
+            rolesList.sort(Comparator.comparingInt(RoleData::position).reversed());
+
+            List<String> tempOrderedIds = rolesList.stream()
+                    .map(RoleData::id)
+                    .toList();
+
+            this.roleIdToNameMap = Collections.unmodifiableMap(tempMap);
+            this.orderedRoleIds = Collections.unmodifiableList(tempOrderedIds);
+            log.info("Successfully cached {} Discord roles.", this.roleIdToNameMap.size());
         } catch (Exception e) {
             log.error("Failed to fetch and cache Discord roles. Role display will show IDs.", e);
         }
@@ -60,4 +77,6 @@ public class DiscordRoleService {
     public String getRoleName(String roleId) {
         return roleIdToNameMap.getOrDefault(roleId, roleId);
     }
+
+    private record RoleData(String id, int position) {}
 }

@@ -46,8 +46,21 @@ public class ClanmemberController {
             if(rawRolesObject instanceof Set) {
                 @SuppressWarnings("unchecked")
                 Set<String> serverRoleIds = (Set<String>) rawRolesObject;
+                final List<String> masterOrder = discordRoleService.getOrderedRoleIds();
+                List<String> userRoleIds = new ArrayList<>(serverRoleIds);
 
-                List<String> roleNames = serverRoleIds.stream()
+                userRoleIds.sort((id1, id2) -> {
+                    int index1 = masterOrder.indexOf(id1);
+                    int index2 = masterOrder.indexOf(id2);
+
+                    if (index1 == -1 && index2 == -1) return 0;
+                    if (index1 == -1) return 1;
+                    if (index2 == -1) return -1;
+
+                    return Integer.compare(index1, index2);
+                });
+
+                List<String> roleNames = userRoleIds.stream()
                         .map(discordRoleService::getRoleName)
                         .toList();
 
