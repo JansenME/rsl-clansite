@@ -36,7 +36,7 @@ public class ClanmemberService {
             clanmemberEntity.setDiscordName(globalName);
             clanmemberEntity.setAvatarHash(avatarHash);
             clanmemberRepository.save(clanmemberEntity);
-            log.info("Clanmember with Discord ID {} is already linked. Updated Global Name.", discordId);
+            log.info("Clanmember with Discord ID {} is already linked. Updated Global Name to {}.", discordId, globalName);
             return;
         }
 
