@@ -8,4 +8,5 @@ import java.util.List;
 public class ClanmemberViewData {
     private final String discordUserName;
     private final List<String> discordUserRoles;
+    private final String discordAvatarUrl;
 }

@@ -12,6 +12,7 @@ import java.util.List;
 public class Clanmember {
     private String discordName;
     private String discordId;
+    private String avatarHash;
     private String playerName;
     private String ingameName;
     private String clanRank;

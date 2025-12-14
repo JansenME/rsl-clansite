@@ -28,12 +28,13 @@ public class ClanmemberService {
         this.discordRoleService = discordRoleService;
     }
 
-    public void linkClanmember(final String discordId, final String linkingName, final String globalName) {
+    public void linkClanmember(final String discordId, final String linkingName, final String globalName, final String avatarHash) {
         Optional<ClanmemberEntity> existingMemberById = clanmemberRepository.findByDiscordId(discordId);
 
         if (existingMemberById.isPresent()) {
             ClanmemberEntity clanmemberEntity = existingMemberById.get();
             clanmemberEntity.setDiscordName(globalName);
+            clanmemberEntity.setAvatarHash(avatarHash);
             clanmemberRepository.save(clanmemberEntity);
             log.info("Clanmember with Discord ID {} is already linked. Updated Global Name.", discordId);
             return;
@@ -45,12 +46,14 @@ public class ClanmemberService {
             ClanmemberEntity clanmemberEntity = unlinkedMember.get();
             clanmemberEntity.setDiscordId(discordId);
             clanmemberEntity.setDiscordName(globalName);
+            clanmemberEntity.setAvatarHash(avatarHash);
             clanmemberRepository.save(clanmemberEntity);
             log.info("Successfully linked existing Clanmember '{}' with Discord ID {}.", linkingName, discordId);
         } else {
             Clanmember newMember = new Clanmember(
                     globalName,
                     discordId,
+                    avatarHash,
                     linkingName,
                     "N/A",
                     "Unassigned",
@@ -71,11 +74,19 @@ public class ClanmemberService {
 
     public ClanmemberViewData getUserViewData(Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof OAuth2User oauth2User)) {
-            return new ClanmemberViewData(null, List.of());
+            return new ClanmemberViewData(null, List.of(), null);
         }
 
         String globalName = oauth2User.getAttribute("global_name");
         String discordUserName = (globalName != null) ? globalName : "Unknown User";
+
+        String avatarHash = oauth2User.getAttribute("avatar");
+        String userId = oauth2User.getAttribute("id");
+
+        String discordAvatarUrl = null;
+        if(userId != null && avatarHash != null) {
+            discordAvatarUrl = "https://cdn.discordapp.com/avatars/" + userId + "/" + avatarHash + ".png";
+        }
 
         List<String> roleNames = List.of("No Discord Roles Found");
 
@@ -103,7 +114,7 @@ public class ClanmemberService {
                     .toList();
         }
 
-        return new ClanmemberViewData(discordUserName, roleNames);
+        return new ClanmemberViewData(discordUserName, roleNames, discordAvatarUrl);
     }
 
     private Clanmember mapEntityToClanmember(final ClanmemberEntity clanmemberEntity) {
@@ -114,6 +125,7 @@ public class ClanmemberService {
         return new Clanmember(
                 clanmemberEntity.getDiscordName(),
                 clanmemberEntity.getDiscordId(),
+                clanmemberEntity.getAvatarHash(),
                 clanmemberEntity.getPlayerName(),
                 clanmemberEntity.getIngameName(),
                 clanmemberEntity.getClanRank(),

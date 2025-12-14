@@ -18,18 +18,31 @@
 				<div class="container">
 					<section>
 						<div sec:authorize="isAuthenticated()">
-							<p>Logged in as: <span th:text="${discordUserName}">Discord User Name</span></p>
+							<div style="display: flex; align-items: flex-start; margin-bottom: 20px;">
 
-							<p>Roles:
-								<span th:each="discordUserRole : ${discordUserRoles}">
-									<span th:text="${discordUserRole}"></span><br />
-							   	</span>
-							</p>
+								<div th:if="${discordAvatarUrl}" style="margin-right: 15px;">
+									<img th:src="${discordAvatarUrl}"
+										 alt="Discord Avatar"
+										 style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
+								</div>
+
+								<div style="margin-left: 0; padding-left: 0;">
+
+									<p style="margin: 0 0 20px 0; padding-left: 0;">Logged in as: <br /><strong th:text="${discordUserName}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong></p>
+									<p style="font-weight: bold; margin-bottom: 5px; margin-left: 0; padding-left: 0;">Roles:</p>
+
+									<ul style="list-style: disc; margin-left: 20px; padding: 0; text-align: left;">
+										<li th:each="discordUserRole : ${discordUserRoles}">
+											<span th:text="${discordUserRole}">Role Name</span>
+										</li>
+									</ul>
+								</div>
+							</div>
 
 							<p>
-								<form th:action="@{/perform_logout}" method="post">
-									<button type="submit">Logout</button>
-								</form>
+							<form th:action="@{/perform_logout}" method="post">
+								<button type="submit">Logout</button>
+							</form>
 							</p>
 						</div>
 					</section>
@@ -37,23 +50,26 @@
 					<section>
 						<table>
 							<thead>
-								<tr>
-									<th>Discord Name</th>
-									<th>Discord Nickname</th>
-									<th>In-Game Name</th>
-									<th>Clan Rank</th>
-									<th>Champion Count</th>
-								</tr>
+							<tr>
+								<th></th> <th>Discord Name</th> <th>Discord Nickname</th> <th>In-Game Name</th> <th>Clan Rank</th> <th>Champion Count</th> </tr>
 							</thead>
 
 							<tbody>
-								<tr th:each="member : ${clanmembers}">
-									<td th:text="${member.discordName}">Global Name</td>
-									<td th:text="${member.playerName}">Server Nickname</td>
-									<td th:text="${member.ingameName}">In-Game Name</td>
-									<td th:text="${member.clanRank}">Rank</td>
-									<td th:text="${member.champions != null ? member.champions.size() : 0}">0</td>
-								</tr>
+							<tr th:each="member : ${clanmembers}">
+
+								<td>
+									<div th:if="${member.discordId != null and member.avatarHash != null}">
+										<img th:src="'https://cdn.discordapp.com/avatars/' + ${member.discordId} + '/' + ${member.avatarHash} + '.png'"
+											 alt="Avatar"
+											 style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
+									</div>
+								</td>
+
+								<td th:text="${member.discordName}">Global Name</td>
+								<td th:text="${member.playerName}">Server Nickname</td> <td th:text="${member.ingameName}">In-Game Name</td>
+								<td th:text="${member.clanRank}">Rank</td>
+								<td th:text="${member.champions != null ? member.champions.size() : 0}">0</td>
+							</tr>
 							</tbody>
 						</table>
 

@@ -63,6 +63,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         String userId = oauth2User.getAttribute("id");
         String globalName = oauth2User.getAttribute("global_name");
+        String avatarHash = oauth2User.getAttribute("avatar");
 
         JsonNode memberData = getClanmemberData(userId);
 
@@ -77,7 +78,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 ? nicknameNode.asText()
                 : globalName;
 
-        clanmemberService.linkClanmember(userId, linkingName, globalName);
+        clanmemberService.linkClanmember(userId, linkingName, globalName, avatarHash);
 
         Set<String> userDiscordRoles = getMemberRoles(memberData);
 

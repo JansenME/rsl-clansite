@@ -33,6 +33,7 @@ public class ClanmemberController {
         if (userViewData.getDiscordUserName() != null) {
             model.addAttribute("discordUserName", userViewData.getDiscordUserName());
             model.addAttribute("discordUserRoles", userViewData.getDiscordUserRoles());
+            model.addAttribute("discordAvatarUrl", userViewData.getDiscordAvatarUrl());
         }
 
         return "clanmembers";

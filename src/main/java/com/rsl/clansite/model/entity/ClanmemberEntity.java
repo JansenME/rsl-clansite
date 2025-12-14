@@ -20,6 +20,7 @@ public class ClanmemberEntity {
 
     private String discordName;
     private String discordId;
+    private String avatarHash;
     private String playerName;
     private String ingameName;
     private String clanRank;
