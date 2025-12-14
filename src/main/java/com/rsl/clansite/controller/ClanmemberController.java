@@ -2,8 +2,8 @@ package com.rsl.clansite.controller;
 
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
+import com.rsl.clansite.service.DiscordRoleService;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,10 +20,12 @@ import java.util.stream.Collectors;
 public class ClanmemberController {
     private final CommonsService commonsService;
     private final ClanmemberService clanmemberService;
+    private final DiscordRoleService discordRoleService;
 
-    public ClanmemberController(final CommonsService commonsService, final ClanmemberService clanmemberService) {
+    public ClanmemberController(final CommonsService commonsService, final ClanmemberService clanmemberService, final DiscordRoleService discordRoleService) {
         this.commonsService = commonsService;
         this.clanmemberService = clanmemberService;
+        this.discordRoleService = discordRoleService;
     }
 
     @GetMapping(value={"", "/"})
@@ -45,9 +47,11 @@ public class ClanmemberController {
                 @SuppressWarnings("unchecked")
                 Set<String> serverRoleIds = (Set<String>) rawRolesObject;
 
-                List<String> rawDiscordRoleIds = new ArrayList<>(serverRoleIds);
+                List<String> roleNames = serverRoleIds.stream()
+                        .map(discordRoleService::getRoleName)
+                        .toList();
 
-                model.addAttribute("discordUserRoles", rawDiscordRoleIds);
+                model.addAttribute("discordUserRoles", roleNames);
             } else {
                 model.addAttribute("discordUserRoles", List.of("No Discord Roles Found"));
             }

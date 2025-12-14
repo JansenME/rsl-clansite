@@ -33,7 +33,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     @Value("${discord.bot-token}")
     private String botToken;
-    private static final String CLAN_SERVER_ID = "1062302225701015552";
+
+    @Value("${discord.clan-server-id}")
+    private String clanServerId;
 
     private static final Set<String> ADMIN_ROLE_IDS = Set.of(
             "1404036150078734468"
@@ -65,7 +67,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         JsonNode memberData = getClanmemberData(userId);
 
         if (memberData == null || memberData.has("message")) {
-            log.warn("Access Denied for user {}: Not a member of the clan server or API error (Guild ID: {})", userId, CLAN_SERVER_ID);
+            log.warn("Access Denied for user {}: Not a member of the clan server or API error (Guild ID: {})", userId, clanServerId);
             throw new OAuth2AuthenticationException("Access Denied: You must be a member of the clan's Discord server to access this application.");
         }
 
@@ -92,7 +94,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     private JsonNode getClanmemberData(String userId) {
-        String apiUri = DISCORD_MEMBER_API_BASE + CLAN_SERVER_ID + "/members/" + userId;
+        String apiUri = DISCORD_MEMBER_API_BASE + clanServerId + "/members/" + userId;
 
         try {
             String memberJson = webClient.get()
@@ -106,7 +108,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         } catch (WebClientResponseException e) {
             if (e.getStatusCode().value() == 404) {
-                log.warn("User {} not found in guild {}. Cannot retrieve member data.", userId, CLAN_SERVER_ID);
+                log.warn("User {} not found in guild {}. Cannot retrieve member data.", userId, clanServerId);
                 return null;
             }
             log.error("WebClient error fetching Discord member data (HTTP {}): {}",

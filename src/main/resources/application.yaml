@@ -2,6 +2,7 @@ app:
   version: '@project.version@'
 discord:
   bot-token: "MTQ0OTA5MTM2NzEwMjg0MDkwNw.GRYd1S.EieISajtwREhbtq_vl_IKAyQqflxjNYPUtW5ak"
+  clan-server-id: "1062302225701015552"
 spring:
   session:
     store-type: mongodb
