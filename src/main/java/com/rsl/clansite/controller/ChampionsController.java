@@ -23,8 +23,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,7 +32,6 @@ public class ChampionsController {
     private final CommonsService commonsService;
     private final ChampionsService championsService;
 
-    @Autowired
     public ChampionsController(final CommonsService commonsService, final ChampionsService championsService) {
         this.commonsService = commonsService;
         this.championsService = championsService;

@@ -3,6 +3,8 @@ app:
 discord:
   bot-token: "MTQ0OTA5MTM2NzEwMjg0MDkwNw.GRYd1S.EieISajtwREhbtq_vl_IKAyQqflxjNYPUtW5ak"
 spring:
+  session:
+    store-type: mongodb
   security:
     oauth2:
       client:
@@ -25,6 +27,9 @@ spring:
   application:
     name: Clansite Raid Shadow Legends
 server:
+  servlet:
+    session:
+      timeout: 30m
   port: 8080
   error:
     whitelabel:

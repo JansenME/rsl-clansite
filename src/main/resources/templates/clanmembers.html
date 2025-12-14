@@ -1,0 +1,63 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+	<head>
+		<title>Clanmembers</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" th:href="@{../styles/css/main.css}" />
+		<script th:src="@{../styles/js/main.js}"></script>
+	</head>
+	<body>
+		<div id="page-wrapper">
+			<section id="header">
+				<div th:insert="~{inserts/nav :: nav}" class="container">
+				</div>
+			</section>
+
+			<section id="content">
+				<div class="container">
+					<section>
+						<div sec:authorize="isAuthenticated()">
+							<p>
+								<form th:action="@{/perform_logout}" method="post">
+									<button type="submit">Logout</button>
+								</form>
+							</p>
+						</div>
+					</section>
+
+					<section>
+						<table>
+							<thead>
+								<tr>
+									<th>Discord Name</th>
+									<th>Discord Nickname</th>
+									<th>In-Game Name</th>
+									<th>Clan Rank</th>
+									<th>Champion Count</th>
+								</tr>
+							</thead>
+
+							<tbody>
+								<tr th:each="member : ${clanmembers}">
+									<td th:text="${member.discordName}">Global Name</td>
+									<td th:text="${member.playerName}">Server Nickname</td>
+									<td th:text="${member.ingameName}">In-Game Name</td>
+									<td th:text="${member.clanRank}">Rank</td>
+									<td th:text="${member.champions != null ? member.champions.size() : 0}">0</td>
+								</tr>
+							</tbody>
+						</table>
+
+						<div th:if="${clanmembers.isEmpty()}">
+							<p>The roster is currently empty. Please log in with a Coordinator account to manually populate the initial list.</p>
+						</div>
+					</section>
+				</div>
+			</section>
+
+			<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+			</div>
+		</div>
+	</body>
+</html>
