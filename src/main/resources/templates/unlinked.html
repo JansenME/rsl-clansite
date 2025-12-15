@@ -1,0 +1,37 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+	<head>
+		<title>Access Denied: Account Not Linked</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" th:href="@{../styles/css/main.css}" />
+		<script th:src="@{../styles/js/main.js}"></script>
+	</head>
+	<body>
+		<div id="page-wrapper">
+			<section id="header">
+				<div th:insert="~{inserts/nav :: nav}" class="container">
+				</div>
+			</section>
+
+			<section id="content">
+				<div class="container">
+					<section>
+						<h1>Access Denied: Account not linked</h1><p>
+							We were unable to log you in because your Discord account is not yet linked to an entry on the clan roster.
+						</p>
+						<p th:text="${errorMessage}" style="font-weight: bold; color: #cc0000;"></p>
+						<br />
+						<h2>What to do next:</h2>
+						<p th:text="${contact}" style="font-size: 1.1em;"></p>
+
+						<p><a href="/">Go to Home Page</a></p>
+					</section>
+				</div>
+			</section>
+
+			<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+			</div>
+		</div>
+	</body>
+</html>

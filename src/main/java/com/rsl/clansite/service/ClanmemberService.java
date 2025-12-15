@@ -28,7 +28,7 @@ public class ClanmemberService {
         List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordId(discordId);
 
         if (linkedMembers.isEmpty()) {
-            throw new UnlinkedAccountException("User's Discord ID is not linked to any roster entry.");
+            throw new UnlinkedAccountException("User's Discord ID is not linked.");
         }
 
         final List<String> masterOrder = discordRoleService.getOrderedRoleIds();
@@ -57,7 +57,7 @@ public class ClanmemberService {
         List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordId(discordId);
 
         if (linkedMembers.isEmpty()) {
-            throw new UnlinkedAccountException("User's Discord ID is not linked to any roster entry. Please contact the administrator.");
+            throw new UnlinkedAccountException("User's Discord ID is not linked. Please contact the administrator.");
         }
 
         return linkedMembers;

@@ -20,6 +20,12 @@ public class SecurityConfig {
     @Autowired
     private OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService;
 
+    private final CustomAuthenticationFailureHandler failureHandler;
+
+    public SecurityConfig(CustomAuthenticationFailureHandler failureHandler) {
+        this.failureHandler = failureHandler;
+    }
+
     @Bean
     public CookieClearingLogoutHandler cookieClearingLogoutHandler() {
         return new CookieClearingLogoutHandler("JSESSIONID", "SESSION");
@@ -31,8 +37,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/champions/add", "/champions/save").hasRole("ADMIN")
                         .requestMatchers("/clanmembers/add", "/clanmembers/*/roster").hasAnyRole("ADMIN", "COORDINATOR")
-                        .requestMatchers("/clanmembers", "/clanmembers/*").authenticated()
-                        .requestMatchers("/index", "/", "/styles/**", "/images/**", "/login**", "/perform_logout").permitAll()
+                        .requestMatchers("/clanmembers", "/clanmembers/*", "/clanmembers/switch").authenticated()
+                        .requestMatchers("/index", "/", "/styles/**", "/images/**", "/login**", "/perform_logout", "/login-error/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
@@ -41,6 +47,7 @@ public class SecurityConfig {
                                 .userService(customOAuth2UserService)
                         )
                         .successHandler(new SavedRequestAwareAuthenticationSuccessHandler())
+                        .failureHandler(failureHandler)
                 )
                 .logout(logout -> logout
                         .logoutUrl("/perform_logout")
