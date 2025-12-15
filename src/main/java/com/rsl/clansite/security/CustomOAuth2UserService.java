@@ -8,6 +8,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
@@ -72,15 +73,22 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             throw new OAuth2AuthenticationException("Access Denied: You must be a member of the clan's Discord server to access this application.");
         }
 
-        JsonNode nicknameNode = memberData.get("nick");
-
-        String linkingName = (nicknameNode != null && !nicknameNode.isNull())
-                ? nicknameNode.asText()
-                : globalName;
-
-        clanmemberService.linkClanmember(userId, linkingName, globalName, avatarHash);
-
         Set<String> userDiscordRoles = getMemberRoles(memberData);
+
+        try {
+            clanmemberService.linkClanmember(userId, globalName, avatarHash, userDiscordRoles.stream().toList());
+
+        } catch (RuntimeException e) {
+            log.warn("Unlinked account login attempt by Discord ID {}: {}", userId, e.getMessage());
+
+            OAuth2Error error = new OAuth2Error(
+                    "unlinked_account",
+                    e.getMessage(),
+                    null
+            );
+
+            throw new OAuth2AuthenticationException(error, e);
+        }
 
         Set<SimpleGrantedAuthority> authorities = mapRolesToAuthorities(userDiscordRoles);
 

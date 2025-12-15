@@ -1,14 +1,19 @@
 package com.rsl.clansite.controller;
 
-import com.rsl.clansite.model.ClanmemberViewData;
+import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
 import com.rsl.clansite.service.DiscordRoleService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 @Controller
 @RequestMapping("/clanmembers")
@@ -24,18 +29,45 @@ public class ClanmemberController {
     }
 
     @GetMapping(value={"", "/"})
-    public String viewClanmembers(Model model, Authentication authentication) {
+    public String viewClanmembers(Model model, Authentication authentication, HttpSession session) {
         commonsService.fillModel(model);
-        model.addAttribute("clanmembers", clanmemberService.findAllMembers());
+        model.addAttribute("clanmemberViewData", clanmemberService.getUserViewData(authentication));
 
-        ClanmemberViewData userViewData = clanmemberService.getUserViewData(authentication);
+        String currentDiscordId = authentication.getName();
 
-        if (userViewData.getDiscordUserName() != null) {
-            model.addAttribute("discordUserName", userViewData.getDiscordUserName());
-            model.addAttribute("discordUserRoles", userViewData.getDiscordUserRoles());
-            model.addAttribute("discordAvatarUrl", userViewData.getDiscordAvatarUrl());
+        List<ClanmemberEntity> linkedMembers = clanmemberService.getLinkedClanmembers(currentDiscordId);
+
+        String activeMemberId = (String) session.getAttribute("ACTIVE_MEMBER_ID");
+
+        if (activeMemberId == null && !linkedMembers.isEmpty()) {
+            activeMemberId = linkedMembers.get(0).getId().toHexString();
+            session.setAttribute("ACTIVE_MEMBER_ID", activeMemberId);
         }
 
+        model.addAttribute("linkedMembers", linkedMembers);
+        model.addAttribute("activeMemberId", activeMemberId);
+
+        model.addAttribute("clanmembers", clanmemberService.findAllClanmemberEntities());
         return "clanmembers";
+    }
+
+    @PostMapping("/switch")
+    public String switchAccount(
+            @RequestParam("memberId") String newActiveMemberId,
+            Authentication authentication,
+            HttpSession session) {
+
+        String currentDiscordId = authentication.getName();
+
+        List<ClanmemberEntity> ownedAccounts = clanmemberService.getLinkedClanmembers(currentDiscordId);
+
+        boolean isOwned = ownedAccounts.stream()
+                .anyMatch(member -> member.getId().toHexString().equals(newActiveMemberId));
+
+        if (isOwned) {
+            session.setAttribute("ACTIVE_MEMBER_ID", newActiveMemberId);
+        }
+
+        return "redirect:/clanmembers";
     }
 }

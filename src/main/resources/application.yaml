@@ -30,7 +30,7 @@ spring:
 server:
   servlet:
     session:
-      timeout: 30m
+      timeout: 86400
   port: 8080
   error:
     whitelabel:

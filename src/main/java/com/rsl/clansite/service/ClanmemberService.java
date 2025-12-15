@@ -1,6 +1,6 @@
 package com.rsl.clansite.service;
 
-import com.rsl.clansite.model.Clanmember;
+import com.rsl.clansite.exceptions.UnlinkedAccountException;
 import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.repository.ClanmemberRepository;
@@ -10,11 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -28,48 +24,47 @@ public class ClanmemberService {
         this.discordRoleService = discordRoleService;
     }
 
-    public void linkClanmember(final String discordId, final String linkingName, final String globalName, final String avatarHash) {
-        Optional<ClanmemberEntity> existingMemberById = clanmemberRepository.findByDiscordId(discordId);
+    public void linkClanmember(final String discordId, final String globalName, final String avatarHash, final List<String> roles) {
+        List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordId(discordId);
 
-        if (existingMemberById.isPresent()) {
-            ClanmemberEntity clanmemberEntity = existingMemberById.get();
-            clanmemberEntity.setDiscordName(globalName);
-            clanmemberEntity.setAvatarHash(avatarHash);
-            clanmemberRepository.save(clanmemberEntity);
-            log.info("Clanmember with Discord ID {} is already linked. Updated Global Name to {}.", discordId, globalName);
-            return;
+        if (linkedMembers.isEmpty()) {
+            throw new UnlinkedAccountException("User's Discord ID is not linked to any roster entry.");
         }
 
-        Optional<ClanmemberEntity> unlinkedMember = clanmemberRepository.findByPlayerName(linkingName);
+        final List<String> masterOrder = discordRoleService.getOrderedRoleIds();
+        List<String> sortedRoles = new java.util.ArrayList<>(roles);
 
-        if (unlinkedMember.isPresent()) {
-            ClanmemberEntity clanmemberEntity = unlinkedMember.get();
-            clanmemberEntity.setDiscordId(discordId);
-            clanmemberEntity.setDiscordName(globalName);
-            clanmemberEntity.setAvatarHash(avatarHash);
-            clanmemberRepository.save(clanmemberEntity);
-            log.info("Successfully linked existing Clanmember '{}' with Discord ID {}.", linkingName, discordId);
-        } else {
-            Clanmember newMember = new Clanmember(
-                    globalName,
-                    discordId,
-                    avatarHash,
-                    linkingName,
-                    "N/A",
-                    "Unassigned",
-                    List.of()
-            );
-            ClanmemberEntity clanmemberEntity = mapClanmemberToEntity(newMember);
+        sortedRoles.sort((id1, id2) -> {
+            int index1 = masterOrder.indexOf(id1);
+            int index2 = masterOrder.indexOf(id2);
 
-            clanmemberRepository.save(clanmemberEntity);
-            log.warn("No existing roster entry found for '{}'. Created new 'Unassigned' entry.", linkingName);
+            if (index1 == -1 && index2 == -1) return 0;
+            if (index1 == -1) return 1;
+            if (index2 == -1) return -1;
+
+            return Integer.compare(index1, index2);
+        });
+
+        for (ClanmemberEntity member : linkedMembers) {
+            member.setDiscordName(globalName);
+            member.setAvatarHash(avatarHash);
+            member.setDiscordRoles(sortedRoles);
+            clanmemberRepository.save(member);
         }
     }
 
-    public List<Clanmember> findAllMembers() {
-        List<ClanmemberEntity> entities = clanmemberRepository.findAll();
+    public List<ClanmemberEntity> getLinkedClanmembers(final String discordId) {
+        List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordId(discordId);
 
-        return mapEntitiesToClanmembers(entities);
+        if (linkedMembers.isEmpty()) {
+            throw new UnlinkedAccountException("User's Discord ID is not linked to any roster entry. Please contact the administrator.");
+        }
+
+        return linkedMembers;
+    }
+
+    public List<ClanmemberEntity> findAllClanmemberEntities() {
+        return clanmemberRepository.findAll();
     }
 
     public ClanmemberViewData getUserViewData(Authentication authentication) {
@@ -77,82 +72,30 @@ public class ClanmemberService {
             return new ClanmemberViewData(null, List.of(), null);
         }
 
+        String discordId = oauth2User.getAttribute("id");
         String globalName = oauth2User.getAttribute("global_name");
         String discordUserName = (globalName != null) ? globalName : "Unknown User";
 
         String avatarHash = oauth2User.getAttribute("avatar");
-        String userId = oauth2User.getAttribute("id");
 
-        String discordAvatarUrl = null;
-        if(userId != null && avatarHash != null) {
-            discordAvatarUrl = "https://cdn.discordapp.com/avatars/" + userId + "/" + avatarHash + ".png";
-        }
+        String discordAvatarUrl = (discordId != null && avatarHash != null)
+                ? "https://cdn.discordapp.com/avatars/" + discordId + "/" + avatarHash + ".png"
+                : null;
 
         List<String> roleNames = List.of("No Discord Roles Found");
 
-        Object rawRolesObject = oauth2User.getAttributes().get("rawDiscordRoleIds");
+        List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordId(discordId);
 
-        if (rawRolesObject instanceof Set) {
-            @SuppressWarnings("unchecked")
-            Set<String> serverRoleIds = (Set<String>) rawRolesObject;
-            final List<String> masterOrder = discordRoleService.getOrderedRoleIds();
-            List<String> userRoleIds = new ArrayList<>(serverRoleIds);
+        if (!linkedMembers.isEmpty()) {
+            List<String> discordRoleIds = linkedMembers.get(0).getDiscordRoles();
 
-            userRoleIds.sort((id1, id2) -> {
-                int index1 = masterOrder.indexOf(id1);
-                int index2 = masterOrder.indexOf(id2);
-
-                if (index1 == -1 && index2 == -1) return 0;
-                if (index1 == -1) return 1;
-                if (index2 == -1) return -1;
-
-                return Integer.compare(index1, index2);
-            });
-
-            roleNames = userRoleIds.stream()
-                    .map(discordRoleService::getRoleName)
-                    .toList();
+            if (discordRoleIds != null && !discordRoleIds.isEmpty()) {
+                roleNames = discordRoleIds.stream()
+                        .map(discordRoleService::getRoleName)
+                        .toList();
+            }
         }
 
         return new ClanmemberViewData(discordUserName, roleNames, discordAvatarUrl);
-    }
-
-    private Clanmember mapEntityToClanmember(final ClanmemberEntity clanmemberEntity) {
-        if (clanmemberEntity == null) {
-            return null;
-        }
-
-        return new Clanmember(
-                clanmemberEntity.getDiscordName(),
-                clanmemberEntity.getDiscordId(),
-                clanmemberEntity.getAvatarHash(),
-                clanmemberEntity.getPlayerName(),
-                clanmemberEntity.getIngameName(),
-                clanmemberEntity.getClanRank(),
-                clanmemberEntity.getChampions()
-        );
-    }
-
-    private ClanmemberEntity mapClanmemberToEntity(Clanmember clanmember) {
-        if (clanmember == null) {
-            return null;
-        }
-
-        ClanmemberEntity entity = new ClanmemberEntity();
-
-        entity.setDiscordName(clanmember.getDiscordName());
-        entity.setDiscordId(clanmember.getDiscordId());
-        entity.setPlayerName(clanmember.getPlayerName());
-        entity.setIngameName(clanmember.getIngameName());
-        entity.setClanRank(clanmember.getClanRank());
-        entity.setChampions(clanmember.getChampions());
-
-        return entity;
-    }
-
-    private List<Clanmember> mapEntitiesToClanmembers(List<ClanmemberEntity> entities) {
-        return entities.stream()
-                .map(this::mapEntityToClanmember)
-                .collect(Collectors.toList());
     }
 }
