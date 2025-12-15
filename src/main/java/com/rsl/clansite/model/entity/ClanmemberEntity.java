@@ -22,7 +22,7 @@ public class ClanmemberEntity {
     private String discordId;
     private String avatarHash;
     private List<String> discordRoles;
-    private String playerName;
+    private String playerNickname;
     private String ingameName;
     private String clanRank;
     private List<Champion> champions;

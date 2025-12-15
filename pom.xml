@@ -31,6 +31,7 @@
 		<commonslang.version>3.20.0</commonslang.version>
 		<opencsv.version>5.12.0</opencsv.version>
 		<jackson.version>2.20.1</jackson.version>
+		<jakerta.version>3.1.1</jakerta.version>
 
 		<junit.version>4.13.2</junit.version>
 	</properties>
@@ -97,6 +98,12 @@
 			<groupId>com.opencsv</groupId>
 			<artifactId>opencsv</artifactId>
 			<version>${opencsv.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>jakarta.validation</groupId>
+			<artifactId>jakarta.validation-api</artifactId>
+			<version>${jakerta.version}</version>
 		</dependency>
 
 		<!--TEST DEPENDENCIES-->

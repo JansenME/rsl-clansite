@@ -35,10 +35,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/champions/add", "/champions/save").hasRole("ADMIN")
-                        .requestMatchers("/clanmembers/add", "/clanmembers/*/roster").hasAnyRole("ADMIN", "COORDINATOR")
-                        .requestMatchers("/clanmembers", "/clanmembers/*", "/clanmembers/switch").authenticated()
+                        .requestMatchers("/clanmembers/add", "/clanmembers/save").hasAnyRole("ADMIN", "COORDINATOR")
                         .requestMatchers("/index", "/", "/styles/**", "/images/**", "/login**", "/perform_logout", "/login-error/**").permitAll()
+                        .requestMatchers("/champions/add", "/champions/save").hasRole("ADMIN")
+                        .requestMatchers("/clanmembers/*/roster").hasAnyRole("ADMIN", "COORDINATOR")
+                        .requestMatchers("/clanmembers", "/clanmembers/*", "/clanmembers/switch").authenticated()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2

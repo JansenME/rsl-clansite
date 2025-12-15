@@ -19,6 +19,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -76,7 +77,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         Set<String> userDiscordRoles = getMemberRoles(memberData);
 
         try {
-            clanmemberService.linkClanmember(userId, globalName, avatarHash, userDiscordRoles.stream().toList());
+            clanmemberService.linkClanmember(userId, globalName, avatarHash, List.copyOf(userDiscordRoles));
 
         } catch (RuntimeException e) {
             log.warn("Unlinked account login attempt by Discord ID {}: {}", userId, e.getMessage());

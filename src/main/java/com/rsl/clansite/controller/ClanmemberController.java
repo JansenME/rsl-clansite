@@ -1,13 +1,17 @@
 package com.rsl.clansite.controller;
 
+import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.enums.ClanRank;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
-import com.rsl.clansite.service.DiscordRoleService;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,12 +24,10 @@ import java.util.List;
 public class ClanmemberController {
     private final CommonsService commonsService;
     private final ClanmemberService clanmemberService;
-    private final DiscordRoleService discordRoleService;
 
-    public ClanmemberController(final CommonsService commonsService, final ClanmemberService clanmemberService, final DiscordRoleService discordRoleService) {
+    public ClanmemberController(final CommonsService commonsService, final ClanmemberService clanmemberService) {
         this.commonsService = commonsService;
         this.clanmemberService = clanmemberService;
-        this.discordRoleService = discordRoleService;
     }
 
     @GetMapping(value={"", "/"})
@@ -66,6 +68,55 @@ public class ClanmemberController {
 
         if (isOwned) {
             session.setAttribute("ACTIVE_MEMBER_ID", newActiveMemberId);
+        }
+
+        return "redirect:/clanmembers";
+    }
+
+    @GetMapping("/add")
+    @PreAuthorize("hasAnyRole('ADMIN', 'COORDINATOR')")
+    public String addClanmemberForm(
+            @RequestParam(value = "discordId", required = false) String discordId,
+            Model model) {
+
+        model.addAttribute("clanRanks", ClanRank.values());
+
+        NewClanmemberDTO dto = new NewClanmemberDTO();
+
+        if (discordId != null && !discordId.isBlank()) {
+            try {
+                dto = clanmemberService.lookupDiscordUser(discordId);
+                model.addAttribute("lookupSuccess", true);
+            } catch (Exception e) {
+                model.addAttribute("lookupError", "Error looking up user: " + e.getMessage());
+            }
+        }
+
+        model.addAttribute("clanmemberRosterDto", dto);
+        return "clanmember-add";
+    }
+
+    @PostMapping("/save")
+    public String saveClanmember(
+            @Valid NewClanmemberDTO dto,
+            BindingResult bindingResult,
+            Model model) {
+
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("clanRanks", ClanRank.values());
+            model.addAttribute("clanmemberRosterDto", dto);
+            model.addAttribute("lookupSuccess", true);
+            return "clanmember-add";
+        }
+
+        try {
+            clanmemberService.saveNewClanmember(dto);
+        } catch (Exception e) {
+            model.addAttribute("clanRanks", ClanRank.values());
+            model.addAttribute("clanmemberRosterDto", dto);
+            model.addAttribute("lookupError", "Failed to save member: " + e.getMessage());
+            model.addAttribute("lookupSuccess", true);
+            return "clanmember-add";
         }
 
         return "redirect:/clanmembers";
