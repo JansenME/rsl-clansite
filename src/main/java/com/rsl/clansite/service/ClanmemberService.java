@@ -130,7 +130,7 @@ public class ClanmemberService {
         newMember.setClanRank(dto.getClanRank() != null ? dto.getClanRank().name() : ClanRank.SOLDIER.name());
 
         newMember.setAvatarHash(dto.getAvatarHash());
-        newMember.setDiscordRoles(dto.getDiscordRoles());
+        newMember.setDiscordRoles(dto.getDiscordRoles() != null ? dto.getDiscordRoles() : List.of());
         newMember.setChampions(List.of());
 
         clanmemberRepository.save(newMember);

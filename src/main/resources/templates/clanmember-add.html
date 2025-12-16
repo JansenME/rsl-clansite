@@ -26,7 +26,10 @@
 								   th:value="${clanmemberRosterDto.discordId}" required
 								   placeholder="Paste the user's copied Discord ID here" />
 							<button type="submit" class="button">Lookup User</button>
-
+							<br />
+							<a th:href="@{/clanmembers/add(skipLookup=true)}" class="button secondary" style="margin-left: 10px;">
+								Skip Discord Lookup
+							</a>
 							<div th:if="${lookupError != null and lookupError.length() > 0 and not lookupSuccess}" style="color: red; margin-top: 10px;">
 								<p>Lookup Failed: <span th:text="${lookupError}"></span></p>
 							</div>
@@ -51,15 +54,16 @@
 									<input type="hidden" name="discordRoles" th:value="${roleId}" />
 								</div>
 
-								<div>
-									<label>Discord Global Name (Verified):</label>
-									<p style="font-weight: bold;" th:text="*{discordName}"></p>
-								</div>
+								<div th:if="${clanmemberRosterDto.discordName != null and clanmemberRosterDto.discordName.length() > 0}">
+									<div>
+										<label>Discord Global Name (Verified):</label>
+										<p style="font-weight: bold;" th:text="*{discordName}"></p>
+									</div>
 
-
-								<div>
-									<label for="playerNickname">Server Nickname (Pre-filled from Discord Server Nickname):</label>
-									<input type="text" id="playerNickname" th:field="*{playerNickname}" required />
+									<div>
+										<label for="playerNickname">Server Nickname (Pre-filled from Discord Server Nickname):</label>
+										<input type="text" id="playerNickname" th:field="*{playerNickname}" />
+									</div>
 								</div>
 
 								<div>

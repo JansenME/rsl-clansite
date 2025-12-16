@@ -77,6 +77,7 @@ public class ClanmemberController {
     @PreAuthorize("hasAnyRole('ADMIN', 'COORDINATOR')")
     public String addClanmemberForm(
             @RequestParam(value = "discordId", required = false) String discordId,
+            @RequestParam(value = "skipLookup", required = false) boolean skipLookup,
             Model model) {
 
         model.addAttribute("clanRanks", ClanRank.values());
@@ -86,7 +87,9 @@ public class ClanmemberController {
         model.addAttribute("lookupError", "");
         model.addAttribute("altAccountWarning", false);
 
-        if (discordId != null && !discordId.isBlank()) {
+        if (skipLookup) {
+            model.addAttribute("lookupSuccess", true);
+        } else if (discordId != null && !discordId.isBlank()) {
             try {
                 dto = clanmemberService.lookupDiscordUser(discordId);
                 model.addAttribute("lookupSuccess", true);
