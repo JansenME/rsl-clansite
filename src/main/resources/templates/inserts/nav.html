@@ -16,8 +16,13 @@
                 </a>
 
                 <a th:unless="${clanmemberViewData}"
-                   th:href="@{/oauth2/authorization/discord}">
-                    Login (Discord)
+                   th:href="@{/oauth2/authorization/discord}"
+                   title="Login with Discord">
+
+                    <img th:src="@{../images/discord.png}"
+                         alt="Login with Discord"
+                         style="vertical-align: middle; margin-top: -3px;" />
+
                 </a>
 
             </nav>
