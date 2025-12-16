@@ -26,6 +26,8 @@ import java.util.Set;
 @Slf4j
 @Service
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
+    private static final String OWNER_DISCORD_ID = "270588526267990017";
+
     private final ClanmemberService clanmemberService;
 
     @Autowired
@@ -92,6 +94,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         }
 
         Set<SimpleGrantedAuthority> authorities = mapRolesToAuthorities(userDiscordRoles);
+
+        if(OWNER_DISCORD_ID.equals(userId)) {
+            log.info("Granting ROLE_OWNER to Discord ID: {}", userId);
+            authorities.add(new SimpleGrantedAuthority("ROLE_OWNER"));
+        }
 
         Map<String, Object> updatedAttributes = new HashMap<>(oauth2User.getAttributes());
         updatedAttributes.put("rawDiscordRoleIds", userDiscordRoles);
