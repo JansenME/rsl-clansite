@@ -212,4 +212,12 @@ public class ClanmemberService {
             throw new RuntimeException("Role lookup failed: " + e.getMessage());
         }
     }
+
+    public boolean isDiscordIdInRoster(String discordId) {
+        return clanmemberRepository.countByDiscordId(discordId) > 0;
+    }
+
+    public boolean isPlayerIngameNameInUse(String ingameName) {
+        return clanmemberRepository.existsByIngameName(ingameName);
+    }
 }

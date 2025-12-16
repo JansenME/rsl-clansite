@@ -80,13 +80,20 @@ public class ClanmemberController {
             Model model) {
 
         model.addAttribute("clanRanks", ClanRank.values());
-
         NewClanmemberDTO dto = new NewClanmemberDTO();
+
+        model.addAttribute("lookupSuccess", false);
+        model.addAttribute("lookupError", "");
+        model.addAttribute("altAccountWarning", false);
 
         if (discordId != null && !discordId.isBlank()) {
             try {
                 dto = clanmemberService.lookupDiscordUser(discordId);
                 model.addAttribute("lookupSuccess", true);
+
+                if (clanmemberService.isDiscordIdInRoster(discordId)) {
+                    model.addAttribute("altAccountWarning", true);
+                }
             } catch (Exception e) {
                 model.addAttribute("lookupError", "Error looking up user: " + e.getMessage());
             }
@@ -106,6 +113,19 @@ public class ClanmemberController {
             model.addAttribute("clanRanks", ClanRank.values());
             model.addAttribute("clanmemberRosterDto", dto);
             model.addAttribute("lookupSuccess", true);
+            model.addAttribute("lookupError", "");
+            return "clanmember-add";
+        }
+
+        if (clanmemberService.isPlayerIngameNameInUse(dto.getIngameName())) {
+            model.addAttribute("clanRanks", ClanRank.values());
+            model.addAttribute("clanmemberRosterDto", dto);
+
+            model.addAttribute("lookupError", "Failed to save member: The In-Game Name '" + dto.getIngameName() + "' already exists in the roster.");
+            model.addAttribute("lookupSuccess", true);
+
+            model.addAttribute("altAccountWarning", false);
+
             return "clanmember-add";
         }
 
@@ -116,6 +136,7 @@ public class ClanmemberController {
             model.addAttribute("clanmemberRosterDto", dto);
             model.addAttribute("lookupError", "Failed to save member: " + e.getMessage());
             model.addAttribute("lookupSuccess", true);
+            model.addAttribute("altAccountWarning", false);
             return "clanmember-add";
         }
 
