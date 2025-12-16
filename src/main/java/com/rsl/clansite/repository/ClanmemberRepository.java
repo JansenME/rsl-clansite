@@ -12,4 +12,5 @@ public interface ClanmemberRepository extends MongoRepository<ClanmemberEntity, 
     List<ClanmemberEntity> findAllByDiscordId(String discordId);
     long countByDiscordId(String discordId);
     boolean existsByIngameName(String ingameName);
+    List<ClanmemberEntity> findAllByDiscordIdIsNotNull();
 }

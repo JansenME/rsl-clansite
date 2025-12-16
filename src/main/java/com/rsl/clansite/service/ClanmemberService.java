@@ -11,9 +11,11 @@ import com.rsl.clansite.repository.ClanmemberRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
@@ -40,6 +42,35 @@ public class ClanmemberService {
     public ClanmemberService(ClanmemberRepository clanmemberRepository, final DiscordRoleService discordRoleService) {
         this.clanmemberRepository = clanmemberRepository;
         this.discordRoleService = discordRoleService;
+    }
+
+    @Scheduled(cron = "0 0 * * * *")
+    @Transactional
+    public void updateAllClanmemberDiscordRoles() {
+        log.info("Starting scheduled Discord role verification job.");
+
+        List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordIdIsNotNull();
+
+        int membersUpdated = 0;
+
+        for (ClanmemberEntity member : linkedMembers) {
+            try {
+                List<String> currentDiscordRoles = getDiscordRoles(member.getDiscordId());
+
+                if (!currentDiscordRoles.equals(member.getDiscordRoles())) {
+                    member.setDiscordRoles(currentDiscordRoles);
+                    clanmemberRepository.save(member);
+                    membersUpdated++;
+                    log.debug("Updated roles for member: {} (ID: {})", member.getDiscordName(), member.getDiscordId());
+                }
+
+            } catch (RuntimeException e) {
+                log.warn("Failed to update roles for Discord ID {}: {}", member.getDiscordId(), e.getMessage());
+            }
+        }
+
+        log.info("Completed scheduled role verification. Total members checked: {}, Updated: {}",
+                linkedMembers.size(), membersUpdated);
     }
 
     public void linkClanmember(final String discordId, final String globalName, final String avatarHash, final List<String> currentDiscordRoles) {
@@ -119,7 +150,6 @@ public class ClanmemberService {
     }
 
     public void saveNewClanmember(NewClanmemberDTO dto) {
-
         ClanmemberEntity newMember = new ClanmemberEntity();
 
         newMember.setDiscordId(dto.getDiscordId());
