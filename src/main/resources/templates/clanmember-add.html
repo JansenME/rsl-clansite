@@ -44,12 +44,11 @@
 							<form th:action="@{/clanmembers/save}" th:object="${clanmemberRosterDto}" method="post">
 
 								<input type="hidden" th:field="*{discordId}" />
-
 								<input type="hidden" th:field="*{discordName}" />
+								<input type="hidden" th:field="*{avatarHash}" />
 
-								<div style="margin-top: 15px;">
-									<label>Discord ID (Verified):</label>
-									<p style="font-weight: bold;" th:text="*{discordId}"></p>
+								<div th:each="roleId : *{discordRoles}">
+									<input type="hidden" name="discordRoles" th:value="${roleId}" />
 								</div>
 
 								<div>

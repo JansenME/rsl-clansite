@@ -4,6 +4,8 @@ import com.rsl.clansite.model.enums.ClanRank;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 public class NewClanmemberDTO {
@@ -14,4 +16,7 @@ public class NewClanmemberDTO {
 
     private String ingameName;
     private ClanRank clanRank;
+
+    private String avatarHash;
+    private List<String> discordRoles;
 }

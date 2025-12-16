@@ -119,6 +119,7 @@ public class ClanmemberService {
     }
 
     public void saveNewClanmember(NewClanmemberDTO dto) {
+
         ClanmemberEntity newMember = new ClanmemberEntity();
 
         newMember.setDiscordId(dto.getDiscordId());
@@ -128,8 +129,8 @@ public class ClanmemberService {
 
         newMember.setClanRank(dto.getClanRank() != null ? dto.getClanRank().name() : ClanRank.SOLDIER.name());
 
-        newMember.setAvatarHash(null);
-        newMember.setDiscordRoles(List.of());
+        newMember.setAvatarHash(dto.getAvatarHash());
+        newMember.setDiscordRoles(dto.getDiscordRoles());
         newMember.setChampions(List.of());
 
         clanmemberRepository.save(newMember);
@@ -150,15 +151,19 @@ public class ClanmemberService {
                     .block();
 
             JsonNode memberData = objectMapper.readTree(memberJson);
-
             JsonNode userData = memberData.path("user");
 
             String globalName = userData.path("global_name").asText();
             String username = memberData.path("username").asText();
             String nick = memberData.path("nick").asText();
+            String avatarHash = userData.path("avatar").asText();
 
             dto.setDiscordName(globalName.isBlank() ? username : globalName);
             dto.setPlayerNickname(nick.isBlank() ? dto.getDiscordName() : nick);
+            dto.setAvatarHash(avatarHash);
+
+            List<String> currentDiscordRoles = getDiscordRoles(userId);
+            dto.setDiscordRoles(currentDiscordRoles);
 
             return dto;
 
@@ -175,7 +180,15 @@ public class ClanmemberService {
         }
     }
 
-    public List<String> getDiscordRoles(String userId) throws RuntimeException {
+    public boolean isDiscordIdInRoster(String discordId) {
+        return clanmemberRepository.countByDiscordId(discordId) > 0;
+    }
+
+    public boolean isPlayerIngameNameInUse(String ingameName) {
+        return clanmemberRepository.existsByIngameName(ingameName);
+    }
+
+    private List<String> getDiscordRoles(String userId) throws RuntimeException {
         String apiUri = DISCORD_MEMBER_API_BASE + clanServerId + "/members/" + userId;
 
         try {
@@ -211,13 +224,5 @@ public class ClanmemberService {
             log.error("General error in getDiscordRoles: {}", e.getMessage());
             throw new RuntimeException("Role lookup failed: " + e.getMessage());
         }
-    }
-
-    public boolean isDiscordIdInRoster(String discordId) {
-        return clanmemberRepository.countByDiscordId(discordId) > 0;
-    }
-
-    public boolean isPlayerIngameNameInUse(String ingameName) {
-        return clanmemberRepository.existsByIngameName(ingameName);
     }
 }
