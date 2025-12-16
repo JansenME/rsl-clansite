@@ -13,8 +13,8 @@ import com.rsl.clansite.model.enums.Rarity;
 import com.rsl.clansite.model.enums.Type;
 import com.rsl.clansite.service.ChampionsService;
 import com.rsl.clansite.service.CommonsService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,8 +38,8 @@ public class ChampionsController {
     }
 
     @GetMapping(value={"", "/"})
-    public String getAllChampions(Model model) {
-        fillModel(model);
+    public String getAllChampions(Model model, Authentication authentication) {
+        fillModel(model, authentication);
 
         model.addAttribute("filtersWrapper", new CompleteChampionsFilter());
         model.addAttribute("champions", championsService.getAllChampions());
@@ -48,8 +48,8 @@ public class ChampionsController {
     }
 
     @GetMapping("/new")
-    public String newChampionForm(Model model) {
-        fillModel(model);
+    public String newChampionForm(Model model, Authentication authentication) {
+        fillModel(model, authentication);
 
         model.addAttribute("newChampion", new ChampionEntryDTO(true));
 
@@ -77,8 +77,8 @@ public class ChampionsController {
         return ResponseEntity.of(Optional.of(championsService.saveAllChampionsFromCsv()));
     }
 
-    private void fillModel(Model model) {
-        commonsService.fillModel(model);
+    private void fillModel(Model model, Authentication authentication) {
+        commonsService.fillModel(model, authentication);
 
         int totalAmountOfChampions = 299+238+265+174;
 

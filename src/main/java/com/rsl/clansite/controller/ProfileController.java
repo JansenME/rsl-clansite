@@ -7,17 +7,17 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
-public class IndexController {
+public class ProfileController {
     private final CommonsService commonsService;
 
-    public IndexController(final CommonsService commonsService) {
+    public ProfileController(CommonsService commonsService) {
         this.commonsService = commonsService;
     }
 
-    @GetMapping(value={"", "/", "/index"})
-    public String index(Model model, Authentication authentication) {
+    @GetMapping("/profile")
+    public String viewProfile(Model model, Authentication authentication) {
         commonsService.fillModel(model, authentication);
 
-        return "index";
+        return "profile";
     }
 }

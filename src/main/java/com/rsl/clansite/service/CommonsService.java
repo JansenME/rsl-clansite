@@ -2,6 +2,7 @@ package com.rsl.clansite.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
 
@@ -18,13 +19,23 @@ import java.util.Date;
 @Slf4j
 @Service
 public class CommonsService {
+    private final ClanmemberService clanmemberService;
+
+    public CommonsService(ClanmemberService clanmemberService) {
+        this.clanmemberService = clanmemberService;
+    }
+
     @Value("${app.version:unknown}")
     String version;
 
-    public void fillModel(Model model) {
+    public void fillModel(Model model, Authentication authentication) {
         model.addAttribute("versionNumber", version);
         model.addAttribute("currentYear", new SimpleDateFormat("yyyy").format(new Date()));
         model.addAttribute("applicationDate", getApplicationDate());
+
+        if (authentication != null && authentication.isAuthenticated()) {
+            model.addAttribute("clanmemberViewData", clanmemberService.getUserViewData(authentication));
+        }
     }
 
     private String getApplicationDate() {

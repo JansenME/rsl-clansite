@@ -32,8 +32,7 @@ public class ClanmemberController {
 
     @GetMapping(value={"", "/"})
     public String viewClanmembers(Model model, Authentication authentication, HttpSession session) {
-        commonsService.fillModel(model);
-        model.addAttribute("clanmemberViewData", clanmemberService.getUserViewData(authentication));
+        commonsService.fillModel(model, authentication);
 
         String currentDiscordId = authentication.getName();
 
@@ -78,8 +77,9 @@ public class ClanmemberController {
     public String addClanmemberForm(
             @RequestParam(value = "discordId", required = false) String discordId,
             @RequestParam(value = "skipLookup", required = false) boolean skipLookup,
-            Model model) {
-
+            Model model,
+            Authentication authentication) {
+        commonsService.fillModel(model, authentication);
         model.addAttribute("clanRanks", ClanRank.values());
         NewClanmemberDTO dto = new NewClanmemberDTO();
 

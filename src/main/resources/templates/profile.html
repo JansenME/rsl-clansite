@@ -1,0 +1,56 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+	<head>
+		<title>Clanmembers</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" th:href="@{../styles/css/main.css}" />
+		<script th:src="@{../styles/js/main.js}"></script>
+	</head>
+	<body>
+		<div id="page-wrapper">
+			<section id="header">
+				<div th:insert="~{inserts/nav :: nav}" class="container">
+				</div>
+			</section>
+
+			<section id="content">
+				<div class="container">
+					<section>
+						<h2>My Profile & Roles</h2>
+
+						<div th:if="${clanmemberViewData}">
+							<div style="display: flex; align-items: flex-start; margin-bottom: 0px;">
+
+								<div th:if="${clanmemberViewData.discordAvatarUrl}" style="margin-right: 15px;">
+									<img th:src="${clanmemberViewData.discordAvatarUrl}"
+										 alt="Discord Avatar"
+										 style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
+								</div>
+
+								<div style="margin-left: 0; padding-left: 0;">
+
+									<p style="margin: 0 0 20px 0; padding-left: 0;">Logged in as: <br /><strong th:text="${clanmemberViewData.discordUserName}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong></p>
+									<p style="font-weight: bold; margin-bottom: 5px; margin-left: 0; padding-left: 0;">Roles:</p>
+
+									<ul style="list-style: disc; margin-left: 20px; padding: 0; text-align: left;">
+										<li th:each="discordUserRole : ${clanmemberViewData.discordUserRoles}">
+											<span th:text="${discordUserRole}">Role Name</span>
+										</li>
+									</ul>
+								</div>
+							</div>
+							<p><form th:action="@{/perform_logout}" method="post"><button type="submit">Logout</button></form></p>
+						</div>
+						<div th:unless="${clanmemberViewData}">
+							<p>Please <a th:href="@{/oauth2/authorization/discord}">log in</a> to view your profile.</p>
+						</div>
+					</section>
+				</div>
+			</section>
+
+			<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+			</div>
+		</div>
+	</body>
+</html>
