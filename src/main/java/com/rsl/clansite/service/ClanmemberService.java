@@ -53,19 +53,72 @@ public class ClanmemberService {
 
         int membersUpdated = 0;
 
-        for (ClanmemberEntity member : linkedMembers) {
-            try {
-                List<String> currentDiscordRoles = getDiscordRoles(member.getDiscordId());
+        final List<String> masterOrder = discordRoleService.getOrderedRoleIds();
 
-                if (!currentDiscordRoles.equals(member.getDiscordRoles())) {
-                    member.setDiscordRoles(currentDiscordRoles);
-                    clanmemberRepository.save(member);
-                    membersUpdated++;
-                    log.debug("Updated roles for member: {} (ID: {})", member.getDiscordName(), member.getDiscordId());
+        for (ClanmemberEntity member : linkedMembers) {
+            String apiUri = DISCORD_MEMBER_API_BASE + clanServerId + "/members/" + member.getDiscordId();
+
+            try {
+                String memberJson = webClient.get()
+                        .uri(apiUri)
+                        .header("Authorization", "Bot " + botToken)
+                        .retrieve()
+                        .bodyToMono(String.class)
+                        .block();
+
+                JsonNode memberData = objectMapper.readTree(memberJson);
+                JsonNode userData = memberData.path("user");
+
+                String newAvatarHash = userData.path("avatar").asText();
+
+                List<String> newDiscordRoles = List.of();
+                JsonNode rolesNode = memberData.path("roles");
+                if (rolesNode.isArray()) {
+                    newDiscordRoles = new java.util.ArrayList<>();
+                    for (JsonNode roleId : rolesNode) {
+                        newDiscordRoles.add(roleId.asText());
+                    }
                 }
 
-            } catch (RuntimeException e) {
-                log.warn("Failed to update roles for Discord ID {}: {}", member.getDiscordId(), e.getMessage());
+                List<String> sortedRoles = new java.util.ArrayList<>(newDiscordRoles);
+
+                sortedRoles.sort((id1, id2) -> {
+                    int index1 = masterOrder.indexOf(id1);
+                    int index2 = masterOrder.indexOf(id2);
+
+                    if (index1 == -1 && index2 == -1) return 0;
+                    if (index1 == -1) return 1;
+                    if (index2 == -1) return -1;
+
+                    return Integer.compare(index1, index2);
+                });
+
+                boolean needsUpdate = false;
+
+                if (!sortedRoles.equals(member.getDiscordRoles())) {
+                    member.setDiscordRoles(sortedRoles);
+                    needsUpdate = true;
+                    log.debug("Roles changed for member: {}", member.getDiscordName());
+                }
+
+                if (member.getAvatarHash() == null || !newAvatarHash.equals(member.getAvatarHash())) {
+                    member.setAvatarHash(newAvatarHash);
+                    needsUpdate = true;
+                    log.debug("Avatar hash changed for member: {}", member.getDiscordName());
+                }
+
+                if (needsUpdate) {
+                    clanmemberRepository.save(member);
+                    membersUpdated++;
+                }
+            } catch (WebClientResponseException e) {
+                if (e.getStatusCode().value() == 404) {
+                    log.warn("User {} not found in guild {}. May have left the server. Skipping update.", member.getDiscordId(), clanServerId);
+                } else {
+                    log.warn("API error fetching data for Discord ID {}: {}", member.getDiscordId(), e.getResponseBodyAsString());
+                }
+            } catch (Exception e) {
+                log.error("General error during scheduled update for {}: {}", member.getDiscordId(), e.getMessage());
             }
         }
 
@@ -192,7 +245,14 @@ public class ClanmemberService {
             dto.setPlayerNickname(nick.isBlank() ? dto.getDiscordName() : nick);
             dto.setAvatarHash(avatarHash);
 
-            List<String> currentDiscordRoles = getDiscordRoles(userId);
+            List<String> currentDiscordRoles = new java.util.ArrayList<>();
+            JsonNode rolesNode = memberData.path("roles");
+
+            if (rolesNode.isArray()) {
+                for (JsonNode roleId : rolesNode) {
+                    currentDiscordRoles.add(roleId.asText());
+                }
+            }
             dto.setDiscordRoles(currentDiscordRoles);
 
             return dto;
@@ -216,43 +276,5 @@ public class ClanmemberService {
 
     public boolean isPlayerIngameNameInUse(String ingameName) {
         return clanmemberRepository.existsByIngameName(ingameName);
-    }
-
-    private List<String> getDiscordRoles(String userId) throws RuntimeException {
-        String apiUri = DISCORD_MEMBER_API_BASE + clanServerId + "/members/" + userId;
-
-        try {
-            String memberJson = webClient.get()
-                    .uri(apiUri)
-                    .header("Authorization", "Bot " + botToken)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
-
-            JsonNode memberData = objectMapper.readTree(memberJson);
-
-            JsonNode rolesNode = memberData.path("roles");
-
-            if (rolesNode.isArray()) {
-                List<String> roles = new java.util.ArrayList<>();
-                for (JsonNode roleId : rolesNode) {
-                    roles.add(roleId.asText());
-                }
-                return roles;
-            }
-
-            return List.of();
-
-        } catch (WebClientResponseException e) {
-            if (e.getStatusCode().value() == 404) {
-                log.warn("User {} not found in guild {}. Cannot fetch roles.", userId, clanServerId);
-                return List.of();
-            }
-            log.error("WebClient error fetching Discord member roles: {}", e.getResponseBodyAsString());
-            throw new RuntimeException("API error while fetching Discord roles.");
-        } catch (Exception e) {
-            log.error("General error in getDiscordRoles: {}", e.getMessage());
-            throw new RuntimeException("Role lookup failed: " + e.getMessage());
-        }
     }
 }
