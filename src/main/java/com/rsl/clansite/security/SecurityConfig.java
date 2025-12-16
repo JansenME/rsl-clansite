@@ -12,11 +12,15 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.logout.CookieClearingLogoutHandler;
 import org.springframework.session.data.mongo.config.annotation.web.http.EnableMongoHttpSession;
+import org.springframework.session.web.http.CookieSerializer;
+import org.springframework.session.web.http.DefaultCookieSerializer;
 
+@EnableMongoHttpSession(maxInactiveIntervalInSeconds = 31536000)
 @Configuration
 @EnableWebSecurity
-@EnableMongoHttpSession
 public class SecurityConfig {
+    private static final int SESSION_TIMEOUT_SECONDS = 31536000;
+
     @Autowired
     private OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService;
 
@@ -24,6 +28,13 @@ public class SecurityConfig {
 
     public SecurityConfig(CustomAuthenticationFailureHandler failureHandler) {
         this.failureHandler = failureHandler;
+    }
+
+    @Bean
+    public CookieSerializer cookieSerializer() {
+        DefaultCookieSerializer serializer = new DefaultCookieSerializer();
+        serializer.setCookieMaxAge(SESSION_TIMEOUT_SECONDS);
+        return serializer;
     }
 
     @Bean
