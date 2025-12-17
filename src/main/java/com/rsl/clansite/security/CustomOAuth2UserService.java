@@ -71,8 +71,14 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         JsonNode memberData = getClanmemberData(userId);
 
         if (memberData == null || memberData.has("message")) {
-            log.warn("Access Denied for user {}: Not a member of the clan server or API error (Guild ID: {})", userId, clanServerId);
-            throw new OAuth2AuthenticationException("Access Denied: You must be a member of the clan's Discord server to access this application.");
+            log.warn("Access Denied for user {}: Not a member of the clan server (Guild ID: {})", userId, clanServerId);
+
+            OAuth2Error error = new OAuth2Error(
+                    "not_in_guild",
+                    "Access Denied: You must be a member of the clan's Discord server to access this application.",
+                    null
+            );
+            throw new OAuth2AuthenticationException(error);
         }
 
         Set<String> userDiscordRoles = getMemberRoles(memberData);
@@ -98,7 +104,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             log.info("Granting ROLE_OWNER to Discord ID: {}", userId);
             authorities.add(new SimpleGrantedAuthority("ROLE_OWNER"));
 
-            authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+            //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
             //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
             //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
         }

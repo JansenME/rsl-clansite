@@ -16,16 +16,19 @@ import java.nio.charset.StandardCharsets;
 public class CustomAuthenticationFailureHandler implements AuthenticationFailureHandler {
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
-        if(exception instanceof OAuth2AuthenticationException oauth2Ex) {
-            if ("unlinked_account".equals(oauth2Ex.getError().getErrorCode())) {
 
-                String errorMessage = URLEncoder.encode(oauth2Ex.getError().getDescription(), StandardCharsets.UTF_8);
+        String messageToUser = "The connection to Discord failed. Please tell Kloep (Kleoperd) on Discord to check the Client Secret.";
 
-                response.sendRedirect("/login-error/unlinked?error=" + errorMessage);
-                return;
+        if (exception instanceof OAuth2AuthenticationException oauth2Ex) {
+            String errorCode = oauth2Ex.getError().getErrorCode();
+            String description = oauth2Ex.getError().getDescription();
+
+            if ("unlinked_account".equals(errorCode) || "not_in_guild".equals(errorCode)) {
+                messageToUser = (description != null) ? description : "Access Denied.";
             }
-
-            response.sendRedirect("/login-error");
         }
+
+        String errorMessage = URLEncoder.encode(messageToUser, StandardCharsets.UTF_8);
+        response.sendRedirect("/login?error=" + errorMessage);
     }
 }

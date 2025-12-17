@@ -1,0 +1,46 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+	<head>
+		<title>Access Denied: Account Not Linked</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+		<script th:src="@{/styles/js/main.js}"></script>
+	</head>
+	<body>
+		<div id="page-wrapper">
+			<section id="header">
+				<div th:insert="~{inserts/nav :: nav}" class="container">
+				</div>
+			</section>
+
+			<section id="content">
+				<div class="container">
+					<section>
+						<div th:if="${loginError}" style="background: rgba(255, 0, 0, 0.1); border: 1px solid #ff0000; color: #ff0000; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+							<p style="margin: 0;" th:text="${loginError}"></p>
+							<p th:if="${#strings.contains(loginError, 'linked')}"
+							   style="font-size: 0.8em; margin-top: 5px;">Please contact a Deputy or higher on Discord to get registered.</p>
+						</div>
+
+						<h2>Login via Discord</h2>
+						<p>Here you can log in via Discord. When you log in, we will check whether you are a member of the Clan Discord. If not, you won't be able to log in. After logging in, depending on your Discord roles, you might have access to certain areas of the website. You will also be able to add Champions to your own Roster.</p>
+
+						<a th:unless="${clanmemberViewData}"
+						   th:href="@{/oauth2/authorization/discord}"
+						   title="Login with Discord">
+
+							<img th:src="@{/images/discord.png}"
+								 alt="Login with Discord"
+								 style="vertical-align: middle; margin-top: -3px;" />
+
+						</a>
+					</section>
+				</div>
+			</section>
+
+			<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+			</div>
+		</div>
+	</body>
+</html>

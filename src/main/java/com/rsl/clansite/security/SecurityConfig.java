@@ -56,7 +56,8 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/index", "/", "/styles/**", "/images/**", "/login**", "/perform_logout", "/login-error/**",
+                                "/index", "/", "/styles/**", "/images/**",
+                                "/login", "/perform_logout", "/error/**",
                                 "/champions", "/champions/",
                                 "/clanmembers", "/clanmembers/"
                         ).permitAll()
@@ -71,12 +72,12 @@ public class SecurityConfig {
                             if (request.getUserPrincipal() != null) {
                                 response.sendRedirect("/error/403");
                             } else {
-                                response.sendRedirect("/oauth2/authorization/discord");
+                                response.sendRedirect("/login");
                             }
                         })
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/oauth2/authorization/discord")
+                        .loginPage("/login")
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )

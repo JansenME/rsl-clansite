@@ -10,7 +10,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class CustomErrorController implements ErrorController {
@@ -18,21 +17,6 @@ public class CustomErrorController implements ErrorController {
 
     public CustomErrorController(CommonsService commonsService) {
         this.commonsService = commonsService;
-    }
-
-    @GetMapping("/login-error/unlinked")
-    public String handleUnlinkedAccountError(@RequestParam("error") String errorMessage, Model model, Authentication authentication) {
-        commonsService.fillModel(model, authentication);
-        model.addAttribute("errorMessage", errorMessage);
-        model.addAttribute("contact", "Please contact the administrator on Discord to link your account.");
-        return "unlinked";
-    }
-
-    @GetMapping("/login-error")
-    public String handleGenericLoginError(Model model, Authentication authentication) {
-        commonsService.fillModel(model, authentication);
-        model.addAttribute("errorMessage", "An unknown authentication error occurred.");
-        return "error";
     }
 
     @RequestMapping("/error")

@@ -4,8 +4,8 @@
 		<title>Clanmembers</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" th:href="@{../styles/css/main.css}" />
-		<script th:src="@{../styles/js/main.js}"></script>
+		<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+		<script th:src="@{/styles/js/main.js}"></script>
 	</head>
 	<body>
 		<div id="page-wrapper">
@@ -44,7 +44,7 @@
 
 								<td th:text="${member.discordName}">Global Name</td>
 								<td th:text="${member.playerNickname}">Server Nickname</td> <td th:text="${member.ingameName}">In-Game Name</td>
-								<td th:text="${T(com.rsl.clansite.model.enums.ClanRank).valueOf(member.clanRank).getName()}">Rank</td>
+								<td th:text="${member.clanRank != null ? T(com.rsl.clansite.model.enums.ClanRank).valueOf(member.clanRank).getName() : 'Unknown'}">Rank</td>
 								<td th:text="${member.champions != null ? member.champions.size() : 0}">0</td>
 							</tr>
 							</tbody>

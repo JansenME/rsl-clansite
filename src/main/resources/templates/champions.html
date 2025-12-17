@@ -4,8 +4,8 @@
 		<title>Raid Shadow Legends Fan Site</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" th:href="@{../styles/css/main.css}" />
-		<script th:src="@{../styles/js/main.js}"></script>
+		<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+		<script th:src="@{/styles/js/main.js}"></script>
 	</head>
 	<body>
 		<div id="page-wrapper">
@@ -137,7 +137,7 @@
 								 th:data-alliance="${champion.getFaction().getAlliance().getName()}"
 								 th:data-name="${champion.getName()}"
 								 th:data-score="${champion.getArenaScore()}">
-								<img th:src="@{../images/champions/{imagename}(imagename=${champion.getImagename()})}" style="width:140px;"/>
+								<img th:src="@{/images/champions/{imagename}(imagename=${champion.getImagename()})}" style="width:140px;"/>
 								<div class="champion-rating-placeholder"></div>
 								<p class="champion-name" th:text="${champion.getName()}"></p>
 							</div>
