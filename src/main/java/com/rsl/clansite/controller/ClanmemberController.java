@@ -13,6 +13,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -140,6 +141,13 @@ public class ClanmemberController {
             return "clanmember-add";
         }
 
+        return "redirect:/clanmembers";
+    }
+
+    @PostMapping("/{id}/delete")
+    @PreAuthorize("hasAnyRole('ADMIN', 'COORDINATOR')")
+    public String deleteClanmember(@PathVariable String id, HttpSession session) {
+        clanmemberService.deleteById(id, session);
         return "redirect:/clanmembers";
     }
 }

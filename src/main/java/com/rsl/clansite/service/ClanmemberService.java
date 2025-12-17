@@ -8,7 +8,9 @@ import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.enums.ClanRank;
 import com.rsl.clansite.repository.ClanmemberRepository;
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -276,5 +278,14 @@ public class ClanmemberService {
 
     public boolean isPlayerIngameNameInUse(String ingameName) {
         return clanmemberRepository.existsByIngameName(ingameName);
+    }
+
+    public void deleteById(String id, HttpSession session) {
+        String activeId = (String) session.getAttribute("ACTIVE_MEMBER_ID");
+        if (id.equals(activeId)) {
+            session.removeAttribute("ACTIVE_MEMBER_ID");
+        }
+
+        clanmemberRepository.deleteById(new ObjectId(id));
     }
 }
