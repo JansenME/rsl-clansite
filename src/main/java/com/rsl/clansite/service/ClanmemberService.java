@@ -238,13 +238,17 @@ public class ClanmemberService {
             JsonNode memberData = objectMapper.readTree(memberJson);
             JsonNode userData = memberData.path("user");
 
+            JsonNode nickNode = memberData.path("nick");
+            String nick = (nickNode.isMissingNode() || nickNode.isNull()) ? "" : nickNode.asText();
+
             String globalName = userData.path("global_name").asText();
             String username = memberData.path("username").asText();
-            String nick = memberData.path("nick").asText();
             String avatarHash = userData.path("avatar").asText();
 
+            String finalDiscordName = globalName.isBlank() ? username : globalName;
+
             dto.setDiscordName(globalName.isBlank() ? username : globalName);
-            dto.setPlayerNickname(nick.isBlank() ? dto.getDiscordName() : nick);
+            dto.setPlayerNickname(nick.isBlank() ? finalDiscordName : nick);
             dto.setAvatarHash(avatarHash);
 
             List<String> currentDiscordRoles = new java.util.ArrayList<>();
