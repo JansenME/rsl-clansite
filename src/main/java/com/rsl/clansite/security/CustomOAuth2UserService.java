@@ -98,13 +98,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             log.info("Granting ROLE_OWNER to Discord ID: {}", userId);
             authorities.add(new SimpleGrantedAuthority("ROLE_OWNER"));
 
-            //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+            authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
             //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
             //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
         }
 
         Map<String, Object> updatedAttributes = new HashMap<>(oauth2User.getAttributes());
         updatedAttributes.put("rawDiscordRoleIds", userDiscordRoles);
+
+        log.info("Logged in user {} has the following roles: {}", globalName, authorities);
 
         return new DefaultOAuth2User(
                 authorities,

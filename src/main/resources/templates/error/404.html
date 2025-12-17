@@ -1,0 +1,34 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+	<head>
+		<title>Page Not Found</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" th:href="@{../../styles/css/main.css}" />
+		<script th:src="@{../../styles/js/main.js}"></script>
+	</head>
+	<body>
+		<div id="page-wrapper">
+			<section id="header">
+				<div th:insert="~{inserts/nav :: nav}" class="container">
+				</div>
+			</section>
+
+			<section id="content">
+				<div class="container">
+					<section>
+						<h2 style="color: #0c2ccc;" th:text="${errorTitle != null ? errorTitle : '404 - Not Found'}"></h2>
+						<p th:text="${errorMessage != null ? errorMessage : ''}"></p>
+
+						<div style="margin-top: 30px;">
+							<a th:href="@{/}" class="button">Return to Mainpage</a>
+						</div>
+					</section>
+				</div>
+			</section>
+
+			<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+			</div>
+		</div>
+	</body>
+</html>

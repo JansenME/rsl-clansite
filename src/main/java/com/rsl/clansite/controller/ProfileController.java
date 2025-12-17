@@ -1,6 +1,7 @@
 package com.rsl.clansite.controller;
 
 import com.rsl.clansite.service.CommonsService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -15,6 +16,7 @@ public class ProfileController {
     }
 
     @GetMapping("/profile")
+    @PreAuthorize("isAuthenticated()")
     public String viewProfile(Model model, Authentication authentication) {
         commonsService.fillModel(model, authentication);
 

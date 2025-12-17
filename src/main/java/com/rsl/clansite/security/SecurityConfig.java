@@ -1,10 +1,12 @@
 package com.rsl.clansite.security;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -17,10 +19,11 @@ import org.springframework.session.data.mongo.config.annotation.web.http.EnableM
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
 
-
-@EnableMongoHttpSession(maxInactiveIntervalInSeconds = 31536000)
+@Slf4j
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
+@EnableMongoHttpSession(maxInactiveIntervalInSeconds = 31536000)
 public class SecurityConfig {
     private static final int SESSION_TIMEOUT_SECONDS = 31536000;
 
@@ -48,16 +51,29 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .securityContext(context -> context
+                        .requireExplicitSave(false)
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/index", "/", "/styles/**", "/images/**", "/login**", "/perform_logout", "/login-error/**",
                                 "/champions", "/champions/",
                                 "/clanmembers", "/clanmembers/"
                         ).permitAll()
-                        .requestMatchers("/clanmembers/add", "/clanmembers/save").hasAnyRole("ADMIN")
-                        .requestMatchers("/clanmembers/*", "/clanmembers/switch", "/profile").authenticated()
-                        .requestMatchers("/**").hasRole("OWNER")
+                        .requestMatchers("/profile", "/champions/**", "/clanmembers/**").authenticated()
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(exception -> exception
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.sendRedirect("/error/403");
+                        })
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            if (request.getUserPrincipal() != null) {
+                                response.sendRedirect("/error/403");
+                            } else {
+                                response.sendRedirect("/oauth2/authorization/discord");
+                            }
+                        })
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/oauth2/authorization/discord")

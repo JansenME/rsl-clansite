@@ -14,6 +14,7 @@ import com.rsl.clansite.model.enums.Type;
 import com.rsl.clansite.service.ChampionsService;
 import com.rsl.clansite.service.CommonsService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -48,6 +49,7 @@ public class ChampionsController {
     }
 
     @GetMapping("/new")
+    @PreAuthorize("hasRole('OWNER')")
     public String newChampionForm(Model model, Authentication authentication) {
         fillModel(model, authentication);
 
@@ -57,6 +59,7 @@ public class ChampionsController {
     }
 
     @PostMapping("/save")
+    @PreAuthorize("hasRole('OWNER')")
     public String saveChampion(@ModelAttribute("newChampion") ChampionEntryDTO dto, RedirectAttributes redirectAttributes) {
         try {
             championsService.saveNewChampion(dto);
@@ -73,6 +76,7 @@ public class ChampionsController {
     }
 
     @GetMapping("/saveChampsFromCsv")
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<List<ChampionEntity>> saveAllChampionsFromCsv() {
         return ResponseEntity.of(Optional.of(championsService.saveAllChampionsFromCsv()));
     }

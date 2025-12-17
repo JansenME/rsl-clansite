@@ -57,6 +57,7 @@ public class ClanmemberController {
     }
 
     @PostMapping("/switch")
+    @PreAuthorize("isAuthenticated()")
     public String switchAccount(
             @RequestParam("memberId") String newActiveMemberId,
             Authentication authentication,
@@ -111,6 +112,7 @@ public class ClanmemberController {
     }
 
     @PostMapping("/save")
+    @PreAuthorize("hasAnyRole('ADMIN', 'COORDINATOR')")
     public String saveClanmember(
             @Valid NewClanmemberDTO dto,
             BindingResult bindingResult,

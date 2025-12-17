@@ -1,6 +1,8 @@
 package com.rsl.clansite.controller;
 
 import com.rsl.clansite.service.CommonsService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -19,5 +21,10 @@ public class IndexController {
         commonsService.fillModel(model, authentication);
 
         return "index";
+    }
+
+    @GetMapping("/woopsie")
+    public String triggerError() {
+        throw new RuntimeException("Test Exception for 500 page");
     }
 }
