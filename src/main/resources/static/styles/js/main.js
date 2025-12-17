@@ -202,14 +202,6 @@ function applyChampionFilters() {
             }
         }
 
-        // Search Filter
-        if (passesFilters && searchTerm.length > 0) {
-            const championName = card.getAttribute('data-name').toLowerCase();
-            if (!championName.includes(searchTerm)) {
-                passesFilters = false;
-            }
-        }
-
         if (passesFilters) {
             allPassedCards.push(card);
         }
@@ -312,6 +304,32 @@ function toggleAuraFields() {
         amountInput.required = false;
 
         amountInput.removeAttribute('min');
+    }
+}
+
+function toggleFilter() {
+    const wrapper = document.getElementById('filter-wrapper');
+    const arrow = document.getElementById('filter-arrow');
+    const btnText = document.getElementById('filter-text');
+
+    if (wrapper.style.maxHeight === '0px' || wrapper.style.maxHeight === '') {
+        wrapper.style.maxHeight = '1000px';
+        wrapper.style.opacity = '1';
+        wrapper.style.padding = '20px';
+        wrapper.style.marginBottom = '30px';
+        wrapper.style.borderColor = '#ddd';
+
+        arrow.textContent = '▲';
+        btnText.textContent = 'Hide Filters & Sorting';
+    } else {
+        wrapper.style.maxHeight = '0px';
+        wrapper.style.opacity = '0';
+        wrapper.style.padding = '0 20px';
+        wrapper.style.marginBottom = '0';
+        wrapper.style.borderColor = 'transparent';
+
+        arrow.textContent = '▼';
+        btnText.textContent = 'Show Filters & Sorting';
     }
 }
 

@@ -18,102 +18,114 @@
 				<div class="container">
 					<section>
 						<p>Amount of champions in database is <span style="font-weight:bold;" th:text="${champions.size()}"></span> out of a total of <span style="font-weight:bold;" th:text="${amountOfChampions}"></span>. Only <span style="font-weight:bold;" th:text="${championsToGo}"></span> to go!</p>
-						<form action="#"
-							  th:action="@{/champions}"
-							  th:object="${filtersWrapper}"
-							  method="POST"
-							  onsubmit="event.preventDefault(); return false;">
 
-							<input type="button" onclick="checkAll(true)" value="Check all">
-							<input type="button" onclick="checkAll(false)" value="Clear all">
+						<div style="margin-bottom: 20px; text-align: center;">
+							<button type="button" onclick="toggleFilter()"
+									style="background: #0c2ccc; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold; display: inline-flex; align-items: center; gap: 10px;">
+								<span id="filter-text">Show Filters & Sorting</span>
+								<span id="filter-arrow">▼</span>
+							</button>
+						</div>
 
-							<label for="champion-sort">Sort by:</label>
-							<select id="champion-sort" onchange="applyChampionFilters();">
-								<option value="name_asc">Name (A-Z)</option>
-								<option value="name_desc">Name (Z-A)</option>
-								<option value="score_desc">Arena Score (High to Low)</option>
-								<option value="score_asc">Arena Score (Low to High)</option>
-							</select>
+						<div id="filter-wrapper"
+							 style="max-height: 0; opacity: 0; overflow: hidden; transition: all 0.5s ease-in-out; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px solid transparent; margin-bottom: 0; padding: 0 20px;">
+							<form action="#"
+								  th:action="@{/champions}"
+								  th:object="${filtersWrapper}"
+								  method="POST"
+								  onsubmit="event.preventDefault(); return false;">
 
-							<label for="champion-search" style="margin-left: 20px;">Search Name:</label>
-							<input type="text"
-								   id="champion-search"
-								   placeholder="Search by Champion name..."
-								   oninput="applyChampionFilters();"
-								   style="width: 250px; padding: 4px;"
-							/>
+								<input type="button" onclick="checkAll(true)" value="Check all">
+								<input type="button" onclick="checkAll(false)" value="Clear all">
 
-							<table>
-								<thead>
-									<tr>
-										<th>Rarity</th>
-										<th>Type</th>
-										<th>Affinity</th>
-										<th>Faction</th>
-										<th>Alliance</th>
-									</tr>
-								</thead>
+								<label for="champion-sort">Sort by:</label>
+								<select id="champion-sort" onchange="applyChampionFilters();">
+									<option value="name_asc">Name (A-Z)</option>
+									<option value="name_desc">Name (Z-A)</option>
+									<option value="score_desc">Arena Score (High to Low)</option>
+									<option value="score_asc">Arena Score (Low to High)</option>
+								</select>
 
-								<tbody>
-								<tr>
-									<td style="vertical-align: text-top; padding-top:10px;">
-										<span th:each="item, stat : *{rarities}">
-											<input type="checkbox"
-												   class="filter-checkbox filter-rarity"
-												   th:data-filter-name="${item.getName()}"
-												   th:field="*{rarities[__${stat.index}__].value}" />
-											<span th:text="${item.getName()}"></span><br />
-											<input type="hidden" th:field="*{rarities[__${stat.index}__].name}" />
-										</span>
-									</td>
+								<label for="champion-search" style="margin-left: 20px;">Search Name:</label>
+								<input type="text"
+									   id="champion-search"
+									   placeholder="Search by Champion name..."
+									   oninput="applyChampionFilters();"
+									   style="width: 250px; padding: 4px;"
+								/>
 
-									<td style="vertical-align: text-top; padding-top:10px;">
-										<span th:each="item, stat : *{types}">
-											<input type="checkbox"
-												   class="filter-checkbox filter-type"
-												   th:data-filter-name="${item.getName()}"
-												   th:field="*{types[__${stat.index}__].value}" />
-											<span th:text="${item.getName()}"></span><br />
-											<input type="hidden" th:field="*{types[__${stat.index}__].name}" />
-										</span>
-									</td>
+								<table>
+									<thead>
+										<tr>
+											<th>Rarity</th>
+											<th>Type</th>
+											<th>Affinity</th>
+											<th>Faction</th>
+											<th>Alliance</th>
+										</tr>
+									</thead>
 
-									<td style="vertical-align: text-top; padding-top:10px;">
-										<span th:each="item, stat : *{affinities}">
-											<input type="checkbox"
-												   class="filter-checkbox filter-affinity"
-												   th:data-filter-name="${item.getName()}"
-												   th:field="*{affinities[__${stat.index}__].value}" />
-											<span th:text="${item.getName()}"></span><br />
-											<input type="hidden" th:field="*{affinities[__${stat.index}__].name}" />
-										</span>
-									</td>
+									<tbody>
+										<tr>
+											<td style="vertical-align: text-top; padding-top:10px;">
+												<span th:each="item, stat : *{rarities}">
+													<input type="checkbox"
+														   class="filter-checkbox filter-rarity"
+														   th:data-filter-name="${item.getName()}"
+														   th:field="*{rarities[__${stat.index}__].value}" />
+													<span th:text="${item.getName()}"></span><br />
+													<input type="hidden" th:field="*{rarities[__${stat.index}__].name}" />
+												</span>
+											</td>
 
-									<td style="vertical-align: text-top; padding-top:10px;">
-										<span th:each="item, stat : *{factions}">
-											<input type="checkbox"
-												   class="filter-checkbox filter-faction"
-												   th:data-filter-name="${item.getName()}"
-												   th:field="*{factions[__${stat.index}__].value}" />
-											<span th:text="${item.getName()}"></span><br />
-											<input type="hidden" th:field="*{factions[__${stat.index}__].name}" />
-										</span>
-									</td>
+											<td style="vertical-align: text-top; padding-top:10px;">
+												<span th:each="item, stat : *{types}">
+													<input type="checkbox"
+														   class="filter-checkbox filter-type"
+														   th:data-filter-name="${item.getName()}"
+														   th:field="*{types[__${stat.index}__].value}" />
+													<span th:text="${item.getName()}"></span><br />
+													<input type="hidden" th:field="*{types[__${stat.index}__].name}" />
+												</span>
+											</td>
 
-									<td style="vertical-align: text-top; padding-top:10px;">
-										<span th:each="item, stat : *{alliances}">
-											<input type="checkbox"
-												   class="filter-checkbox filter-alliance"
-												   th:data-filter-name="${item.getName()}"
-												   th:field="*{alliances[__${stat.index}__].value}" />
-											<span th:text="${item.getName()}"></span><br />
-											<input type="hidden" th:field="*{alliances[__${stat.index}__].name}" />
-										</span>
-									</td>
-								</tr>
-								</tbody>
-							</table>
-						</form>
+											<td style="vertical-align: text-top; padding-top:10px;">
+												<span th:each="item, stat : *{affinities}">
+													<input type="checkbox"
+														   class="filter-checkbox filter-affinity"
+														   th:data-filter-name="${item.getName()}"
+														   th:field="*{affinities[__${stat.index}__].value}" />
+													<span th:text="${item.getName()}"></span><br />
+													<input type="hidden" th:field="*{affinities[__${stat.index}__].name}" />
+												</span>
+											</td>
+
+											<td style="vertical-align: text-top; padding-top:10px;">
+												<span th:each="item, stat : *{factions}">
+													<input type="checkbox"
+														   class="filter-checkbox filter-faction"
+														   th:data-filter-name="${item.getName()}"
+														   th:field="*{factions[__${stat.index}__].value}" />
+													<span th:text="${item.getName()}"></span><br />
+													<input type="hidden" th:field="*{factions[__${stat.index}__].name}" />
+												</span>
+											</td>
+
+											<td style="vertical-align: text-top; padding-top:10px;">
+												<span th:each="item, stat : *{alliances}">
+													<input type="checkbox"
+														   class="filter-checkbox filter-alliance"
+														   th:data-filter-name="${item.getName()}"
+														   th:field="*{alliances[__${stat.index}__].value}" />
+													<span th:text="${item.getName()}"></span><br />
+													<input type="hidden" th:field="*{alliances[__${stat.index}__].name}" />
+												</span>
+											</td>
+										</tr>
+									</tbody>
+								</table>
+							</form>
+						</div>
 					</section>
 
 					<section>
