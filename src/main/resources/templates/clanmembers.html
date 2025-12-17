@@ -25,16 +25,21 @@
 							</div>
 						</div>
 
-						<table>
+						<table th:style="${#authorization.expression('isAuthenticated()')} ? 'width: 100%;' : 'width: 50%; margin: 0 auto;'">
 							<thead>
-							<tr>
-								<th></th> <th>Discord Name</th> <th>Discord Nickname</th> <th>In-Game Name</th> <th>Clan Rank</th> <th>Champion Count</th> </tr>
+								<tr>
+									<th sec:authorize="isAuthenticated()"></th>
+									<th sec:authorize="isAuthenticated()">Discord Name</th>
+									<th sec:authorize="isAuthenticated()">Discord Nickname</th>
+									<th>In-Game Name</th>
+									<th>Clan Rank</th>
+									<th sec:authorize="isAuthenticated()">Champion Count</th>
+								</tr>
 							</thead>
 
 							<tbody>
 							<tr th:each="member : ${clanmembers}">
-
-								<td>
+								<td sec:authorize="isAuthenticated()">
 									<div th:if="${member.discordId != null and member.avatarHash != null}">
 										<img th:src="'https://cdn.discordapp.com/avatars/' + ${member.discordId} + '/' + ${member.avatarHash} + '.png'"
 											 alt="Avatar"
@@ -42,10 +47,10 @@
 									</div>
 								</td>
 
-								<td th:text="${member.discordName}">Global Name</td>
-								<td th:text="${member.playerNickname}">Server Nickname</td> <td th:text="${member.ingameName}">In-Game Name</td>
+								<td sec:authorize="isAuthenticated()" th:text="${member.discordName}">Global Name</td>
+								<td sec:authorize="isAuthenticated()" th:text="${member.playerNickname}">Server Nickname</td> <td th:text="${member.ingameName}">In-Game Name</td>
 								<td th:text="${member.clanRank != null ? T(com.rsl.clansite.model.enums.ClanRank).valueOf(member.clanRank).getName() : 'Unknown'}">Rank</td>
-								<td th:text="${member.champions != null ? member.champions.size() : 0}">0</td>
+								<td sec:authorize="isAuthenticated()" th:text="${member.champions != null ? member.champions.size() : 0}">0</td>
 							</tr>
 							</tbody>
 						</table>
