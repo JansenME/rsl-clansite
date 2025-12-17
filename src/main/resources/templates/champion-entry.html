@@ -20,12 +20,8 @@
 						<div class="form-container">
 							<h2>Add new Champion</h2>
 
-							<div th:if="${errorMessage}" style="color: red; margin-bottom: 15px;">
-								<p th:text="${errorMessage}"></p>
-							</div>
-							<div th:if="${successMessage}" style="color: green; margin-bottom: 15px;">
-								<p th:text="${successMessage}"></p>
-							</div>
+							<div th:replace="~{inserts/alerts :: error-box(${errorMessage})}"></div>
+							<div th:replace="~{inserts/alerts :: success-box(${successMessage})}"></div>
 
 							<form action="#"
 								  th:action="@{/champions/save}"

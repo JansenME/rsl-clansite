@@ -1,0 +1,28 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+    <body>
+        <div th:fragment="error-box(message)"
+             th:if="${message != null and !#strings.isEmpty(message)}"
+             style="background: rgba(255, 0, 0, 0.1); border: 1px solid #ff0000; color: #ff0000; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+            <p style="margin: 0;" th:text="${message}"></p>
+            <p th:if="${#strings.contains(message, 'linked')}"
+               style="font-size: 0.8em; margin-top: 5px;">
+                Please contact a Deputy or higher on Discord to get registered.
+            </p>
+        </div>
+
+        <div th:fragment="warning-box(message)"
+             th:if="${message != null and message != true and message != false and !#strings.isEmpty(message)}"
+             style="background: rgba(255, 165, 0, 0.1); border: 1px solid #ffa500; color: #cc8400; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+            <p style="margin: 0;">
+                <strong th:text="${message}"></strong>
+            </p>
+        </div>
+
+        <div th:fragment="success-box(message)"
+             th:if="${message != null and !#strings.isEmpty(message)}"
+             style="background: rgba(0, 255, 0, 0.1); border: 1px solid #00aa00; color: #008800; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+            <p style="margin: 0;" th:text="${message}"></p>
+        </div>
+    </body>
+</html>

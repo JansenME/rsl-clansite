@@ -17,11 +17,7 @@
 			<section id="content">
 				<div class="container">
 					<section>
-						<div th:if="${loginError}" style="background: rgba(255, 0, 0, 0.1); border: 1px solid #ff0000; color: #ff0000; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
-							<p style="margin: 0;" th:text="${loginError}"></p>
-							<p th:if="${#strings.contains(loginError, 'linked')}"
-							   style="font-size: 0.8em; margin-top: 5px;">Please contact a Deputy or higher on Discord to get registered.</p>
-						</div>
+						<div th:replace="~{inserts/alerts :: error-box(${loginError})}"></div>
 
 						<h2>Login via Discord</h2>
 						<p>Here you can log in via Discord. When you log in, we will check whether you are a member of the Clan Discord. If not, you won't be able to log in. After logging in, depending on your Discord roles, you might have access to certain areas of the website. You will also be able to add Champions to your own Roster.</p>
