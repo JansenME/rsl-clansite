@@ -232,7 +232,7 @@ function applyChampionFilters() {
         }
     });
 
-    const container = document.querySelector('.container section:nth-child(2) > div');
+    const container = document.getElementById('champion-grid-container');
     if (container) {
         allPassedCards.forEach(card => {
             container.appendChild(card);

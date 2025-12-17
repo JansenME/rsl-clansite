@@ -3,6 +3,8 @@ package com.rsl.clansite.security;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -14,6 +16,7 @@ import org.springframework.security.web.authentication.logout.CookieClearingLogo
 import org.springframework.session.data.mongo.config.annotation.web.http.EnableMongoHttpSession;
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
+
 
 @EnableMongoHttpSession(maxInactiveIntervalInSeconds = 31536000)
 @Configuration
@@ -46,12 +49,14 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/index", "/", "/styles/**", "/images/**", "/login**", "/perform_logout", "/login-error/**").permitAll()
+                        .requestMatchers(
+                                "/index", "/", "/styles/**", "/images/**", "/login**", "/perform_logout", "/login-error/**",
+                                "/champions", "/champions/",
+                                "/clanmembers", "/clanmembers/"
+                        ).permitAll()
+                        .requestMatchers("/clanmembers/add", "/clanmembers/save").hasAnyRole("ADMIN")
+                        .requestMatchers("/clanmembers/*", "/clanmembers/switch", "/profile").authenticated()
                         .requestMatchers("/**").hasRole("OWNER")
-                        .requestMatchers("/clanmembers/add", "/clanmembers/save").hasAnyRole("ADMIN", "COORDINATOR")
-                        .requestMatchers("/champions/add", "/champions/save").hasRole("ADMIN")
-                        .requestMatchers("/clanmembers/*/roster").hasAnyRole("ADMIN", "COORDINATOR")
-                        .requestMatchers("/clanmembers", "/clanmembers/*", "/clanmembers/switch").authenticated()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
@@ -70,5 +75,14 @@ public class SecurityConfig {
                 );
 
         return http.build();
+    }
+
+    @Bean
+    public RoleHierarchy roleHierarchy() {
+        String hierarchy =
+                "ROLE_OWNER > ROLE_ADMIN \n" +
+                        "ROLE_ADMIN > ROLE_COORDINATOR";
+
+        return RoleHierarchyImpl.fromHierarchy(hierarchy);
     }
 }

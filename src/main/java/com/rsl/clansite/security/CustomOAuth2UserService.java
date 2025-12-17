@@ -42,18 +42,17 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private String clanServerId;
 
     private static final Set<String> ADMIN_ROLE_IDS = Set.of(
-            "1404036150078734468"
+            "1298810713309057067", //Clan Leader
+            "1298810856804454461" //Deputy
     );
 
     private static final Set<String> COORDINATOR_ROLE_IDS = Set.of(
-            "1298810713309057067",
-            "1298810856804454461",
-            "1428676592791453778"
+            "1428676592791453778" //Siege Coordinators
     );
 
     private static final Set<String> MEMBER_ROLE_IDS = Set.of(
-            "1298811143699169350",
-            "1374237716149174453"
+            "1298811143699169350", //T1
+            "1374237716149174453" //T2
     );
 
     private static final String DISCORD_MEMBER_API_BASE = "https://discord.com/api/v10/guilds/";
@@ -98,6 +97,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         if(OWNER_DISCORD_ID.equals(userId)) {
             log.info("Granting ROLE_OWNER to Discord ID: {}", userId);
             authorities.add(new SimpleGrantedAuthority("ROLE_OWNER"));
+
+            //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+            //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
+            //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
         }
 
         Map<String, Object> updatedAttributes = new HashMap<>(oauth2User.getAttributes());

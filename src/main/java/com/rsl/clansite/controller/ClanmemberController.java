@@ -34,15 +34,19 @@ public class ClanmemberController {
     public String viewClanmembers(Model model, Authentication authentication, HttpSession session) {
         commonsService.fillModel(model, authentication);
 
-        String currentDiscordId = authentication.getName();
+        List<ClanmemberEntity> linkedMembers = List.of();
+        String activeMemberId = null;
 
-        List<ClanmemberEntity> linkedMembers = clanmemberService.getLinkedClanmembers(currentDiscordId);
+        if (authentication != null && authentication.isAuthenticated()) {
+            String currentDiscordId = authentication.getName();
+            linkedMembers = clanmemberService.getLinkedClanmembers(currentDiscordId);
 
-        String activeMemberId = (String) session.getAttribute("ACTIVE_MEMBER_ID");
+            activeMemberId = (String) session.getAttribute("ACTIVE_MEMBER_ID");
 
-        if (activeMemberId == null && !linkedMembers.isEmpty()) {
-            activeMemberId = linkedMembers.get(0).getId().toHexString();
-            session.setAttribute("ACTIVE_MEMBER_ID", activeMemberId);
+            if (activeMemberId == null && !linkedMembers.isEmpty()) {
+                activeMemberId = linkedMembers.get(0).getId().toHexString();
+                session.setAttribute("ACTIVE_MEMBER_ID", activeMemberId);
+            }
         }
 
         model.addAttribute("linkedMembers", linkedMembers);

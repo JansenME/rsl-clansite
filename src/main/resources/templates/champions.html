@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 	<head>
 		<title>Raid Shadow Legends Fan Site</title>
 		<meta charset="utf-8" />
@@ -117,7 +117,16 @@
 					</section>
 
 					<section>
-						<div style="display: grid; grid-template-columns: repeat(6, 1fr); padding: 10px;">
+						<div sec:authorize="hasRole('OWNER')"
+							 style="text-align: left; margin-bottom: 20px;">
+							<a th:href="@{/champions/new}"
+							   style="display: inline-block; background: #0c2ccc; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+								+ Add new Champion
+							</a>
+						</div>
+
+						<div id="champion-grid-container"
+							 style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; width: 100%;">
 							<div class="champion-card"
 								 style="padding: 10px; text-align: center;"
 								 th:each="champion : ${champions}"
@@ -129,7 +138,8 @@
 								 th:data-name="${champion.getName()}"
 								 th:data-score="${champion.getArenaScore()}">
 								<img th:src="@{../images/champions/{imagename}(imagename=${champion.getImagename()})}" style="width:140px;"/>
-								<div class="champion-rating-placeholder"></div> <p class="champion-name" th:text="${champion.getName()}"></p>
+								<div class="champion-rating-placeholder"></div>
+								<p class="champion-name" th:text="${champion.getName()}"></p>
 							</div>
 						</div>
 					</section>
