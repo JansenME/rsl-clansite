@@ -62,6 +62,10 @@
 								<a th:href="@{/champions/new}" class="button small fit" style="display: block; width: 100%; text-align: center;">Add Champion</a>
 							</li>
 
+							<li sec:authorize="hasRole('ADMIN')" style="margin-bottom: 10px;">
+								<a th:href="@{/audit-log}" class="button small fit" style="display: block; width: 100%; text-align: center;">Audit Log</a>
+							</li>
+
 						</ul>
 					</div>
 				</div> </section>

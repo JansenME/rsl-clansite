@@ -1,6 +1,7 @@
 package com.rsl.clansite.controller;
 
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
+import com.rsl.clansite.model.entity.AuditLogEntity;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.enums.ClanRank;
 import com.rsl.clansite.service.ClanmemberService;
@@ -142,7 +143,8 @@ public class ClanmemberController {
             @Valid NewClanmemberDTO dto,
             BindingResult bindingResult,
             Model model,
-            RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes,
+            Authentication authentication) {
 
         boolean isManualEntry = (dto.getDiscordId() == null || dto.getDiscordId().isBlank());
 
@@ -169,7 +171,7 @@ public class ClanmemberController {
         }
 
         try {
-            clanmemberService.saveNewClanmember(dto);
+            clanmemberService.saveNewClanmember(dto, authentication);
         } catch (Exception e) {
             model.addAttribute("clanRanks", ClanRank.values());
             model.addAttribute("clanmemberRosterDto", dto);
@@ -183,8 +185,8 @@ public class ClanmemberController {
 
     @PostMapping("/{id}/delete")
     @PreAuthorize("hasRole('ADMIN')")
-    public String deleteClanmember(@PathVariable String id, HttpSession session) {
-        clanmemberService.deleteById(id, session);
+    public String deleteClanmember(@PathVariable String id, HttpSession session, Authentication authentication) {
+        clanmemberService.deleteById(id, session, authentication);
         return "redirect:/clanmembers";
     }
 }

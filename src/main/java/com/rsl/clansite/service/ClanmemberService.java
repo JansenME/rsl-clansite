@@ -6,6 +6,7 @@ import com.rsl.clansite.exceptions.UnlinkedAccountException;
 import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.enums.AuditAction;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.ClanRank;
 import com.rsl.clansite.repository.ClanmemberRepository;
@@ -23,6 +24,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -31,6 +33,7 @@ public class ClanmemberService {
 
     private final ClanmemberRepository clanmemberRepository;
     private final DiscordRoleService discordRoleService;
+    private final AuditLogService auditLogService;
 
     private final WebClient webClient = WebClient.create();
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -42,9 +45,12 @@ public class ClanmemberService {
     private String clanServerId;
 
     @Autowired
-    public ClanmemberService(ClanmemberRepository clanmemberRepository, final DiscordRoleService discordRoleService) {
+    public ClanmemberService(final ClanmemberRepository clanmemberRepository,
+                             final DiscordRoleService discordRoleService,
+                             final AuditLogService auditLogService) {
         this.clanmemberRepository = clanmemberRepository;
         this.discordRoleService = discordRoleService;
+        this.auditLogService = auditLogService;
     }
 
     @Scheduled(cron = "0 0 * * * *")
@@ -227,7 +233,7 @@ public class ClanmemberService {
         return new ClanmemberViewData(discordUserName, roleNames, discordAvatarUrl);
     }
 
-    public void saveNewClanmember(NewClanmemberDTO dto) {
+    public void saveNewClanmember(NewClanmemberDTO dto, Authentication authentication) {
         ClanmemberEntity newMember = new ClanmemberEntity();
 
         newMember.setDiscordId(dto.getDiscordId());
@@ -243,7 +249,13 @@ public class ClanmemberService {
         newMember.setChampions(List.of());
 
         clanmemberRepository.save(newMember);
-        log.info("New Clanmember added to roster with Discord ID: {}", dto.getDiscordId());
+
+        auditLogService.logAction(
+                authentication,
+                AuditAction.MEMBER_ADD,
+                dto.getIngameName(),
+                "Added with Discord ID: " + dto.getDiscordId()
+        );
     }
 
     public NewClanmemberDTO lookupDiscordUser(String userId) throws RuntimeException {
@@ -319,12 +331,22 @@ public class ClanmemberService {
         return clanmemberRepository.existsByIngameName(ingameName);
     }
 
-    public void deleteById(String id, HttpSession session) {
+    public void deleteById(String id, HttpSession session, Authentication authentication) {
         String activeId = (String) session.getAttribute("ACTIVE_MEMBER_ID");
         if (id.equals(activeId)) {
             session.removeAttribute("ACTIVE_MEMBER_ID");
         }
 
+        Optional<ClanmemberEntity> memberToDelete = clanmemberRepository.findById(new ObjectId(id));
+        String targetName = memberToDelete.map(ClanmemberEntity::getIngameName).orElse("Unknown ID: " + id);
+
         clanmemberRepository.deleteById(new ObjectId(id));
+
+        auditLogService.logAction(
+                authentication,
+                AuditAction.MEMBER_DELETE,
+                targetName,
+                "Deleted from Roster List"
+        );
     }
 }

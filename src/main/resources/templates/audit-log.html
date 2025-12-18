@@ -1,0 +1,61 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+	<head>
+		<title>Audit Log</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+		<script th:src="@{/styles/js/main.js}"></script>
+	</head>
+	<body>
+		<div id="page-wrapper">
+			<section id="header">
+				<div th:insert="~{inserts/nav :: nav}" class="container">
+				</div>
+			</section>
+
+			<section id="content">
+				<div class="container">
+					<section>
+						<h2>Audit Log</h2>
+						<p>Tracking administrative actions performed on the roster.</p>
+
+						<table style="width: 100%;">
+							<thead>
+							<tr>
+								<th>Date & Time</th>
+								<th>Admin</th>
+								<th>Action</th>
+								<th>Target</th>
+								<th>Details</th>
+							</tr>
+							</thead>
+							<tbody>
+							<tr th:each="log : ${logs}">
+								<td th:text="${#temporals.format(log.timestamp, 'dd-MM-yyyy HH:mm')}">Date</td>
+
+								<td th:text="${log.actorDiscordName}">Admin Name</td>
+
+								<td th:text="${log.action.description}">Action</td>
+
+								<td th:text="${log.target}">Target Name</td>
+								<td th:text="${log.details}">Details</td>
+							</tr>
+							</tbody>
+						</table>
+
+						<div th:if="${logs.isEmpty()}">
+							<p>No audit records found.</p>
+						</div>
+
+						<br />
+						<a th:href="@{/profile}" class="button">Back to Profile</a>
+					</section>
+				</div>
+			</section>
+
+			<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+			</div>
+		</div>
+	</body>
+</html>
