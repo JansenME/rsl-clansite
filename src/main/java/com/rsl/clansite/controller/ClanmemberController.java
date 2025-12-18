@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -87,17 +88,30 @@ public class ClanmemberController {
             Authentication authentication) {
         commonsService.fillModel(model, authentication);
         model.addAttribute("clanRanks", ClanRank.values());
-        NewClanmemberDTO dto = new NewClanmemberDTO();
+
+        if (!model.containsAttribute("clanmemberRosterDto")) {
+            model.addAttribute("clanmemberRosterDto", new NewClanmemberDTO());
+        }
+
+        NewClanmemberDTO dto = (NewClanmemberDTO) model.getAttribute("clanmemberRosterDto");
 
         if (skipLookup) {
             model.addAttribute("lookupSuccess", true);
         } else if (discordId != null && !discordId.isBlank()) {
             try {
-                dto = clanmemberService.lookupDiscordUser(discordId);
+                NewClanmemberDTO lookedUpDto = clanmemberService.lookupDiscordUser(discordId);
+
+                dto.setDiscordId(lookedUpDto.getDiscordId());
+                dto.setDiscordName(lookedUpDto.getDiscordName());
+                dto.setPlayerNickname(lookedUpDto.getPlayerNickname());
+                dto.setAvatarHash(lookedUpDto.getAvatarHash());
+                dto.setDiscordRoles(lookedUpDto.getDiscordRoles());
+                dto.setClanGroup(lookedUpDto.getClanGroup());
+
                 model.addAttribute("lookupSuccess", true);
 
                 if (clanmemberService.isDiscordIdInRoster(discordId)) {
-                    model.addAttribute("altAccountWarning", "Notice: This Discord ID is already in the roster. You can still add this as an alt account.");
+                    model.addAttribute("altAccountWarning", "Notice: This Discord ID is already in the roster.");
                 }
             } catch (Exception e) {
                 model.addAttribute("lookupError", "Error looking up user: " + e.getMessage());
@@ -113,7 +127,10 @@ public class ClanmemberController {
     public String saveClanmember(
             @Valid NewClanmemberDTO dto,
             BindingResult bindingResult,
-            Model model) {
+            Model model,
+            RedirectAttributes redirectAttributes) {
+
+        boolean isManualEntry = (dto.getDiscordId() == null || dto.getDiscordId().isBlank());
 
         if (bindingResult.hasErrors()) {
             model.addAttribute("clanRanks", ClanRank.values());
@@ -129,6 +146,12 @@ public class ClanmemberController {
             model.addAttribute("lookupSuccess", true);
 
             return "clanmember-add";
+        }
+
+        if (isManualEntry && (dto.getIngameName() == null || dto.getIngameName().isBlank())) {
+            redirectAttributes.addFlashAttribute("lookupError", "For manual entries, the In-Game Name is required so we know who this is!");
+            redirectAttributes.addFlashAttribute("clanmemberRosterDto", dto);
+            return "redirect:/clanmembers/add?skipLookup=true";
         }
 
         try {

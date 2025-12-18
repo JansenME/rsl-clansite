@@ -61,8 +61,9 @@
 								</div>
 
 								<div>
-									<label for="ingameName">In-Game Name (Manual Entry):</label>
-									<input type="text" id="ingameName" th:field="*{ingameName}" />
+									<label for="ingameName">In-Game Name (Required for manual entry):</label>
+									<input type="text" id="ingameName" th:field="*{ingameName}"
+										   th:required="${clanmemberRosterDto.discordId == null || clanmemberRosterDto.discordId.isEmpty()}" />
 								</div>
 
 								<div>
@@ -75,8 +76,23 @@
 									</select>
 								</div>
 
+								<input type="hidden" th:field="*{clanGroup}" th:if="${clanmemberRosterDto.clanGroup != null}" />
+								<div th:if="${clanmemberRosterDto.clanGroup == null}">
+									<label for="clanGroupSelect">Clan (Could not detect from Discord):</label>
+									<select id="clanGroupSelect" th:field="*{clanGroup}" required>
+										<option value="">-- Select Clan --</option>
+										<option th:each="group : ${T(com.rsl.clansite.model.enums.ClanGroup).values()}"
+												th:value="${group}"
+												th:text="${group.name}">Group Name</option>
+									</select>
+								</div>
 
-								<button type="submit" class="button special">Save Roster Entry</button>
+								<div th:if="${clanmemberRosterDto.clanGroup != null}">
+									<label>Detected Clan:</label>
+									<p style="font-weight: bold;" th:text="${clanmemberRosterDto.clanGroup}"></p>
+								</div>
+
+								<button type="submit" formnovalidate class="button special">Save Roster Entry</button>
 								<a th:href="@{/clanmembers}" class="button">Cancel</a>
 							</form>
 						</div>

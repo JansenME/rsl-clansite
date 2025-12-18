@@ -8,8 +8,10 @@ import com.rsl.clansite.model.enums.Rarity;
 import com.rsl.clansite.model.enums.Type;
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
-public class ChampionEntryDTO {
+public class ChampionEntryDTO implements Serializable {
     private String name;
     private Rarity rarity;
     private Type type;

@@ -6,6 +6,7 @@ import com.rsl.clansite.exceptions.UnlinkedAccountException;
 import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.ClanRank;
 import com.rsl.clansite.repository.ClanmemberRepository;
 import jakarta.servlet.http.HttpSession;
@@ -150,10 +151,19 @@ public class ClanmemberService {
             return Integer.compare(index1, index2);
         });
 
+        ClanGroup detectedGroup = null;
+        if (currentDiscordRoles.contains(DiscordRoleService.T1_ROLE_ID)) detectedGroup = ClanGroup.T1;
+        else if (currentDiscordRoles.contains(DiscordRoleService.T2_ROLE_ID)) detectedGroup = ClanGroup.T2;
+
         for (ClanmemberEntity member : linkedMembers) {
             member.setDiscordName(globalName);
             member.setAvatarHash(avatarHash);
             member.setDiscordRoles(sortedRoles);
+
+            if (member.getClanGroup() == null && detectedGroup != null) {
+                member.setClanGroup(detectedGroup);
+            }
+
             clanmemberRepository.save(member);
         }
     }
@@ -213,6 +223,7 @@ public class ClanmemberService {
         newMember.setIngameName(dto.getIngameName());
 
         newMember.setClanRank(dto.getClanRank() != null ? dto.getClanRank().name() : ClanRank.SOLDIER.name());
+        newMember.setClanGroup(dto.getClanGroup());
 
         newMember.setAvatarHash(dto.getAvatarHash());
         newMember.setDiscordRoles(dto.getDiscordRoles() != null ? dto.getDiscordRoles() : List.of());
@@ -260,6 +271,12 @@ public class ClanmemberService {
                 }
             }
             dto.setDiscordRoles(currentDiscordRoles);
+
+            if (currentDiscordRoles.contains(DiscordRoleService.T1_ROLE_ID)) {
+                dto.setClanGroup(ClanGroup.T1);
+            } else if (currentDiscordRoles.contains(DiscordRoleService.T2_ROLE_ID)) {
+                dto.setClanGroup(ClanGroup.T2);
+            }
 
             return dto;
 

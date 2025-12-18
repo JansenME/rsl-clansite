@@ -1,6 +1,7 @@
 package com.rsl.clansite.model.entity;
 
 import com.rsl.clansite.model.Champion;
+import com.rsl.clansite.model.enums.ClanGroup;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,6 +19,7 @@ public class ClanmemberEntity {
     @Id
     private ObjectId id;
 
+    private ClanGroup clanGroup;
     private String discordName;
     private String discordId;
     private String avatarHash;

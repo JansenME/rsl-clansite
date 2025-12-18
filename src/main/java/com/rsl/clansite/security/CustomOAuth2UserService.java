@@ -1,6 +1,7 @@
 package com.rsl.clansite.security;
 
 import com.rsl.clansite.service.ClanmemberService;
+import com.rsl.clansite.service.DiscordRoleService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,17 +43,17 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private String clanServerId;
 
     private static final Set<String> ADMIN_ROLE_IDS = Set.of(
-            "1298810713309057067", //Clan Leader
-            "1298810856804454461" //Deputy
+            DiscordRoleService.CLAN_LEADER_ROLE_ID,
+            DiscordRoleService.DEPUTY_ROLE_ID
     );
 
     private static final Set<String> COORDINATOR_ROLE_IDS = Set.of(
-            "1428676592791453778" //Siege Coordinators
+            DiscordRoleService.SIEGE_COORDINATOR_ROLE_ID
     );
 
     private static final Set<String> MEMBER_ROLE_IDS = Set.of(
-            "1298811143699169350", //T1
-            "1374237716149174453" //T2
+            DiscordRoleService.T1_ROLE_ID,
+            DiscordRoleService.T2_ROLE_ID
     );
 
     private static final String DISCORD_MEMBER_API_BASE = "https://discord.com/api/v10/guilds/";
