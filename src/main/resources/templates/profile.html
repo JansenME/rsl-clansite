@@ -1,22 +1,26 @@
 <!DOCTYPE HTML>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-	<head>
-		<title>Clanmembers</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
-		<script th:src="@{/styles/js/main.js}"></script>
-	</head>
-	<body>
-		<div id="page-wrapper">
-			<section id="header">
-				<div th:insert="~{inserts/nav :: nav}" class="container">
-				</div>
-			</section>
+<head>
+	<title>My Profile</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+	<script th:src="@{/styles/js/main.js}"></script>
+</head>
+<body>
+<div id="page-wrapper">
+	<section id="header">
+		<div th:insert="~{inserts/nav :: nav}" class="container">
+		</div>
+	</section>
 
-			<section id="content">
-				<div class="container">
-					<section>
+	<section id="content">
+		<div class="container">
+			<section>
+
+				<div style="display: flex; flex-wrap: wrap; justify-content: space-between; text-align: left;">
+
+					<div style="flex: 1; min-width: 300px;">
 						<h2>My Profile & Roles</h2>
 
 						<div th:if="${clanmemberViewData}">
@@ -29,7 +33,6 @@
 								</div>
 
 								<div style="margin-left: 0; padding-left: 0;">
-
 									<p style="margin: 0 0 20px 0; padding-left: 0;">Logged in as: <br /><strong th:text="${clanmemberViewData.discordUserName}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong></p>
 									<p style="font-weight: bold; margin-bottom: 5px; margin-left: 0; padding-left: 0;">Roles:</p>
 
@@ -40,17 +43,33 @@
 									</ul>
 								</div>
 							</div>
-							<p><form th:action="@{/perform_logout}" method="post"><button type="submit">Logout</button></form></p>
+							<form th:action="@{/perform_logout}" method="post" style="margin-top: 20px;"><button type="submit">Logout</button></form>
 						</div>
 						<div th:unless="${clanmemberViewData}">
 							<p>Please <a th:href="@{/oauth2/authorization/discord}">log in</a> to view your profile.</p>
 						</div>
-					</section>
-				</div>
-			</section>
+					</div>
 
-			<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
-			</div>
+					<div style="width: 250px; border-left: 1px solid #eee; padding-left: 30px; margin-left: 20px;" sec:authorize="hasRole('COORDINATOR')">
+						<h2 style="font-size: 1.4em;">Quick Links</h2>
+						<ul style="list-style: none; padding: 0; margin: 0;">
+
+							<li sec:authorize="hasRole('ADMIN')" style="margin-bottom: 10px;">
+								<a th:href="@{/clanmembers/add}" class="button small fit" style="display: block; width: 100%; text-align: center;">Add Clanmember</a>
+							</li>
+
+							<li sec:authorize="hasRole('OWNER')" style="margin-bottom: 10px;">
+								<a th:href="@{/champions/new}" class="button small fit" style="display: block; width: 100%; text-align: center;">Add Champion</a>
+							</li>
+
+						</ul>
+					</div>
+				</div> </section>
 		</div>
-	</body>
+	</section>
+
+	<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+	</div>
+</div>
+</body>
 </html>

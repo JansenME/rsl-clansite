@@ -81,7 +81,7 @@ public class ClanmemberController {
     }
 
     @GetMapping("/add")
-    @PreAuthorize("hasAnyRole('ADMIN', 'COORDINATOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public String addClanmemberForm(
             @RequestParam(value = "discordId", required = false) String discordId,
             @RequestParam(value = "skipLookup", required = false) boolean skipLookup,
@@ -137,7 +137,7 @@ public class ClanmemberController {
     }
 
     @PostMapping("/save")
-    @PreAuthorize("hasAnyRole('ADMIN', 'COORDINATOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public String saveClanmember(
             @Valid NewClanmemberDTO dto,
             BindingResult bindingResult,
@@ -182,7 +182,7 @@ public class ClanmemberController {
     }
 
     @PostMapping("/{id}/delete")
-    @PreAuthorize("hasAnyRole('ADMIN', 'COORDINATOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public String deleteClanmember(@PathVariable String id, HttpSession session) {
         clanmemberService.deleteById(id, session);
         return "redirect:/clanmembers";

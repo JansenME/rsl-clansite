@@ -20,7 +20,7 @@
 						<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
 							<h2>Clanmembers</h2>
 
-							<div sec:authorize="hasAnyRole('ADMIN', 'COORDINATOR')">
+							<div sec:authorize="hasRole('ADMIN')">
 								<a th:href="@{/clanmembers/add}">Add new Clanmember</a>
 							</div>
 						</div>
@@ -35,7 +35,7 @@
 								<th>In-Game Name</th>
 								<th>Clan Rank</th>
 								<th sec:authorize="isAuthenticated()">Champion Count</th>
-								<th sec:authorize="hasAnyRole('ADMIN')">Actions</th>
+								<th sec:authorize="hasRole('ADMIN')">Actions</th>
 							</tr>
 							</thead>
 
@@ -58,7 +58,7 @@
 								<td th:text="${member.clanRank != null ? T(com.rsl.clansite.model.enums.ClanRank).valueOf(member.clanRank).getName() : 'Unknown'}">Rank</td>
 								<td sec:authorize="isAuthenticated()" th:text="${member.champions != null ? member.champions.size() : 0}">0</td>
 
-								<td sec:authorize="hasAnyRole('ADMIN')">
+								<td sec:authorize="hasRole('ADMIN')">
 									<form th:action="@{/clanmembers/{id}/delete(id=${member.id})}" method="POST"
 										  th:data-name="${member.ingameName}"
 										  onsubmit="return confirm('Are you sure you want to delete ' + this.getAttribute('data-name') + '?');">
@@ -81,7 +81,7 @@
 								<th>In-Game Name</th>
 								<th>Clan Rank</th>
 								<th sec:authorize="isAuthenticated()">Champion Count</th>
-								<th sec:authorize="hasAnyRole('ADMIN')">Actions</th>
+								<th sec:authorize="hasRole('ADMIN')">Actions</th>
 							</tr>
 							</thead>
 
@@ -103,7 +103,7 @@
 								<td th:text="${member.clanRank != null ? T(com.rsl.clansite.model.enums.ClanRank).valueOf(member.clanRank).getName() : 'Unknown'}">Rank</td>
 								<td sec:authorize="isAuthenticated()" th:text="${member.champions != null ? member.champions.size() : 0}">0</td>
 
-								<td sec:authorize="hasAnyRole('ADMIN')">
+								<td sec:authorize="hasRole('ADMIN')">
 									<form th:action="@{/clanmembers/{id}/delete(id=${member.id})}" method="POST"
 										  th:data-name="${member.ingameName}"
 										  onsubmit="return confirm('Are you sure you want to delete ' + this.getAttribute('data-name') + '?');">
@@ -117,7 +117,7 @@
 						</table>
 
 						<div th:if="${clanmembers.isEmpty()}">
-							<p>The roster is currently empty. Please log in with a Coordinator account to manually populate the initial list.</p>
+							<p>The roster is currently empty. Please log in with a Administrator account to manually populate the initial list.</p>
 						</div>
 					</section>
 				</div>
