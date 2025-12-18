@@ -5,6 +5,7 @@ import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.enums.ClanRank;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
+import com.rsl.clansite.service.DiscordRoleService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -110,8 +111,21 @@ public class ClanmemberController {
 
                 model.addAttribute("lookupSuccess", true);
 
+                StringBuilder warningMsg = new StringBuilder();
+
+                List<String> roles = dto.getDiscordRoles();
+                if (roles != null &&
+                        roles.contains(DiscordRoleService.T1_ROLE_ID) &&
+                        roles.contains(DiscordRoleService.T2_ROLE_ID)) {
+                    warningMsg.append("Notice: This user has both T1 and T2 roles in Discord. Please manually select the correct Clan Group below. ");
+                }
+
                 if (clanmemberService.isDiscordIdInRoster(discordId)) {
-                    model.addAttribute("altAccountWarning", "Notice: This Discord ID is already in the roster.");
+                    warningMsg.append("Notice: This Discord ID is already in the roster. You can still add this as an alt account.");
+                }
+
+                if (warningMsg.length() > 0) {
+                    model.addAttribute("lookupWarning", warningMsg.toString().trim());
                 }
             } catch (Exception e) {
                 model.addAttribute("lookupError", "Error looking up user: " + e.getMessage());

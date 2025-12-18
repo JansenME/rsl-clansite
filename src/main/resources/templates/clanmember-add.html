@@ -36,7 +36,7 @@
 
 						<div th:if="${lookupSuccess}">
 							<h3>Step 2: Verify and Save Roster Entry</h3>
-							<div th:replace="~{inserts/alerts :: warning-box(${altAccountWarning})}"></div>
+							<div th:replace="~{inserts/alerts :: warning-box(${lookupWarning})}"></div>
 
 							<form th:action="@{/clanmembers/save}" th:object="${clanmemberRosterDto}" method="post">
 

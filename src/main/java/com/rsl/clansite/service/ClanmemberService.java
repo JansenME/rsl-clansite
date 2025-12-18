@@ -272,10 +272,15 @@ public class ClanmemberService {
             }
             dto.setDiscordRoles(currentDiscordRoles);
 
-            if (currentDiscordRoles.contains(DiscordRoleService.T1_ROLE_ID)) {
+            boolean hasT1 = currentDiscordRoles.contains(DiscordRoleService.T1_ROLE_ID);
+            boolean hasT2 = currentDiscordRoles.contains(DiscordRoleService.T2_ROLE_ID);
+
+            if (hasT1 && !hasT2) {
                 dto.setClanGroup(ClanGroup.T1);
-            } else if (currentDiscordRoles.contains(DiscordRoleService.T2_ROLE_ID)) {
+            } else if (hasT2 && !hasT1) {
                 dto.setClanGroup(ClanGroup.T2);
+            } else {
+                dto.setClanGroup(null);
             }
 
             return dto;
