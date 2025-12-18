@@ -179,7 +179,20 @@ public class ClanmemberService {
     }
 
     public List<ClanmemberEntity> findAllClanmemberEntities() {
-        return clanmemberRepository.findAll();
+        List<ClanmemberEntity> members = clanmemberRepository.findAll();
+
+        members.sort((m1, m2) -> {
+            if (m1.getClanRank() == null && m2.getClanRank() == null) return 0;
+            if (m1.getClanRank() == null) return 1;
+            if (m2.getClanRank() == null) return -1;
+
+            ClanRank rank1 = ClanRank.valueOf(m1.getClanRank());
+            ClanRank rank2 = ClanRank.valueOf(m2.getClanRank());
+
+            return rank1.compareTo(rank2);
+        });
+
+        return members;
     }
 
     public ClanmemberViewData getUserViewData(Authentication authentication) {
