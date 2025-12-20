@@ -2,6 +2,7 @@ package com.rsl.clansite.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rsl.clansite.model.dto.DiscordRoleDTO;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,7 @@ public class DiscordApiClient {
                             @Value("${discord.clan-server-id}") String clanServerId) {
 
         this.webClient = WebClient.builder()
-                .baseUrl("https://discord.com/api/v10/guilds/" + clanServerId + "/members/")
+                .baseUrl("https://discord.com/api/v10/guilds/" + clanServerId)
                 .defaultHeader("Authorization", "Bot " + botToken)
                 .build();
 
@@ -31,7 +32,7 @@ public class DiscordApiClient {
     public Optional<NewClanmemberDTO> getDiscordMember(String discordId) {
         try {
             String jsonResponse = webClient.get()
-                    .uri(discordId)
+                    .uri("/members/" + discordId)
                     .retrieve()
                     .bodyToMono(String.class)
                     .block();
@@ -45,6 +46,21 @@ public class DiscordApiClient {
             throw new RuntimeException("Discord API Error: " + e.getStatusCode() + " - " + e.getResponseBodyAsString());
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch Discord Member: " + e.getMessage());
+        }
+    }
+
+    public List<DiscordRoleDTO> getGuildRoles() {
+        try {
+            String jsonResponse = webClient.get()
+                    .uri("/roles")
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            return parseRolesResponse(jsonResponse);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch Discord Roles: " + e.getMessage());
         }
     }
 
@@ -79,5 +95,21 @@ public class DiscordApiClient {
         dto.setDiscordRoles(roleIds);
 
         return dto;
+    }
+
+    private List<DiscordRoleDTO> parseRolesResponse(String json) throws Exception {
+        JsonNode root = objectMapper.readTree(json);
+        List<DiscordRoleDTO> roles = new ArrayList<>();
+
+        if (root.isArray()) {
+            for (JsonNode node : root) {
+                DiscordRoleDTO role = new DiscordRoleDTO();
+                role.setId(node.get("id").asText());
+                role.setName(node.get("name").asText());
+                role.setPosition(node.get("position").asInt());
+                roles.add(role);
+            }
+        }
+        return roles;
     }
 }

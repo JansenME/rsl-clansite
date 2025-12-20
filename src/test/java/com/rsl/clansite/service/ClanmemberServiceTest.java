@@ -409,4 +409,27 @@ class ClanmemberServiceTest {
 
         verify(session).removeAttribute("ACTIVE_MEMBER_ID");
     }
+
+    @Test
+    @DisplayName("getUserViewData should return 'No Discord Roles Found' if linked member has empty roles list")
+    void getUserViewData_ShouldReturnDefault_WhenRolesEmpty() {
+        String discordId = "123";
+
+        org.springframework.security.oauth2.core.user.OAuth2User oauth2User = mock(org.springframework.security.oauth2.core.user.OAuth2User.class);
+        when(oauth2User.getAttribute("id")).thenReturn(discordId);
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(oauth2User);
+
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setDiscordId(discordId);
+        member.setDiscordRoles(List.of());
+
+        when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of(member));
+
+        var result = clanmemberService.getUserViewData(auth);
+
+        assertEquals(1, result.getDiscordUserRoles().size());
+        assertEquals("No Discord Roles Found", result.getDiscordUserRoles().get(0));
+    }
 }

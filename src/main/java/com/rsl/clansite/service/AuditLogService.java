@@ -31,22 +31,7 @@ public class AuditLogService {
 
         if (authentication != null && authentication.getPrincipal() instanceof OAuth2User oauth2User) {
             actorId = oauth2User.getAttribute("id");
-
-            String sessionName = oauth2User.getAttribute("global_name");
-            actorName = (sessionName != null) ? sessionName : "Unknown Admin";
-
-            List<ClanmemberEntity> adminEntry = clanmemberRepository.findAllByDiscordId(actorId);
-
-            if (!adminEntry.isEmpty()) {
-                ClanmemberEntity admin = adminEntry.get(0);
-
-                if (admin.getPlayerNickname() != null && !admin.getPlayerNickname().isBlank()) {
-                    actorName = admin.getPlayerNickname();
-                }
-                else if (admin.getDiscordName() != null && !admin.getDiscordName().isBlank()) {
-                    actorName = admin.getDiscordName();
-                }
-            }
+            actorName = resolveActorName(oauth2User, actorId);
         }
 
         AuditLogEntity logEntry = new AuditLogEntity(
@@ -65,5 +50,25 @@ public class AuditLogService {
 
     public List<AuditLogEntity> getAllLogs() {
         return auditLogRepository.findAllByOrderByTimestampDesc();
+    }
+
+    private String resolveActorName(OAuth2User oauth2User, String actorId) {
+        String sessionName = oauth2User.getAttribute("global_name");
+        String resolvedName = (sessionName != null) ? sessionName : "Unknown Admin";
+
+        List<ClanmemberEntity> adminEntry = clanmemberRepository.findAllByDiscordId(actorId);
+
+        if (!adminEntry.isEmpty()) {
+            ClanmemberEntity admin = adminEntry.get(0);
+
+            if (admin.getPlayerNickname() != null && !admin.getPlayerNickname().isBlank()) {
+                return admin.getPlayerNickname();
+            }
+            if (admin.getDiscordName() != null && !admin.getDiscordName().isBlank()) {
+                return admin.getDiscordName();
+            }
+        }
+
+        return resolvedName;
     }
 }

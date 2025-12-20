@@ -1,13 +1,11 @@
 package com.rsl.clansite.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rsl.clansite.client.DiscordApiClient;
+import com.rsl.clansite.model.dto.DiscordRoleDTO;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,51 +23,32 @@ public class DiscordRoleService {
     public static final String T1_ROLE_ID = "1298811143699169350";
     public static final String T2_ROLE_ID = "1374237716149174453";
 
-    @Value("${discord.bot-token}")
-    private String botToken;
-
-    @Value("${discord.clan-server-id}")
-    private String clanServerId;
-
-    private final WebClient webClient = WebClient.create();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final DiscordApiClient discordApiClient;
 
     private Map<String, String> roleIdToNameMap = Collections.emptyMap();
     @Getter
     private List<String> orderedRoleIds = Collections.emptyList();
 
+    public DiscordRoleService(DiscordApiClient discordApiClient) {
+        this.discordApiClient = discordApiClient;
+    }
+
     @PostConstruct
     public void init() {
-        final String DISCORD_ROLES_API = "https://discord.com/api/v10/guilds/" + clanServerId + "/roles";
-
-        log.info("Fetching and caching Discord role names for guild: {}", clanServerId);
+        log.info("Fetching and caching Discord role names via API Client.");
         try {
-            String rolesJson = webClient.get()
-                    .uri(DISCORD_ROLES_API)
-                    .header("Authorization", "Bot " + botToken)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
+            List<DiscordRoleDTO> rolesList = new ArrayList<>(discordApiClient.getGuildRoles());
 
-            JsonNode rolesNode = objectMapper.readTree(rolesJson);
             Map<String, String> tempMap = new HashMap<>();
-            List<RoleData> rolesList = new ArrayList<>();
 
-            if (rolesNode.isArray()) {
-                for (JsonNode role : rolesNode) {
-                    String id = role.get("id").asText();
-                    String name = role.get("name").asText();
-                    int position = role.get("position").asInt();
-
-                    tempMap.put(id, name);
-                    rolesList.add(new RoleData(id, position));
-                }
+            for (DiscordRoleDTO role : rolesList) {
+                tempMap.put(role.getId(), role.getName());
             }
 
-            rolesList.sort(Comparator.comparingInt(RoleData::position).reversed());
+            rolesList.sort(Comparator.comparingInt(DiscordRoleDTO::getPosition).reversed());
 
             List<String> tempOrderedIds = rolesList.stream()
-                    .map(RoleData::id)
+                    .map(DiscordRoleDTO::getId)
                     .toList();
 
             this.roleIdToNameMap = Collections.unmodifiableMap(tempMap);
@@ -104,6 +83,4 @@ public class DiscordRoleService {
 
         return sortedList;
     }
-
-    private record RoleData(String id, int position) {}
 }
