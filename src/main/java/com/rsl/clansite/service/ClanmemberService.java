@@ -1,7 +1,6 @@
 package com.rsl.clansite.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rsl.clansite.client.DiscordApiClient;
 import com.rsl.clansite.exceptions.UnlinkedAccountException;
 import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
@@ -14,14 +13,11 @@ import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,28 +25,20 @@ import java.util.Optional;
 @Service
 @Slf4j
 public class ClanmemberService {
-    private static final String DISCORD_MEMBER_API_BASE = "https://discord.com/api/v10/guilds/";
-
     private final ClanmemberRepository clanmemberRepository;
     private final DiscordRoleService discordRoleService;
     private final AuditLogService auditLogService;
-
-    private final WebClient webClient = WebClient.create();
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
-    @Value("${discord.bot-token}")
-    private String botToken;
-
-    @Value("${discord.clan-server-id}")
-    private String clanServerId;
+    private final DiscordApiClient discordApiClient;
 
     @Autowired
     public ClanmemberService(final ClanmemberRepository clanmemberRepository,
                              final DiscordRoleService discordRoleService,
-                             final AuditLogService auditLogService) {
+                             final AuditLogService auditLogService,
+                             final DiscordApiClient discordApiClient) {
         this.clanmemberRepository = clanmemberRepository;
         this.discordRoleService = discordRoleService;
         this.auditLogService = auditLogService;
+        this.discordApiClient = discordApiClient;
     }
 
     @Scheduled(cron = "0 0 * * * *")
@@ -59,75 +47,11 @@ public class ClanmemberService {
         log.info("Starting scheduled Discord role verification job.");
 
         List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordIdIsNotNull();
-
         int membersUpdated = 0;
 
-        final List<String> masterOrder = discordRoleService.getOrderedRoleIds();
-
         for (ClanmemberEntity member : linkedMembers) {
-            String apiUri = DISCORD_MEMBER_API_BASE + clanServerId + "/members/" + member.getDiscordId();
-
-            try {
-                String memberJson = webClient.get()
-                        .uri(apiUri)
-                        .header("Authorization", "Bot " + botToken)
-                        .retrieve()
-                        .bodyToMono(String.class)
-                        .block();
-
-                JsonNode memberData = objectMapper.readTree(memberJson);
-                JsonNode userData = memberData.path("user");
-
-                String newAvatarHash = userData.path("avatar").asText();
-
-                List<String> newDiscordRoles = List.of();
-                JsonNode rolesNode = memberData.path("roles");
-                if (rolesNode.isArray()) {
-                    newDiscordRoles = new java.util.ArrayList<>();
-                    for (JsonNode roleId : rolesNode) {
-                        newDiscordRoles.add(roleId.asText());
-                    }
-                }
-
-                List<String> sortedRoles = new java.util.ArrayList<>(newDiscordRoles);
-
-                sortedRoles.sort((id1, id2) -> {
-                    int index1 = masterOrder.indexOf(id1);
-                    int index2 = masterOrder.indexOf(id2);
-
-                    if (index1 == -1 && index2 == -1) return 0;
-                    if (index1 == -1) return 1;
-                    if (index2 == -1) return -1;
-
-                    return Integer.compare(index1, index2);
-                });
-
-                boolean needsUpdate = false;
-
-                if (!sortedRoles.equals(member.getDiscordRoles())) {
-                    member.setDiscordRoles(sortedRoles);
-                    needsUpdate = true;
-                    log.debug("Roles changed for member: {}", member.getDiscordName());
-                }
-
-                if (member.getAvatarHash() == null || !newAvatarHash.equals(member.getAvatarHash())) {
-                    member.setAvatarHash(newAvatarHash);
-                    needsUpdate = true;
-                    log.debug("Avatar hash changed for member: {}", member.getDiscordName());
-                }
-
-                if (needsUpdate) {
-                    clanmemberRepository.save(member);
-                    membersUpdated++;
-                }
-            } catch (WebClientResponseException e) {
-                if (e.getStatusCode().value() == 404) {
-                    log.warn("User {} not found in guild {}. May have left the server. Skipping update.", member.getDiscordId(), clanServerId);
-                } else {
-                    log.warn("API error fetching data for Discord ID {}: {}", member.getDiscordId(), e.getResponseBodyAsString());
-                }
-            } catch (Exception e) {
-                log.error("General error during scheduled update for {}: {}", member.getDiscordId(), e.getMessage());
+            if (tryUpdateMemberRoles(member)) {
+                membersUpdated++;
             }
         }
 
@@ -143,61 +67,25 @@ public class ClanmemberService {
             return;
         }
 
-        final List<String> masterOrder = discordRoleService.getOrderedRoleIds();
-        List<String> sortedRoles = new java.util.ArrayList<>(currentDiscordRoles);
-
-        sortedRoles.sort((id1, id2) -> {
-            int index1 = masterOrder.indexOf(id1);
-            int index2 = masterOrder.indexOf(id2);
-
-            if (index1 == -1 && index2 == -1) return 0;
-            if (index1 == -1) return 1;
-            if (index2 == -1) return -1;
-
-            return Integer.compare(index1, index2);
-        });
-
-        ClanGroup detectedGroup = null;
-        if (currentDiscordRoles.contains(DiscordRoleService.T1_ROLE_ID)) detectedGroup = ClanGroup.T1;
-        else if (currentDiscordRoles.contains(DiscordRoleService.T2_ROLE_ID)) detectedGroup = ClanGroup.T2;
+        List<String> sortedRoles = discordRoleService.sortRoles(currentDiscordRoles);
+        ClanGroup detectedGroup = resolveClanGroup(currentDiscordRoles);
 
         for (ClanmemberEntity member : linkedMembers) {
-            member.setDiscordName(globalName);
-            member.setAvatarHash(avatarHash);
-            member.setDiscordRoles(sortedRoles);
-
-            if (member.getClanGroup() == null && detectedGroup != null) {
-                member.setClanGroup(detectedGroup);
-            }
-
-            clanmemberRepository.save(member);
+            updateSingleLinkedMember(member, globalName, avatarHash, sortedRoles, detectedGroup);
         }
     }
 
     public List<ClanmemberEntity> getLinkedClanmembers(final String discordId) {
         List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordId(discordId);
-
         if (linkedMembers.isEmpty()) {
             throw new UnlinkedAccountException("User's Discord ID is not linked. Please contact the administrator.");
         }
-
         return linkedMembers;
     }
 
     public List<ClanmemberEntity> findAllClanmemberEntities() {
         List<ClanmemberEntity> members = clanmemberRepository.findAll();
-
-        members.sort((m1, m2) -> {
-            if (m1.getClanRank() == null && m2.getClanRank() == null) return 0;
-            if (m1.getClanRank() == null) return 1;
-            if (m2.getClanRank() == null) return -1;
-
-            ClanRank rank1 = ClanRank.valueOf(m1.getClanRank());
-            ClanRank rank2 = ClanRank.valueOf(m2.getClanRank());
-
-            return rank1.compareTo(rank2);
-        });
-
+        members.sort(this::compareClanRanks);
         return members;
     }
 
@@ -209,28 +97,13 @@ public class ClanmemberService {
         String discordId = oauth2User.getAttribute("id");
         String globalName = oauth2User.getAttribute("global_name");
         String discordUserName = (globalName != null) ? globalName : "Unknown User";
-
         String avatarHash = oauth2User.getAttribute("avatar");
 
-        String discordAvatarUrl = (discordId != null && avatarHash != null)
-                ? "https://cdn.discordapp.com/avatars/" + discordId + "/" + avatarHash + ".png"
-                : null;
-
-        List<String> roleNames = List.of("No Discord Roles Found");
-
-        List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordId(discordId);
-
-        if (!linkedMembers.isEmpty()) {
-            List<String> discordRoleIds = linkedMembers.get(0).getDiscordRoles();
-
-            if (discordRoleIds != null && !discordRoleIds.isEmpty()) {
-                roleNames = discordRoleIds.stream()
-                        .map(discordRoleService::getRoleName)
-                        .toList();
-            }
-        }
-
-        return new ClanmemberViewData(discordUserName, roleNames, discordAvatarUrl);
+        return new ClanmemberViewData(
+                discordUserName,
+                resolveRoleNamesForUser(discordId),
+                buildAvatarUrl(discordId, avatarHash)
+        );
     }
 
     public void saveNewClanmember(NewClanmemberDTO dto, Authentication authentication) {
@@ -240,10 +113,8 @@ public class ClanmemberService {
         newMember.setDiscordName(dto.getDiscordName());
         newMember.setPlayerNickname(dto.getPlayerNickname());
         newMember.setIngameName(dto.getIngameName());
-
         newMember.setClanRank(dto.getClanRank() != null ? dto.getClanRank().name() : ClanRank.SOLDIER.name());
         newMember.setClanGroup(dto.getClanGroup());
-
         newMember.setAvatarHash(dto.getAvatarHash());
         newMember.setDiscordRoles(dto.getDiscordRoles() != null ? dto.getDiscordRoles() : List.of());
         newMember.setChampions(List.of());
@@ -259,68 +130,16 @@ public class ClanmemberService {
     }
 
     public NewClanmemberDTO lookupDiscordUser(String userId) throws RuntimeException {
-        String apiUri = DISCORD_MEMBER_API_BASE + clanServerId + "/members/" + userId;
-        NewClanmemberDTO dto = new NewClanmemberDTO();
-        dto.setDiscordId(userId);
+        Optional<NewClanmemberDTO> result = discordApiClient.getDiscordMember(userId);
 
-        try {
-            String memberJson = webClient.get()
-                    .uri(apiUri)
-                    .header("Authorization", "Bot " + botToken)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
-
-            JsonNode memberData = objectMapper.readTree(memberJson);
-            JsonNode userData = memberData.path("user");
-
-            JsonNode nickNode = memberData.path("nick");
-            String nick = (nickNode.isMissingNode() || nickNode.isNull()) ? "" : nickNode.asText();
-
-            String globalName = userData.path("global_name").asText();
-            String username = memberData.path("username").asText();
-            String avatarHash = userData.path("avatar").asText();
-
-            String finalDiscordName = globalName.isBlank() ? username : globalName;
-
-            dto.setDiscordName(globalName.isBlank() ? username : globalName);
-            dto.setPlayerNickname(nick.isBlank() ? finalDiscordName : nick);
-            dto.setAvatarHash(avatarHash);
-
-            List<String> currentDiscordRoles = new java.util.ArrayList<>();
-            JsonNode rolesNode = memberData.path("roles");
-
-            if (rolesNode.isArray()) {
-                for (JsonNode roleId : rolesNode) {
-                    currentDiscordRoles.add(roleId.asText());
-                }
-            }
-            dto.setDiscordRoles(currentDiscordRoles);
-
-            boolean hasT1 = currentDiscordRoles.contains(DiscordRoleService.T1_ROLE_ID);
-            boolean hasT2 = currentDiscordRoles.contains(DiscordRoleService.T2_ROLE_ID);
-
-            if (hasT1 && !hasT2) {
-                dto.setClanGroup(ClanGroup.T1);
-            } else if (hasT2 && !hasT1) {
-                dto.setClanGroup(ClanGroup.T2);
-            } else {
-                dto.setClanGroup(null);
-            }
-
-            return dto;
-
-        } catch (WebClientResponseException e) {
-            if (e.getStatusCode().value() == 404) {
-                log.warn("User {} not found in guild {}.", userId, clanServerId);
-                throw new RuntimeException("Discord User ID not found in the clan server.");
-            }
-            log.error("WebClient error fetching Discord member data: {}", e.getResponseBodyAsString());
-            throw new RuntimeException("API error while fetching Discord data.");
-        } catch (Exception e) {
-            log.error("General error in lookupDiscordUser: {}", e.getMessage());
-            throw new RuntimeException("Lookup failed: " + e.getMessage());
+        if (result.isEmpty()) {
+            throw new RuntimeException("Discord User ID not found in the clan server.");
         }
+
+        NewClanmemberDTO dto = result.get();
+        dto.setClanGroup(resolveClanGroup(dto.getDiscordRoles()));
+
+        return dto;
     }
 
     public boolean isDiscordIdInRoster(String discordId) {
@@ -348,5 +167,94 @@ public class ClanmemberService {
                 targetName,
                 "Deleted from Roster List"
         );
+    }
+
+    private boolean tryUpdateMemberRoles(ClanmemberEntity member) {
+        try {
+            Optional<NewClanmemberDTO> discordDataOpt = discordApiClient.getDiscordMember(member.getDiscordId());
+
+            if (discordDataOpt.isEmpty()) {
+                log.warn("User {} not found in guild. May have left the server.", member.getDiscordId());
+                return false;
+            }
+
+            NewClanmemberDTO discordData = discordDataOpt.get();
+            List<String> sortedRoles = discordRoleService.sortRoles(discordData.getDiscordRoles());
+            String newAvatarHash = discordData.getAvatarHash();
+
+            boolean rolesChanged = !sortedRoles.equals(member.getDiscordRoles());
+            boolean avatarChanged = member.getAvatarHash() == null || !newAvatarHash.equals(member.getAvatarHash());
+
+            if (rolesChanged) {
+                member.setDiscordRoles(sortedRoles);
+                log.debug("Roles changed for member: {}", member.getDiscordName());
+            }
+
+            if (avatarChanged) {
+                member.setAvatarHash(newAvatarHash);
+                log.debug("Avatar hash changed for member: {}", member.getDiscordName());
+            }
+
+            if (rolesChanged || avatarChanged) {
+                clanmemberRepository.save(member);
+                return true;
+            }
+        } catch (Exception e) {
+            log.error("General error during scheduled update for {}: {}", member.getDiscordId(), e.getMessage());
+        }
+        return false;
+    }
+
+    private void updateSingleLinkedMember(ClanmemberEntity member, String globalName, String avatarHash, List<String> sortedRoles, ClanGroup detectedGroup) {
+        member.setDiscordName(globalName);
+        member.setAvatarHash(avatarHash);
+        member.setDiscordRoles(sortedRoles);
+
+        if (member.getClanGroup() == null && detectedGroup != null) {
+            member.setClanGroup(detectedGroup);
+        }
+        clanmemberRepository.save(member);
+    }
+
+    private ClanGroup resolveClanGroup(List<String> roles) {
+        if (roles == null) return null;
+
+        boolean hasT1 = roles.contains(DiscordRoleService.T1_ROLE_ID);
+        boolean hasT2 = roles.contains(DiscordRoleService.T2_ROLE_ID);
+
+        if (hasT1 && !hasT2) return ClanGroup.T1;
+        if (hasT2 && !hasT1) return ClanGroup.T2;
+        return null;
+    }
+
+    private int compareClanRanks(ClanmemberEntity m1, ClanmemberEntity m2) {
+        if (m1.getClanRank() == null && m2.getClanRank() == null) return 0;
+        if (m1.getClanRank() == null) return 1;
+        if (m2.getClanRank() == null) return -1;
+
+        return ClanRank.valueOf(m1.getClanRank()).compareTo(ClanRank.valueOf(m2.getClanRank()));
+    }
+
+    private List<String> resolveRoleNamesForUser(String discordId) {
+        List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordId(discordId);
+        if (linkedMembers.isEmpty()) {
+            return List.of("No Discord Roles Found");
+        }
+
+        List<String> roleIds = linkedMembers.get(0).getDiscordRoles();
+        if (roleIds == null || roleIds.isEmpty()) {
+            return List.of("No Discord Roles Found");
+        }
+
+        return roleIds.stream()
+                .map(discordRoleService::getRoleName)
+                .toList();
+    }
+
+    private String buildAvatarUrl(String discordId, String avatarHash) {
+        if (discordId != null && avatarHash != null) {
+            return "https://cdn.discordapp.com/avatars/" + discordId + "/" + avatarHash + ".png";
+        }
+        return null;
     }
 }

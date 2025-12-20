@@ -84,5 +84,26 @@ public class DiscordRoleService {
         return roleIdToNameMap.getOrDefault(roleId, roleId);
     }
 
+    public List<String> sortRoles(List<String> roleIds) {
+        if (roleIds == null || roleIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<String> sortedList = new ArrayList<>(roleIds);
+
+        sortedList.sort((id1, id2) -> {
+            int index1 = orderedRoleIds.indexOf(id1);
+            int index2 = orderedRoleIds.indexOf(id2);
+
+            if (index1 == -1 && index2 == -1) return 0;
+            if (index1 == -1) return 1;
+            if (index2 == -1) return -1;
+
+            return Integer.compare(index1, index2);
+        });
+
+        return sortedList;
+    }
+
     private record RoleData(String id, int position) {}
 }

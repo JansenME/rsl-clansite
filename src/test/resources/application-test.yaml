@@ -1,13 +1,13 @@
 app:
   version: '@project.version@'
 discord:
-  bot-token: ${DISCORD_BOT_TOKEN}
+  bot-token: "TEST_BOT_TOKEN"
   clan-server-id: "1062302225701015552"
 spring:
   data:
     mongodb:
-      uri: ${MONGODB_URI}
-      database: raidshadowlegends
+      uri: mongodb://localhost:27017
+      database: rsl_test_db
   session:
     store-type: mongodb
     timeout-seconds: 31536000
@@ -17,7 +17,7 @@ spring:
         registration:
           discord:
             client-id: "1449091367102840907"
-            client-secret: ${DISCORD_CLIENT_SECRET}
+            client-secret: "TEST_CLIENT_SECRET"
             client-name: Discord
             provider: discord
             scope: identify, guilds, guilds.members.read
@@ -42,6 +42,8 @@ server:
       enabled: false
     path: /error
 logging:
+  level:
+    org.springframework.data.mongodb: WARN
   file:
     name: /logs/rsl-clansite.log
   pattern:
