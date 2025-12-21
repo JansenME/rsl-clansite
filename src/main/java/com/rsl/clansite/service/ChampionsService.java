@@ -1,49 +1,32 @@
 package com.rsl.clansite.service;
 
-import com.opencsv.CSVReader;
-import com.opencsv.exceptions.CsvException;
 import com.rsl.clansite.exceptions.ChampionSaveException;
 import com.rsl.clansite.model.Aura;
 import com.rsl.clansite.model.BaseStats;
 import com.rsl.clansite.model.Champion;
 import com.rsl.clansite.model.dto.ChampionEntryDTO;
 import com.rsl.clansite.model.entity.ChampionEntity;
-import com.rsl.clansite.model.enums.Affinity;
-import com.rsl.clansite.model.enums.AuraStat;
-import com.rsl.clansite.model.enums.Faction;
-import com.rsl.clansite.model.enums.AuraLocation;
-import com.rsl.clansite.model.enums.Rarity;
-import com.rsl.clansite.model.enums.Type;
 import com.rsl.clansite.repository.ChampionRepository;
+import com.rsl.clansite.repository.ChampionsCsvRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.Reader;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 
 @Slf4j
 @Service
 public class ChampionsService {
     private final ChampionRepository championRepository;
+    private final ChampionsCsvRepository championsCsvRepository;
 
     @Autowired
-    public ChampionsService(final ChampionRepository championRepository) {
+    public ChampionsService(final ChampionRepository championRepository, final ChampionsCsvRepository championsCsvRepository) {
         this.championRepository = championRepository;
+        this.championsCsvRepository = championsCsvRepository;
     }
 
     public List<Champion> getAllChampions() {
@@ -51,10 +34,9 @@ public class ChampionsService {
     }
 
     public List<ChampionEntity> saveAllChampionsFromCsv() {
+        List<ChampionEntity> championEntities = championsCsvRepository.readAllChampions();
+
         championRepository.deleteAll();
-
-        List<ChampionEntity> championEntities = getChampionsFromCsv();
-
         championRepository.saveAll(championEntities);
 
         return championEntities;
@@ -69,11 +51,10 @@ public class ChampionsService {
 
         try {
             championRepository.save(entity);
+            championsCsvRepository.appendChampion(entity);
         } catch (Exception e) {
-            throw new ChampionSaveException("Failed to save to database: " + e.getMessage());
+            throw new ChampionSaveException("Failed to save champion: " + e.getMessage());
         }
-
-        appendChampionToCsv(entity);
     }
 
     private ChampionEntity mapDtoToEntity(final ChampionEntryDTO dto) {
@@ -117,39 +98,6 @@ public class ChampionsService {
         );
     }
 
-    private void appendChampionToCsv(final ChampionEntity entity) throws ChampionSaveException {
-        String csvFilePath = "src/main/resources/champions.csv";
-
-        String baseStatsString = entity.getBaseStats().toCsvString();
-        String auraString = entity.getAura() == null ? "null" : entity.getAura().toCsvString();
-
-        String csvLineFormat = "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%.1f,\"%s\"\n";
-
-        String csvLine = String.format(
-                Locale.US,
-                csvLineFormat,
-                entity.getName(),
-                entity.getRarity().getName(),
-                entity.getType().getName(),
-                entity.getAffinity().getName(),
-                entity.getFaction().getName(),
-                baseStatsString,
-                auraString,
-                entity.getArenaScore(),
-                entity.getImagename()
-        );
-
-        try (FileWriter fw = new FileWriter(csvFilePath, true);
-             BufferedWriter bw = new BufferedWriter(fw);
-             PrintWriter out = new PrintWriter(bw)) {
-
-            out.print(csvLine);
-
-        } catch (IOException e) {
-            throw new ChampionSaveException("Failed to append champion to CSV file!" + e.getMessage());
-        }
-    }
-
     private List<Champion> mapEntitiesToChampions(final List<ChampionEntity> championEntities) {
         return championEntities.stream()
                 .map(this::mapEntityToChampion)
@@ -168,82 +116,6 @@ public class ChampionsService {
                 championEntity.getAura(),
                 championEntity.getArenaScore(),
                 championEntity.getImagename()
-        );
-    }
-
-    private List<ChampionEntity> getChampionsFromCsv() {
-        List<String[]> csvLines = readCsv("champions.csv");
-
-        csvLines.remove(0);
-
-        return mapChampionCsvToEntity(csvLines);
-    }
-
-    private List<String[]> readCsv(final String filename) {
-        try (Reader reader = new BufferedReader(Files.newBufferedReader(Paths.get(ClassLoader.getSystemResource(filename).toURI())));
-             CSVReader csvReader = new CSVReader(reader)) {
-            return csvReader.readAll();
-        } catch (IOException | CsvException | URISyntaxException e) {
-            log.error(e.getMessage());
-            return new ArrayList<>();
-        }
-    }
-
-    private List<ChampionEntity> mapChampionCsvToEntity(final List<String[]> csvLines) {
-        return csvLines.stream()
-                .map(this::mapOneCsvLineToChampion)
-                .toList();
-    }
-
-    private ChampionEntity mapOneCsvLineToChampion(final String[] csvLine) {
-        return new ChampionEntity(
-                ObjectId.get(),
-                csvLine[0],
-                Rarity.getRarityByName(csvLine[1]),
-                Type.getTypeByName(csvLine[2]),
-                Affinity.getAffinityByName(csvLine[3]),
-                Faction.getFactionByName(csvLine[4]),
-                getBaseStats(csvLine[5].split(",")),
-                getAura(csvLine[6].split(",")),
-                Double.valueOf(csvLine[7]),
-                csvLine[8]
-        );
-    }
-
-    private BaseStats getBaseStats(final String[] baseStatsFromCsv) {
-        if(baseStatsFromCsv == null || baseStatsFromCsv.length != 8) {
-            log.error("CSV Parsing Error: BaseStats field has " + (baseStatsFromCsv == null ? 0 : baseStatsFromCsv.length) + " fields. Expected 8. Returning default stats.");
-
-            return new BaseStats();
-        }
-
-        return new BaseStats(
-                Integer.parseInt(baseStatsFromCsv[0]),
-                Integer.parseInt(baseStatsFromCsv[1]),
-                Integer.parseInt(baseStatsFromCsv[2]),
-                Integer.parseInt(baseStatsFromCsv[3]),
-                Integer.parseInt(baseStatsFromCsv[4]),
-                Integer.parseInt(baseStatsFromCsv[5]),
-                Integer.parseInt(baseStatsFromCsv[6]),
-                Integer.parseInt(baseStatsFromCsv[7])
-        );
-    }
-
-    private Aura getAura(final String[] auraFromCsv) {
-        if (auraFromCsv == null || auraFromCsv.length == 0 || auraFromCsv[0].equalsIgnoreCase("null")) {
-            return null;
-        }
-
-        if (auraFromCsv.length != 4) {
-            log.error("CSV Parsing Error: Aura field has " + auraFromCsv.length + " fields. Expected 4. Raw data: " + Arrays.toString(auraFromCsv) + ". Returning null.");
-            return null;
-        }
-
-        return new Aura(
-                Boolean.parseBoolean(auraFromCsv[0]),
-                Integer.parseInt(auraFromCsv[1]),
-                AuraStat.getAuraStatByName(auraFromCsv[2]),
-                AuraLocation.getAuraLocationByName(auraFromCsv[3])
         );
     }
 }
