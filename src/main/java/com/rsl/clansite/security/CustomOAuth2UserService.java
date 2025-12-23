@@ -63,13 +63,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         List<String> roleList = memberDto.getDiscordRoles();
         Set<String> userDiscordRoles = new HashSet<>(roleList);
 
-        try {
-            clanmemberService.linkClanmember(userId, globalName, avatarHash, roleList);
-
-        } catch (RuntimeException e) {
-            log.warn("Unlinked account login attempt by Discord ID {}: {}", userId, e.getMessage());
-            throw new OAuth2AuthenticationException(new OAuth2Error("unlinked_account", e.getMessage(), null), e);
-        }
+        clanmemberService.linkClanmember(userId, globalName, avatarHash, roleList);
 
         Set<SimpleGrantedAuthority> authorities = mapRolesToAuthorities(userDiscordRoles);
 
@@ -82,6 +76,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         updatedAttributes.put("rawDiscordRoleIds", userDiscordRoles);
 
         log.info("Logged in user {} has the following roles: {}", globalName, authorities);
+
+        //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
+        //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
 
         return new DefaultOAuth2User(
                 authorities,

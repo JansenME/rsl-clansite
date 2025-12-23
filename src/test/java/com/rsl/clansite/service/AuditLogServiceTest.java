@@ -5,6 +5,7 @@ import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.enums.AuditAction;
 import com.rsl.clansite.repository.AuditLogRepository;
 import com.rsl.clansite.repository.ClanmemberRepository;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,7 +19,9 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -125,5 +128,23 @@ class AuditLogServiceTest {
     void getAllLogs_ShouldCallRepository() {
         auditLogService.getAllLogs();
         verify(auditLogRepository).findAllByOrderByTimestampDesc();
+    }
+
+    @Test
+    @DisplayName("deleteLogEntry - Should call repository delete for valid ID")
+    void deleteLogEntry_ValidId_ShouldDelete() {
+        String validId = new ObjectId().toHexString();
+
+        auditLogService.deleteLogEntry(validId);
+
+        verify(auditLogRepository).deleteById(any(ObjectId.class));
+    }
+
+    @Test
+    @DisplayName("deleteLogEntry - Should ignore invalid ID")
+    void deleteLogEntry_InvalidId_ShouldDoNothing() {
+        auditLogService.deleteLogEntry("invalid-id");
+
+        verify(auditLogRepository, never()).deleteById(any());
     }
 }

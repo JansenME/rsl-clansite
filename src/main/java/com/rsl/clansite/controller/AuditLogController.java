@@ -7,6 +7,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
@@ -28,5 +30,12 @@ public class AuditLogController {
         model.addAttribute("logs", auditLogService.getAllLogs());
 
         return "audit-log";
+    }
+
+    @PostMapping("/{id}/delete")
+    @PreAuthorize("hasRole('OWNER')")
+    public String deleteLogEntry(@PathVariable String id) {
+        auditLogService.deleteLogEntry(id);
+        return "redirect:/audit-log";
     }
 }

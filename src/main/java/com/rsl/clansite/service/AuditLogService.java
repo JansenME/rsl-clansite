@@ -52,6 +52,15 @@ public class AuditLogService {
         return auditLogRepository.findAllByOrderByTimestampDesc();
     }
 
+    public void deleteLogEntry(String id) {
+        if (id == null || !ObjectId.isValid(id)) {
+            log.warn("Attempted to delete audit log with invalid ID: {}", id);
+            return;
+        }
+        auditLogRepository.deleteById(new ObjectId(id));
+        log.info("Audit log entry {} deleted manually by OWNER.", id);
+    }
+
     private String resolveActorName(OAuth2User oauth2User, String actorId) {
         String sessionName = oauth2User.getAttribute("global_name");
         String resolvedName = (sessionName != null) ? sessionName : "Unknown Admin";

@@ -99,8 +99,8 @@ class CustomOAuth2UserServiceTest {
     }
 
     @Test
-    @DisplayName("loadUser should wrap RuntimeException from service in OAuth2AuthenticationException")
-    void loadUser_ShouldWrapServiceException() {
+    @DisplayName("loadUser should propagate RuntimeException from service (System Error)")
+    void loadUser_ShouldPropagateServiceException() {
         String discordId = "12345";
 
         OAuth2User mockOAuthUser = new DefaultOAuth2User(
@@ -112,14 +112,13 @@ class CustomOAuth2UserServiceTest {
         memberDto.setDiscordRoles(List.of());
         when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(memberDto));
 
-        doThrow(new RuntimeException("Account not linked")).when(clanmemberService)
+        doThrow(new RuntimeException("Database Down")).when(clanmemberService)
                 .linkClanmember(any(), any(), any(), any());
 
-        OAuth2AuthenticationException ex = assertThrows(OAuth2AuthenticationException.class,
+        RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> userService.loadUser(userRequest));
 
-        assertEquals("unlinked_account", ex.getError().getErrorCode());
-        assertTrue(ex.getMessage().contains("Account not linked"));
+        assertEquals("Database Down", ex.getMessage());
     }
 
     @Test
