@@ -125,7 +125,7 @@ public class ClanmemberService {
                 authentication,
                 AuditAction.MEMBER_ADD,
                 dto.getIngameName(),
-                "Added with Discord ID: " + dto.getDiscordId()
+                "Manually added to Roster: " + dto.getIngameName()
         );
     }
 

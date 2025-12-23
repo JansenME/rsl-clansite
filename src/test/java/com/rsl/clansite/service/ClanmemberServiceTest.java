@@ -52,6 +52,9 @@ class ClanmemberServiceTest {
     @Mock
     private DiscordApiClient discordApiClient;
 
+    @Mock
+    private Authentication authentication;
+
     @InjectMocks
     private ClanmemberService clanmemberService;
 
@@ -75,6 +78,26 @@ class ClanmemberServiceTest {
         soldier.setId(ObjectId.get());
         soldier.setIngameName("SoldierUser");
         soldier.setClanRank(ClanRank.SOLDIER.name());
+    }
+
+    @Test
+    @DisplayName("saveNewClanmember - Should save entity and log Ingame Name in audit details")
+    void saveNewClanmember_ShouldLogCorrectly() {
+        NewClanmemberDTO dto = new NewClanmemberDTO();
+        dto.setIngameName("TestPlayer");
+        dto.setClanRank(ClanRank.SOLDIER);
+        dto.setClanGroup(ClanGroup.T1);
+
+        clanmemberService.saveNewClanmember(dto, authentication);
+
+        verify(clanmemberRepository).save(any(ClanmemberEntity.class));
+
+        verify(auditLogService).logAction(
+                eq(authentication),
+                eq(AuditAction.MEMBER_ADD),
+                eq("TestPlayer"),
+                eq("Manually added to Roster: TestPlayer")
+        );
     }
 
     @Test
@@ -113,7 +136,7 @@ class ClanmemberServiceTest {
                 eq(authentication),
                 eq(AuditAction.MEMBER_ADD),
                 eq("NewPlayer"),
-                contains("Added with Discord ID")
+                contains("Manually added to Roster")
         );
     }
 
