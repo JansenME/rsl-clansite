@@ -4,33 +4,40 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 class IndexControllerIntegrationTest extends BaseControllerTest {
+    private static final String LOGIN_LINK = "href=\"/login\"";
+
     @Test
-    @DisplayName("GET / - GUEST should access homepage (200 OK)")
+    @DisplayName("GET / - GUEST should access homepage and SEE Login Button")
     void index_AsGuest_ShouldSucceed() throws Exception {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("index"));
+                .andExpect(view().name("index"))
+                .andExpect(content().string(containsString(LOGIN_LINK)));
 
         verify(commonsService).fillModel(any(), any());
     }
 
     @Test
-    @DisplayName("GET /index - MEMBER should access homepage (200 OK)")
-    void index_AsMember_ShouldSucceed() throws Exception {
+    @DisplayName("GET /index - MEMBER should access homepage but NOT see Login Button")
+    void index_AsMember_ShouldSucceed_NoLoginButton() throws Exception {
         mockMvc.perform(get("/index")
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
                 .andExpect(status().isOk())
-                .andExpect(view().name("index"));
+                .andExpect(view().name("index"))
+                .andExpect(content().string(not(containsString(LOGIN_LINK))));
     }
 
     @Test

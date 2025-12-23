@@ -1,25 +1,28 @@
 <!DOCTYPE HTML>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-    <body>
-        <div th:fragment="nav">
-            <h1><a href="/index" id="logo">RSL Fan Site</a></h1>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<div th:fragment="nav">
+    <h1><a href="/index" id="logo">RSL Fan Site</a></h1>
 
-            <nav id="nav">
-                <a href="/index">Homepage</a>
-                <a href="/champions">Champions</a>
-                <a href="/clanmembers">Clanmembers</a>
+    <nav id="nav">
+        <a href="/index">Homepage</a>
+        <a href="/champions">Champions</a>
+        <a href="/clanmembers">Clanmembers</a>
 
-                <a th:if="${clanmemberViewData}"
-                   th:href="@{/profile}"
-                   th:text="${clanmemberViewData.discordUserName}">
-                    Logged In User
-                </a>
+        <a href="/profile"
+           title="Profile"
+           sec:authorize="isAuthenticated()"
+           th:text="${clanmemberViewData != null ? clanmemberViewData.discordUserName : 'Profile'}">
+            Profile
+        </a>
 
-                <a th:unless="${clanmemberViewData}" href="/login" title="Login">
-                    Login
-                </a>
+        <a href="/login"
+           title="Login"
+           sec:authorize="isAnonymous()">
+            Login
+        </a>
 
-            </nav>
-        </div>
-    </body>
+    </nav>
+</div>
+</body>
 </html>

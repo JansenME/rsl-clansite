@@ -12,6 +12,8 @@ import org.springframework.session.Session;
 import java.util.Base64;
 import java.util.List;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,6 +26,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -31,17 +34,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class ClanmemberControllerIntegrationTest extends BaseControllerTest {
     @Test
-    @DisplayName("GET /clanmembers - GUEST should access list (200 OK)")
-    void viewClanmembers_AsGuest_ShouldSucceed() throws Exception {
+    @DisplayName("GET /clanmembers - GUEST should access list but NOT see Add Button")
+    void viewClanmembers_AsGuest_ShouldSucceed_NoAddButton() throws Exception {
         mockMvc.perform(get("/clanmembers"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("clanmembers"))
-                .andExpect(model().attributeExists("clanmembers"));
+                .andExpect(model().attributeExists("clanmembers"))
+                .andExpect(content().string(not(containsString("href=\"/clanmembers/add\""))));
     }
 
     @Test
-    @DisplayName("GET /clanmembers - MEMBER should see linked accounts")
-    void viewClanmembers_AsMember_ShouldShowLinked() throws Exception {
+    @DisplayName("GET /clanmembers - MEMBER should access list but NOT see Add Button")
+    void viewClanmembers_AsMember_ShouldShowLinked_NoAddButton() throws Exception {
         String discordId = "12345";
         ClanmemberEntity entity = new ClanmemberEntity();
         entity.setId(new ObjectId());
@@ -53,7 +57,37 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
                                 .authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
                 .andExpect(status().isOk())
                 .andExpect(model().attributeExists("linkedMembers"))
-                .andExpect(model().attribute("activeMemberId", entity.getId().toHexString()));
+                .andExpect(content().string(not(containsString("href=\"/clanmembers/add\""))));
+    }
+
+    @Test
+    @DisplayName("GET /clanmembers - COORDINATOR should access list but NOT see Add Button")
+    void viewClanmembers_AsCoordinator_ShouldNotSeeAddButton() throws Exception {
+        mockMvc.perform(get("/clanmembers")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_COORDINATOR"))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("clanmembers"))
+                .andExpect(content().string(not(containsString("href=\"/clanmembers/add\""))));
+    }
+
+    @Test
+    @DisplayName("GET /clanmembers - ADMIN should see 'Add Member' button")
+    void viewClanmembers_AsAdmin_ShouldSeeAddButton() throws Exception {
+        mockMvc.perform(get("/clanmembers")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("clanmembers"))
+                .andExpect(content().string(containsString("href=\"/clanmembers/add\"")));
+    }
+
+    @Test
+    @DisplayName("GET /clanmembers - OWNER should see 'Add Member' button (Inheritance)")
+    void viewClanmembers_AsOwner_ShouldSeeAddButton() throws Exception {
+        mockMvc.perform(get("/clanmembers")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("clanmembers"))
+                .andExpect(content().string(containsString("href=\"/clanmembers/add\"")));
     }
 
     @Test

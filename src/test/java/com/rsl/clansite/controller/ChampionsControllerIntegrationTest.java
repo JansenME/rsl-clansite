@@ -6,6 +6,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -13,6 +15,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -20,6 +23,56 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 class ChampionsControllerIntegrationTest extends BaseControllerTest {
+    @Test
+    @DisplayName("GET /champions - OWNER should see 'Add new Champion' button")
+    void viewChampions_AsOwner_ShouldShowAddButton() throws Exception {
+        mockMvc.perform(get("/champions")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("champions"))
+                // CHECK: Owner MUST see the link
+                .andExpect(content().string(containsString("href=\"/champions/new\"")));
+    }
+
+    @Test
+    @DisplayName("GET /champions - ADMIN should NOT see 'Add new Champion' button")
+    void viewChampions_AsAdmin_ShouldNotShowAddButton() throws Exception {
+        // Admin < Owner, so strict check "hasRole('OWNER')" should hide it
+        mockMvc.perform(get("/champions")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("champions"))
+                // CHECK: Admin should NOT see the link
+                .andExpect(content().string(not(containsString("href=\"/champions/new\""))));
+    }
+
+    @Test
+    @DisplayName("GET /champions - COORDINATOR should NOT see 'Add new Champion' button")
+    void viewChampions_AsCoordinator_ShouldNotShowAddButton() throws Exception {
+        mockMvc.perform(get("/champions")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_COORDINATOR"))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("href=\"/champions/new\""))));
+    }
+
+    @Test
+    @DisplayName("GET /champions - MEMBER should NOT see 'Add new Champion' button")
+    void viewChampions_AsMember_ShouldNotShowAddButton() throws Exception {
+        mockMvc.perform(get("/champions")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("href=\"/champions/new\""))));
+    }
+
+    @Test
+    @DisplayName("GET /champions - GUEST should access list but NOT see Add Button")
+    void viewChampions_AsGuest_ShouldNotShowAddButton() throws Exception {
+        mockMvc.perform(get("/champions"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("champions"))
+                .andExpect(content().string(not(containsString("href=\"/champions/new\""))));
+    }
+
     @Test
     @DisplayName("GET /new - OWNER should access the form (200 OK)")
     void newChampionForm_AsOwner_ShouldSucceed() throws Exception {
@@ -154,5 +207,30 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("GET /saveChampsFromCsv - COORDINATOR should be denied (403)")
+    void saveCsv_AsCoordinator_ShouldFail() throws Exception {
+        mockMvc.perform(get("/champions/saveChampsFromCsv")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_COORDINATOR"))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("GET /saveChampsFromCsv - MEMBER should be denied (403)")
+    void saveCsv_AsMember_ShouldFail() throws Exception {
+        mockMvc.perform(get("/champions/saveChampsFromCsv")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("GET /saveChampsFromCsv - GUEST should be redirected to Login (302)")
+    void saveCsv_AsGuest_ShouldRedirect() throws Exception {
+        mockMvc.perform(get("/champions/saveChampsFromCsv"))
+                .andExpect(status().is3xxRedirection());
     }
 }

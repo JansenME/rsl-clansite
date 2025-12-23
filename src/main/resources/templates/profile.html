@@ -23,20 +23,21 @@
 					<div style="flex: 1; min-width: 300px;">
 						<h2>My Profile & Roles</h2>
 
-						<div th:if="${clanmemberViewData}">
+						<div sec:authorize="isAuthenticated()">
 							<div style="display: flex; align-items: flex-start; margin-bottom: 0px;">
 
-								<div th:if="${clanmemberViewData.discordAvatarUrl}" style="margin-right: 15px;">
+								<div th:if="${clanmemberViewData != null and clanmemberViewData.discordAvatarUrl != null}" style="margin-right: 15px;">
 									<img th:src="${clanmemberViewData.discordAvatarUrl}"
 										 alt="Discord Avatar"
 										 style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
 								</div>
 
 								<div style="margin-left: 0; padding-left: 0;">
-									<p style="margin: 0 0 20px 0; padding-left: 0;">Logged in as: <br /><strong th:text="${clanmemberViewData.discordUserName}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong></p>
+									<p style="margin: 0 0 20px 0; padding-left: 0;">Logged in as: <br /><strong th:text="${clanmemberViewData != null ? clanmemberViewData.discordUserName : 'User'}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong></p>
 									<p style="font-weight: bold; margin-bottom: 5px; margin-left: 0; padding-left: 0;">Roles:</p>
 
-									<ul style="list-style: disc; margin-left: 20px; padding: 0; text-align: left;">
+									<ul style="list-style: disc; margin-left: 20px; padding: 0; text-align: left;"
+										th:if="${clanmemberViewData != null}">
 										<li th:each="discordUserRole : ${clanmemberViewData.discordUserRoles}">
 											<span th:text="${discordUserRole}">Role Name</span>
 										</li>
@@ -45,7 +46,7 @@
 							</div>
 							<form th:action="@{/perform_logout}" method="post" style="margin-top: 20px;"><button type="submit">Logout</button></form>
 						</div>
-						<div th:unless="${clanmemberViewData}">
+						<div sec:authorize="isAnonymous()">
 							<p>Please <a th:href="@{/oauth2/authorization/discord}">log in</a> to view your profile.</p>
 						</div>
 					</div>
