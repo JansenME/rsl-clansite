@@ -2,6 +2,7 @@ package com.rsl.clansite.controller;
 
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.service.DiscordRoleService;
 import jakarta.servlet.http.Cookie;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.DisplayName;
@@ -13,7 +14,9 @@ import java.util.Base64;
 import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -148,6 +151,28 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("GET /add - ADMIN lookup with dual roles should show warning and empty clan group")
+    void addForm_WithDualRoles_ShouldShowWarning() throws Exception {
+        String discordId = "dualRoleUser";
+
+        NewClanmemberDTO mockDto = new NewClanmemberDTO();
+        mockDto.setDiscordId(discordId);
+        mockDto.setDiscordRoles(List.of(DiscordRoleService.T1_ROLE_ID, DiscordRoleService.T2_ROLE_ID));
+        mockDto.setClanGroup(null);
+
+        when(clanmemberService.lookupDiscordUser(discordId)).thenReturn(mockDto);
+
+        mockMvc.perform(get("/clanmembers/add")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .param("discordId", discordId))
+                .andExpect(status().isOk())
+                .andExpect(view().name("clanmember-add"))
+                .andExpect(model().attribute("lookupSuccess", true))
+                .andExpect(model().attribute("lookupWarning", containsString("has both T1 and T2 roles")))
+                .andExpect(model().attribute("clanmemberRosterDto", hasProperty("clanGroup", nullValue())));
     }
 
     @Test
