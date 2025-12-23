@@ -1,7 +1,6 @@
 package com.rsl.clansite.controller;
 
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
-import com.rsl.clansite.model.entity.AuditLogEntity;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.enums.ClanRank;
 import com.rsl.clansite.service.ClanmemberService;
