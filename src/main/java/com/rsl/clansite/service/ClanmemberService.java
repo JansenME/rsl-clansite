@@ -18,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -63,7 +64,6 @@ public class ClanmemberService {
         List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordId(discordId);
 
         if (linkedMembers.isEmpty()) {
-            log.warn("Link attempt for user {} failed. No roster entry found.", discordId);
             return;
         }
 
@@ -171,6 +171,10 @@ public class ClanmemberService {
 
     private boolean tryUpdateMemberRoles(ClanmemberEntity member) {
         try {
+            if (!StringUtils.hasText(member.getDiscordId())) {
+                return false;
+            }
+
             Optional<NewClanmemberDTO> discordDataOpt = discordApiClient.getDiscordMember(member.getDiscordId());
 
             if (discordDataOpt.isEmpty()) {
