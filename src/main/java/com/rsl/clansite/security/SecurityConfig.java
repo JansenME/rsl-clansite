@@ -98,7 +98,8 @@ public class SecurityConfig {
     public RoleHierarchy roleHierarchy() {
         String hierarchy =
                 "ROLE_OWNER > ROLE_ADMIN \n" +
-                        "ROLE_ADMIN > ROLE_COORDINATOR";
+                        "ROLE_ADMIN > ROLE_COORDINATOR \n" +
+                        "ROLE_COORDINATOR > ROLE_MEMBER";
 
         return RoleHierarchyImpl.fromHierarchy(hierarchy);
     }

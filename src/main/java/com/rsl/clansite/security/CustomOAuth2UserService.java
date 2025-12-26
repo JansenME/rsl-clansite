@@ -37,6 +37,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             DiscordRoleService.SIEGE_COORDINATOR_ROLE_ID
     );
 
+    private static final Set<String> MEMBER_ROLE_IDS = Set.of(
+            DiscordRoleService.T1_ROLE_ID,
+            DiscordRoleService.T2_ROLE_ID
+    );
+
     public CustomOAuth2UserService(ClanmemberService clanmemberService, DiscordApiClient discordApiClient) {
         this.clanmemberService = clanmemberService;
         this.discordApiClient = discordApiClient;
@@ -99,7 +104,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
         }
 
-        if (!authorities.isEmpty() || !userDiscordRoles.isEmpty()) {
+        if (userDiscordRoles.stream().anyMatch(MEMBER_ROLE_IDS::contains)) {
             authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
         }
 

@@ -76,7 +76,6 @@ class CustomOAuth2UserServiceTest {
                 .collect(Collectors.toSet());
 
         assertTrue(authorities.contains("ROLE_ADMIN"));
-        assertTrue(authorities.contains("ROLE_MEMBER"));
     }
 
     @Test
@@ -165,5 +164,79 @@ class CustomOAuth2UserServiceTest {
                 .collect(Collectors.toSet());
 
         assertTrue(authorities.contains("ROLE_COORDINATOR"));
+    }
+
+    @Test
+    @DisplayName("loadUser - SAFETY CHECK: Regular user must NOT get Admin/Coordinator roles (Debug lines must be commented out)")
+    void loadUser_RegularUser_ShouldNotHaveElevatedPrivileges() {
+        String discordId = "987654321";
+
+        OAuth2User mockOAuthUser = new DefaultOAuth2User(
+                Set.of(), Map.of("id", discordId, "global_name", "RegularJoe", "avatar", "hash"), "id"
+        );
+        doReturn(mockOAuthUser).when(userService).fetchUserInfo(any());
+
+        NewClanmemberDTO memberDto = new NewClanmemberDTO();
+        memberDto.setDiscordRoles(List.of(DiscordRoleService.T1_ROLE_ID));
+        when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(memberDto));
+
+        OAuth2User result = userService.loadUser(userRequest);
+
+        assertTrue(result.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_MEMBER")));
+
+        assertTrue(result.getAuthorities().stream()
+                        .noneMatch(a -> a.getAuthority().equals("ROLE_ADMIN")),
+                "Security Alert: Regular user has ADMIN role! Check for uncommented debug lines.");
+
+        assertTrue(result.getAuthorities().stream()
+                        .noneMatch(a -> a.getAuthority().equals("ROLE_COORDINATOR")),
+                "Security Alert: Regular user has COORDINATOR role! Check for uncommented debug lines.");
+
+        assertTrue(result.getAuthorities().stream()
+                        .noneMatch(a -> a.getAuthority().equals("ROLE_OWNER")),
+                "Security Alert: Regular user has OWNER role! Check for uncommented debug lines.");
+    }
+
+    @Test
+    @DisplayName("loadUser - SAFETY CHECK: Random roles should NOT grant any access")
+    void loadUser_RandomRole_ShouldHaveNoAccess() {
+        String discordId = "987654321";
+
+        OAuth2User mockOAuthUser = new DefaultOAuth2User(
+                Set.of(), Map.of("id", discordId, "global_name", "RandomGuy", "avatar", "hash"), "id"
+        );
+        doReturn(mockOAuthUser).when(userService).fetchUserInfo(any());
+
+        NewClanmemberDTO memberDto = new NewClanmemberDTO();
+        memberDto.setDiscordRoles(List.of("999999"));
+        when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(memberDto));
+
+        OAuth2User result = userService.loadUser(userRequest);
+
+        assertTrue(result.getAuthorities().isEmpty(),
+                "Security Alert: User with random role got access! Authorities: " + result.getAuthorities());
+    }
+
+    @Test
+    @DisplayName("loadUser - T1/T2 Role should grant ROLE_MEMBER")
+    void loadUser_T1Role_ShouldGrantMember() {
+        String discordId = "111222333";
+        OAuth2User mockOAuthUser = new DefaultOAuth2User(
+                Set.of(), Map.of("id", discordId, "global_name", "T1Soldier", "avatar", "hash"), "id"
+        );
+        doReturn(mockOAuthUser).when(userService).fetchUserInfo(any());
+
+        NewClanmemberDTO memberDto = new NewClanmemberDTO();
+        memberDto.setDiscordRoles(List.of("1298811143699169350"));
+        when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(memberDto));
+
+        OAuth2User result = userService.loadUser(userRequest);
+
+        assertTrue(result.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_MEMBER")));
+
+        assertTrue(result.getAuthorities().stream()
+                .noneMatch(a -> a.getAuthority().equals("ROLE_ADMIN")));
     }
 }
