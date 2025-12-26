@@ -16,10 +16,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -134,9 +138,7 @@ class AuditLogServiceTest {
     @DisplayName("deleteLogEntry - Should call repository delete for valid ID")
     void deleteLogEntry_ValidId_ShouldDelete() {
         String validId = new ObjectId().toHexString();
-
         auditLogService.deleteLogEntry(validId);
-
         verify(auditLogRepository).deleteById(any(ObjectId.class));
     }
 
@@ -144,7 +146,40 @@ class AuditLogServiceTest {
     @DisplayName("deleteLogEntry - Should ignore invalid ID")
     void deleteLogEntry_InvalidId_ShouldDoNothing() {
         auditLogService.deleteLogEntry("invalid-id");
-
         verify(auditLogRepository, never()).deleteById(any());
+    }
+
+    @Test
+    @DisplayName("searchLogs - Should convert LocalDate to LocalDateTime (Start/End of Day) and call Repo")
+    void searchLogs_ShouldConvertDatesAndCallRepository() {
+        LocalDate fromDate = LocalDate.of(2025, 12, 24);
+        LocalDate toDate = LocalDate.of(2025, 12, 25);
+        String actor = "Martijn";
+        AuditAction action = AuditAction.MEMBER_ADD;
+        String target = "NewGuy";
+
+        auditLogService.searchLogs(fromDate, toDate, actor, action, target);
+
+        verify(auditLogRepository).searchAuditLogs(
+                eq(LocalDateTime.of(fromDate, LocalTime.MIN)),
+                eq(LocalDateTime.of(toDate, LocalTime.MAX)),
+                eq(actor),
+                eq(action),
+                eq(target)
+        );
+    }
+
+    @Test
+    @DisplayName("searchLogs - Should handle NULL inputs safely")
+    void searchLogs_WithNulls_ShouldPassNullsToRepository() {
+        auditLogService.searchLogs(null, null, null, null, null);
+
+        verify(auditLogRepository).searchAuditLogs(
+                eq(null),
+                eq(null),
+                eq(null),
+                eq(null),
+                eq(null)
+        );
     }
 }

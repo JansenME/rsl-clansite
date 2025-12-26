@@ -11,7 +11,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -50,6 +52,13 @@ public class AuditLogService {
 
     public List<AuditLogEntity> getAllLogs() {
         return auditLogRepository.findAllByOrderByTimestampDesc();
+    }
+
+    public List<AuditLogEntity> searchLogs(LocalDate fromDate, LocalDate toDate, String actor, AuditAction action, String target) {
+        LocalDateTime start = (fromDate != null) ? fromDate.atStartOfDay() : null;
+        LocalDateTime end = (toDate != null) ? toDate.atTime(LocalTime.MAX) : null;
+
+        return auditLogRepository.searchAuditLogs(start, end, actor, action, target);
     }
 
     public void deleteLogEntry(String id) {

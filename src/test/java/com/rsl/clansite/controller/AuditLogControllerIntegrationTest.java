@@ -8,11 +8,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -36,7 +39,7 @@ class AuditLogControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(model().attributeExists("logs"))
                 .andExpect(content().string(not(containsString("<th>Delete</th>"))));
 
-        verify(auditLogService).getAllLogs();
+        verify(auditLogService).searchLogs(any(), any(), any(), any(), any());
         verify(commonsService).fillModel(any(), any());
     }
 
@@ -44,7 +47,7 @@ class AuditLogControllerIntegrationTest extends BaseControllerTest {
     @DisplayName("GET /audit-log - OWNER should access logs AND see Delete Column")
     void viewAuditLog_AsOwner_ShouldSucceed_WithDelete() throws Exception {
         AuditLogEntity log = new AuditLogEntity(ObjectId.get(), LocalDateTime.now(), "user", "User", AuditAction.MEMBER_ADD, "Target", "Details");
-        when(auditLogService.getAllLogs()).thenReturn(List.of(log));
+        when(auditLogService.searchLogs(any(), any(), any(), any(), any())).thenReturn(List.of(log));
 
         mockMvc.perform(get("/audit-log")
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
@@ -116,5 +119,65 @@ class AuditLogControllerIntegrationTest extends BaseControllerTest {
                         .with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("GET /audit-log?params - Should map URL parameters to Service method")
+    void viewAuditLog_WithSearchParameters_ShouldPassToService() throws Exception {
+        String startDateStr = "2025-12-01";
+        String endDateStr = "2025-12-31";
+        String actor = "Martijn";
+        String target = "BadGuy";
+        String action = "MEMBER_DELETE";
+
+        mockMvc.perform(get("/audit-log")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .param("startDate", startDateStr)
+                        .param("endDate", endDateStr)
+                        .param("actor", actor)
+                        .param("action", action)
+                        .param("target", target))
+                .andExpect(status().isOk());
+
+        verify(auditLogService).searchLogs(
+                eq(java.time.LocalDate.parse(startDateStr)),
+                eq(java.time.LocalDate.parse(endDateStr)),
+                eq(actor),
+                eq(AuditAction.MEMBER_DELETE),
+                eq(target)
+        );
+    }
+
+    @Test
+    @DisplayName("GET /audit-log - Should show Warning if results exceed 100")
+    void viewAuditLog_WithManyResults_ShouldShowLimitWarning() throws Exception {
+        List<AuditLogEntity> largeList = new ArrayList<>();
+        for (int i = 0; i < 101; i++) {
+            largeList.add(new AuditLogEntity(ObjectId.get(), LocalDateTime.now(), "user", "User", AuditAction.MEMBER_ADD, "Target", "Details"));
+        }
+
+        when(auditLogService.searchLogs(any(), any(), any(), any(), any())).thenReturn(largeList);
+
+        mockMvc.perform(get("/audit-log")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                        .andExpect(status().isOk())
+                        .andExpect(model().attribute("limitWarning", notNullValue()))
+                        .andExpect(content().string(containsString("Showing the first 100 results only")));
+    }
+
+    @Test
+    @DisplayName("GET /audit-log - Should not show Warning if results are less than 100")
+    void viewAuditLog_WithFewResults_ShouldNotShowLimitWarning() throws Exception {
+        List<AuditLogEntity> largeList = new ArrayList<>();
+        for (int i = 0; i < 99; i++) {
+            largeList.add(new AuditLogEntity(ObjectId.get(), LocalDateTime.now(), "user", "User", AuditAction.MEMBER_ADD, "Target", "Details"));
+        }
+
+        when(auditLogService.searchLogs(any(), any(), any(), any(), any())).thenReturn(largeList);
+
+        mockMvc.perform(get("/audit-log")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                        .andExpect(status().isOk())
+                        .andExpect(model().attributeDoesNotExist("limitWarning"));
     }
 }

@@ -282,3 +282,38 @@ tbody tr:hover {
      background-clip: text !important;
      -webkit-text-fill-color: transparent !important;
 }
+
+/* Simple styling for the filter bar */
+.filter-container {
+    background: #f4f4f4;
+    padding: 20px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+}
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+}
+.filter-group {
+    flex: 1;
+    min-width: 150px;
+}
+.filter-group label {
+    display: block;
+    font-size: 0.9em;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+.filter-group input, .filter-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.filter-actions {
+    display: flex;
+    gap: 10px;
+}

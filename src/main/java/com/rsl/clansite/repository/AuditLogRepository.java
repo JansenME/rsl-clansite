@@ -8,6 +8,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface AuditLogRepository extends MongoRepository<AuditLogEntity, ObjectId> {
+public interface AuditLogRepository extends MongoRepository<AuditLogEntity, ObjectId>, AuditLogRepositoryCustom {
     List<AuditLogEntity> findAllByOrderByTimestampDesc();
 }

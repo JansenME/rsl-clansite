@@ -20,6 +20,53 @@
 						<h2>Audit Log</h2>
 						<p>Tracking administrative actions performed on the roster.</p>
 
+						<div class="filter-container">
+							<form th:action="@{/audit-log}" method="get">
+								<div class="filter-row">
+
+									<div class="filter-group">
+										<label for="startDate">From Date:</label>
+										<input type="date" id="startDate" name="startDate" th:value="${startDate}" />
+									</div>
+
+									<div class="filter-group">
+										<label for="endDate">To Date:</label>
+										<input type="date" id="endDate" name="endDate" th:value="${endDate}" />
+									</div>
+
+									<div class="filter-group">
+										<label for="actor">Admin Name:</label>
+										<input type="text" id="actor" name="actor" th:value="${actor}" placeholder="Search Admin..." />
+									</div>
+
+									<div class="filter-group">
+										<label for="action">Action:</label>
+										<select id="action" name="action">
+											<option value="">-- All Actions --</option>
+											<option th:each="act : ${auditActions}"
+													th:value="${act}"
+													th:text="${act.description != null ? act.description : act}"
+													th:selected="${act == selectedAction}">
+												Action Name
+											</option>
+										</select>
+									</div>
+
+									<div class="filter-group">
+										<label for="target">Target Name:</label>
+										<input type="text" id="target" name="target" th:value="${target}" placeholder="Search Target..." />
+									</div>
+
+									<div class="filter-actions" style="padding-bottom: 2px;">
+										<button type="submit" class="button small">Filter</button>
+										<a th:href="@{/audit-log}" class="button small alt">Reset</a>
+									</div>
+								</div>
+							</form>
+						</div>
+
+						<div th:replace="~{inserts/alerts :: warning-box(${limitWarning})}"></div>
+
 						<table style="width: 100%;">
 							<thead>
 							<tr>
@@ -37,7 +84,7 @@
 
 								<td th:text="${log.actorDiscordName}">Admin Name</td>
 
-								<td th:text="${log.action.description}">Action</td>
+								<td th:text="${log.action.description != null ? log.action.description : log.action}">Action</td>
 
 								<td th:text="${log.target}">Target Name</td>
 								<td th:text="${log.details}">Details</td>
