@@ -1,5 +1,6 @@
 package com.rsl.clansite.controller;
 
+import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.enums.ClanRank;
@@ -37,25 +38,12 @@ public class ClanmemberController {
     public String viewClanmembers(Model model, Authentication authentication, HttpSession session) {
         commonsService.fillModel(model, authentication);
 
-        List<ClanmemberEntity> linkedMembers = List.of();
-        String activeMemberId = null;
+        String activeMemberId = clanmemberService.manageActiveMemberSession(session, authentication);
 
-        if (authentication != null && authentication.isAuthenticated()) {
-            String currentDiscordId = authentication.getName();
-            linkedMembers = clanmemberService.getLinkedClanmembers(currentDiscordId);
-
-            activeMemberId = (String) session.getAttribute("ACTIVE_MEMBER_ID");
-
-            if (activeMemberId == null && !linkedMembers.isEmpty()) {
-                activeMemberId = linkedMembers.get(0).getId().toHexString();
-                session.setAttribute("ACTIVE_MEMBER_ID", activeMemberId);
-            }
-        }
-
-        model.addAttribute("linkedMembers", linkedMembers);
+        model.addAttribute("linkedMembers", clanmemberService.getLinkedClanmembers(authentication != null ? authentication.getName() : null));
         model.addAttribute("activeMemberId", activeMemberId);
-
         model.addAttribute("clanmembers", clanmemberService.findAllClanmemberEntities());
+
         return "clanmembers";
     }
 
@@ -66,16 +54,7 @@ public class ClanmemberController {
             Authentication authentication,
             HttpSession session) {
 
-        String currentDiscordId = authentication.getName();
-
-        List<ClanmemberEntity> ownedAccounts = clanmemberService.getLinkedClanmembers(currentDiscordId);
-
-        boolean isOwned = ownedAccounts.stream()
-                .anyMatch(member -> member.getId().toHexString().equals(newActiveMemberId));
-
-        if (isOwned) {
-            session.setAttribute("ACTIVE_MEMBER_ID", newActiveMemberId);
-        }
+        clanmemberService.switchActiveMember(session, authentication, newActiveMemberId);
 
         return "redirect:/clanmembers";
     }
@@ -87,6 +66,7 @@ public class ClanmemberController {
             @RequestParam(value = "skipLookup", required = false) boolean skipLookup,
             Model model,
             Authentication authentication) {
+
         commonsService.fillModel(model, authentication);
         model.addAttribute("clanRanks", ClanRank.values());
 
@@ -94,45 +74,22 @@ public class ClanmemberController {
             model.addAttribute("clanmemberRosterDto", new NewClanmemberDTO());
         }
 
-        NewClanmemberDTO dto = (NewClanmemberDTO) model.getAttribute("clanmemberRosterDto");
-
         if (skipLookup) {
             model.addAttribute("lookupSuccess", true);
         } else if (discordId != null && !discordId.isBlank()) {
-            try {
-                NewClanmemberDTO lookedUpDto = clanmemberService.lookupDiscordUser(discordId);
+            MemberLookupResult result = clanmemberService.performMemberLookup(discordId);
 
-                dto.setDiscordId(lookedUpDto.getDiscordId());
-                dto.setDiscordName(lookedUpDto.getDiscordName());
-                dto.setPlayerNickname(lookedUpDto.getPlayerNickname());
-                dto.setAvatarHash(lookedUpDto.getAvatarHash());
-                dto.setDiscordRoles(lookedUpDto.getDiscordRoles());
-                dto.setClanGroup(lookedUpDto.getClanGroup());
-
+            if (result.isSuccess()) {
+                model.addAttribute("clanmemberRosterDto", result.getDto());
                 model.addAttribute("lookupSuccess", true);
-
-                StringBuilder warningMsg = new StringBuilder();
-
-                List<String> roles = dto.getDiscordRoles();
-                if (roles != null &&
-                        roles.contains(DiscordRoleService.T1_ROLE_ID) &&
-                        roles.contains(DiscordRoleService.T2_ROLE_ID)) {
-                    warningMsg.append("Notice: This user has both T1 and T2 roles in Discord. Please manually select the correct Clan Group below. ");
+                if (result.getWarningMessage() != null) {
+                    model.addAttribute("lookupWarning", result.getWarningMessage());
                 }
-
-                if (clanmemberService.isDiscordIdInRoster(discordId)) {
-                    warningMsg.append("Notice: This Discord ID is already in the roster. You can still add this as an alt account.");
-                }
-
-                if (warningMsg.length() > 0) {
-                    model.addAttribute("lookupWarning", warningMsg.toString().trim());
-                }
-            } catch (Exception e) {
-                model.addAttribute("lookupError", "Error looking up user: " + e.getMessage());
+            } else {
+                model.addAttribute("lookupError", result.getErrorMessage());
             }
         }
 
-        model.addAttribute("clanmemberRosterDto", dto);
         return "clanmember-add";
     }
 
@@ -145,24 +102,15 @@ public class ClanmemberController {
             RedirectAttributes redirectAttributes,
             Authentication authentication) {
 
-        boolean isManualEntry = (dto.getDiscordId() == null || dto.getDiscordId().isBlank());
-
         if (bindingResult.hasErrors()) {
-            model.addAttribute("clanRanks", ClanRank.values());
-            model.addAttribute("clanmemberRosterDto", dto);
-            model.addAttribute("lookupSuccess", true);
-            return "clanmember-add";
+            return reloadFormWithError(model, dto, null);
         }
 
         if (clanmemberService.isPlayerIngameNameInUse(dto.getIngameName())) {
-            model.addAttribute("clanRanks", ClanRank.values());
-            model.addAttribute("clanmemberRosterDto", dto);
-            model.addAttribute("lookupError", "Failed to save member: The In-Game Name '" + dto.getIngameName() + "' already exists in the roster.");
-            model.addAttribute("lookupSuccess", true);
-
-            return "clanmember-add";
+            return reloadFormWithError(model, dto, "Failed to save member: The In-Game Name '" + dto.getIngameName() + "' already exists in the roster.");
         }
 
+        boolean isManualEntry = (dto.getDiscordId() == null || dto.getDiscordId().isBlank());
         if (isManualEntry && (dto.getIngameName() == null || dto.getIngameName().isBlank())) {
             redirectAttributes.addFlashAttribute("lookupError", "For manual entries, the In-Game Name is required so we know who this is!");
             redirectAttributes.addFlashAttribute("clanmemberRosterDto", dto);
@@ -172,11 +120,7 @@ public class ClanmemberController {
         try {
             clanmemberService.saveNewClanmember(dto, authentication);
         } catch (Exception e) {
-            model.addAttribute("clanRanks", ClanRank.values());
-            model.addAttribute("clanmemberRosterDto", dto);
-            model.addAttribute("lookupError", "Failed to save member: " + e.getMessage());
-            model.addAttribute("lookupSuccess", true);
-            return "clanmember-add";
+            return reloadFormWithError(model, dto, "Failed to save member: " + e.getMessage());
         }
 
         return "redirect:/clanmembers";
@@ -187,5 +131,15 @@ public class ClanmemberController {
     public String deleteClanmember(@PathVariable String id, HttpSession session, Authentication authentication) {
         clanmemberService.deleteById(id, session, authentication);
         return "redirect:/clanmembers";
+    }
+
+    private String reloadFormWithError(Model model, NewClanmemberDTO dto, String errorMessage) {
+        model.addAttribute("clanRanks", ClanRank.values());
+        model.addAttribute("clanmemberRosterDto", dto);
+        model.addAttribute("lookupSuccess", true); // Keep form visible
+        if (errorMessage != null) {
+            model.addAttribute("lookupError", errorMessage);
+        }
+        return "clanmember-add";
     }
 }

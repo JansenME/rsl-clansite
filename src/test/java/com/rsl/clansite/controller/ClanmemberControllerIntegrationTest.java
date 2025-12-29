@@ -1,12 +1,15 @@
 package com.rsl.clansite.controller;
 
+import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.service.DiscordRoleService;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpSession;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.session.Session;
 
@@ -100,29 +103,14 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
         ObjectId realId = new ObjectId();
         String targetMemberId = realId.toHexString();
 
-        ClanmemberEntity ownedMember = new ClanmemberEntity();
-        ownedMember.setId(realId);
-
-        when(clanmemberService.getLinkedClanmembers(any())).thenReturn(List.of(ownedMember));
-
-        var result = mockMvc.perform(post("/clanmembers/switch")
+        mockMvc.perform(post("/clanmembers/switch")
                         .with(user(discordId).roles("MEMBER"))
                         .with(csrf())
                         .param("memberId", targetMemberId))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/clanmembers"))
-                .andReturn();
+                .andExpect(redirectedUrl("/clanmembers"));
 
-        Cookie sessionCookie = result.getResponse().getCookie("SESSION");
-        assertNotNull(sessionCookie, "Session Cookie should exist");
-
-        String sessionId = new String(Base64.getDecoder().decode(sessionCookie.getValue()));
-        Session storedSession = sessionRepository.findById(sessionId);
-
-        assertNotNull(storedSession, "Session should be saved in the repository");
-        assertEquals(targetMemberId, storedSession.getAttribute("ACTIVE_MEMBER_ID"));
-
-        verify(clanmemberService).getLinkedClanmembers(eq(discordId));
+        verify(clanmemberService).switchActiveMember(any(HttpSession.class), any(Authentication.class), eq(targetMemberId));
     }
 
     @Test
@@ -163,7 +151,12 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
         mockDto.setDiscordRoles(List.of(DiscordRoleService.T1_ROLE_ID, DiscordRoleService.T2_ROLE_ID));
         mockDto.setClanGroup(null);
 
-        when(clanmemberService.lookupDiscordUser(discordId)).thenReturn(mockDto);
+        MemberLookupResult result = MemberLookupResult.success(
+                mockDto,
+                "Notice: This user has both T1 and T2 roles in Discord. Please manually select the correct Clan Group below."
+        );
+
+        when(clanmemberService.performMemberLookup(discordId)).thenReturn(result);
 
         mockMvc.perform(get("/clanmembers/add")
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))

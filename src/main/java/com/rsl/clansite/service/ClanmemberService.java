@@ -3,6 +3,7 @@ package com.rsl.clansite.service;
 import com.rsl.clansite.client.DiscordApiClient;
 import com.rsl.clansite.exceptions.UnlinkedAccountException;
 import com.rsl.clansite.model.ClanmemberViewData;
+import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.enums.AuditAction;
@@ -42,6 +43,62 @@ public class ClanmemberService {
         this.discordApiClient = discordApiClient;
     }
 
+    public String manageActiveMemberSession(HttpSession session, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+
+        String currentDiscordId = authentication.getName();
+        List<ClanmemberEntity> linkedMembers = getLinkedClanmembers(currentDiscordId);
+        String activeMemberId = (String) session.getAttribute("ACTIVE_MEMBER_ID");
+
+        if (activeMemberId == null && !linkedMembers.isEmpty()) {
+            activeMemberId = linkedMembers.get(0).getId().toHexString();
+            session.setAttribute("ACTIVE_MEMBER_ID", activeMemberId);
+        }
+        return activeMemberId;
+    }
+
+    public boolean switchActiveMember(HttpSession session, Authentication authentication, String newMemberId) {
+        if (authentication == null) return false;
+
+        String currentDiscordId = authentication.getName();
+        List<ClanmemberEntity> ownedAccounts = getLinkedClanmembers(currentDiscordId);
+
+        boolean isOwned = ownedAccounts.stream()
+                .anyMatch(member -> member.getId().toHexString().equals(newMemberId));
+
+        if (isOwned) {
+            session.setAttribute("ACTIVE_MEMBER_ID", newMemberId);
+            return true;
+        }
+        return false;
+    }
+
+    public MemberLookupResult performMemberLookup(String discordId) {
+        try {
+            NewClanmemberDTO dto = lookupDiscordUser(discordId);
+
+            StringBuilder warningMsg = new StringBuilder();
+
+            List<String> roles = dto.getDiscordRoles();
+            if (roles != null &&
+                    roles.contains(DiscordRoleService.T1_ROLE_ID) &&
+                    roles.contains(DiscordRoleService.T2_ROLE_ID)) {
+                warningMsg.append("Notice: This user has both T1 and T2 roles in Discord. Please manually select the correct Clan Group below. ");
+            }
+
+            if (isDiscordIdInRoster(discordId)) {
+                warningMsg.append("Notice: This Discord ID is already in the roster. You can still add this as an alt account.");
+            }
+
+            return MemberLookupResult.success(dto, warningMsg.toString().trim());
+
+        } catch (Exception e) {
+            return MemberLookupResult.failure("Error looking up user: " + e.getMessage());
+        }
+    }
+
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
     public void updateAllClanmemberDiscordRoles() {
@@ -76,10 +133,9 @@ public class ClanmemberService {
     }
 
     public List<ClanmemberEntity> getLinkedClanmembers(final String discordId) {
+        if (discordId == null) return List.of();
+
         List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordId(discordId);
-        if (linkedMembers.isEmpty()) {
-            throw new UnlinkedAccountException("User's Discord ID is not linked. Please contact the administrator.");
-        }
         return linkedMembers;
     }
 

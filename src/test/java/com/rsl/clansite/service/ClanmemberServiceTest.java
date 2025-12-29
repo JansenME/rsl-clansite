@@ -2,6 +2,7 @@ package com.rsl.clansite.service;
 
 import com.rsl.clansite.client.DiscordApiClient;
 import com.rsl.clansite.exceptions.UnlinkedAccountException;
+import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.enums.AuditAction;
@@ -26,6 +27,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,6 +38,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -162,15 +166,14 @@ class ClanmemberServiceTest {
     }
 
     @Test
-    @DisplayName("getLinkedClanmembers should throw exception if no members found")
-    void getLinkedClanmembers_ShouldThrowException_WhenEmpty() {
+    @DisplayName("getLinkedClanmembers should return empty list if no members found (Safe for anonymous users)")
+    void getLinkedClanmembers_ShouldReturnEmptyList_WhenEmpty() {
         String discordId = "99999";
         when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of());
 
-        assertThrows(
-                UnlinkedAccountException.class,
-                () -> clanmemberService.getLinkedClanmembers(discordId)
-        );
+        List<ClanmemberEntity> result = clanmemberService.getLinkedClanmembers(discordId);
+
+        assertTrue(result.isEmpty(), "Should return empty list for unlinked user");
     }
 
     @Test
@@ -338,7 +341,7 @@ class ClanmemberServiceTest {
 
         clanmemberService.updateAllClanmemberDiscordRoles();
 
-        verify(clanmemberRepository, org.mockito.Mockito.never()).save(any());
+        verify(clanmemberRepository, never()).save(any());
     }
 
     @Test
@@ -349,7 +352,7 @@ class ClanmemberServiceTest {
 
         clanmemberService.linkClanmember(discordId, "Name", "hash", List.of());
 
-        verify(clanmemberRepository, org.mockito.Mockito.never()).save(any());
+        verify(clanmemberRepository, never()).save(any());
     }
 
     @Test
@@ -454,5 +457,143 @@ class ClanmemberServiceTest {
 
         assertEquals(1, result.getDiscordUserRoles().size());
         assertEquals("No Discord Roles Found", result.getDiscordUserRoles().get(0));
+    }
+
+    @Test
+    @DisplayName("performMemberLookup - Should return warning if user has both T1 and T2 roles")
+    void performMemberLookup_WithDualRoles_ShouldReturnWarning() {
+        String discordId = "dual_role_user";
+
+        NewClanmemberDTO mockDto = new NewClanmemberDTO();
+        mockDto.setDiscordId(discordId);
+        mockDto.setDiscordRoles(List.of(DiscordRoleService.T1_ROLE_ID, DiscordRoleService.T2_ROLE_ID));
+        when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(mockDto));
+
+        MemberLookupResult result = clanmemberService.performMemberLookup(discordId);
+
+        assertTrue(result.isSuccess());
+        assertNotNull(result.getWarningMessage());
+        assertTrue(result.getWarningMessage().contains("has both T1 and T2 roles"));
+    }
+
+    @Test
+    @DisplayName("performMemberLookup - Should return warning if user is already in roster")
+    void performMemberLookup_DuplicateUser_ShouldReturnWarning() {
+        String discordId = "existing_user";
+
+        NewClanmemberDTO mockDto = new NewClanmemberDTO();
+        mockDto.setDiscordRoles(List.of());
+        when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(mockDto));
+
+        when(clanmemberRepository.countByDiscordId(discordId)).thenReturn(1L);
+
+        MemberLookupResult result = clanmemberService.performMemberLookup(discordId);
+
+        assertTrue(result.isSuccess());
+        assertNotNull(result.getWarningMessage());
+        assertTrue(result.getWarningMessage().contains("already in the roster"));
+    }
+
+    @Test
+    @DisplayName("performMemberLookup - Should return Failure Result on API Error")
+    void performMemberLookup_ApiError_ShouldReturnFailure() {
+        String discordId = "bad_user";
+        when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.empty());
+
+        MemberLookupResult result = clanmemberService.performMemberLookup(discordId);
+
+        assertFalse(result.isSuccess());
+        assertNotNull(result.getErrorMessage());
+        assertTrue(result.getErrorMessage().contains("Discord User ID not found"));
+    }
+
+    @Test
+    @DisplayName("switchActiveMember - Should FAIL if user does not own the target account")
+    void switchActiveMember_NotOwned_ShouldReturnFalse() {
+        String discordId = "user1";
+        String targetMemberId = new ObjectId().toHexString();
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getName()).thenReturn(discordId);
+        HttpSession session = mock(HttpSession.class);
+
+        when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of());
+
+        boolean result = clanmemberService.switchActiveMember(session, auth, targetMemberId);
+
+        assertFalse(result, "Should not allow switching to unowned account");
+        verify(session, never()).setAttribute(eq("ACTIVE_MEMBER_ID"), any());
+    }
+
+    @Test
+    @DisplayName("manageActiveMemberSession - Should set Default ID if session is empty")
+    void manageActiveMemberSession_EmptySession_ShouldSetDefault() {
+        String discordId = "user1";
+        ObjectId defaultId = new ObjectId();
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(true);
+        when(auth.getName()).thenReturn(discordId);
+
+        HttpSession session = mock(HttpSession.class);
+        when(session.getAttribute("ACTIVE_MEMBER_ID")).thenReturn(null);
+
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setId(defaultId);
+        when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of(member));
+
+        String result = clanmemberService.manageActiveMemberSession(session, auth);
+
+        assertEquals(defaultId.toHexString(), result);
+        verify(session).setAttribute("ACTIVE_MEMBER_ID", defaultId.toHexString());
+    }
+
+    @Test
+    @DisplayName("manageActiveMemberSession - Should return null if Authentication is null or not authenticated")
+    void manageActiveMemberSession_NoAuth_ShouldReturnNull() {
+        HttpSession session = mock(HttpSession.class);
+
+        String result1 = clanmemberService.manageActiveMemberSession(session, null);
+        assertNull(result1);
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(false);
+        String result2 = clanmemberService.manageActiveMemberSession(session, auth);
+        assertNull(result2);
+    }
+
+    @Test
+    @DisplayName("switchActiveMember - Should SUCCEED if user owns the target account")
+    void switchActiveMember_Owned_ShouldReturnTrue() {
+        String discordId = "ownerUser";
+        ObjectId targetId = new ObjectId();
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getName()).thenReturn(discordId);
+        HttpSession session = mock(HttpSession.class);
+
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setId(targetId);
+        when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of(member));
+
+        boolean result = clanmemberService.switchActiveMember(session, auth, targetId.toHexString());
+
+        assertTrue(result);
+        verify(session).setAttribute("ACTIVE_MEMBER_ID", targetId.toHexString());
+    }
+
+    @Test
+    @DisplayName("updateAllClanmemberDiscordRoles - Should skip members with empty Discord IDs")
+    void updateAllClanmemberDiscordRoles_EmptyId_ShouldSkip() {
+        ClanmemberEntity memberWithNoId = new ClanmemberEntity();
+        memberWithNoId.setDiscordId("");
+        memberWithNoId.setIngameName("ManualUser");
+
+        when(clanmemberRepository.findAllByDiscordIdIsNotNull()).thenReturn(List.of(memberWithNoId));
+
+        clanmemberService.updateAllClanmemberDiscordRoles();
+
+        verify(discordApiClient, never()).getDiscordMember(any());
+        verify(clanmemberRepository, never()).save(any());
     }
 }
