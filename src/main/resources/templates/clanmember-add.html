@@ -1,107 +1,111 @@
 <!DOCTYPE HTML>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-	<head>
-		<title>Raid Shadow Legends Fan Site</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
-		<script th:src="@{/styles/js/main.js}"></script>
-	</head>
-	<body>
-		<div id="page-wrapper">
-			<section id="header">
-				<div th:insert="~{inserts/nav :: nav}" class="container">
-				</div>
-			</section>
-
-			<section id="content">
-				<div class="container">
-					<section>
-						<h1>Add New Clanmember</h1>
-
-						<div th:replace="~{inserts/alerts :: error-box(${lookupError})}"></div>
-
-						<form th:action="@{/clanmembers/add}" method="get" style="margin-bottom: 30px; padding-bottom: 30px; border-bottom: 1px solid #ccc;">
-							<h3>Step 1: Discord ID Lookup</h3>
-							<label for="discordIdLookup">Discord ID:</label>
-							<input type="text" id="discordIdLookup" name="discordId"
-								   th:value="${clanmemberRosterDto.discordId}" required
-								   placeholder="Paste the user's copied Discord ID here" />
-							<button type="submit" class="button">Lookup User</button>
-							<br />
-							<a th:href="@{/clanmembers/add(skipLookup=true)}" class="button secondary" style="margin-left: 10px;">
-								Skip Discord Lookup
-							</a>
-						</form>
-
-						<div th:if="${lookupSuccess}">
-							<h3>Step 2: Verify and Save Roster Entry</h3>
-							<div th:replace="~{inserts/alerts :: warning-box(${lookupWarning})}"></div>
-
-							<form th:action="@{/clanmembers/save}" th:object="${clanmemberRosterDto}" method="post">
-
-								<input type="hidden" th:field="*{discordId}" />
-								<input type="hidden" th:field="*{discordName}" />
-								<input type="hidden" th:field="*{avatarHash}" />
-
-								<div th:each="roleId : *{discordRoles}">
-									<input type="hidden" name="discordRoles" th:value="${roleId}" />
-								</div>
-
-								<div th:if="${clanmemberRosterDto.discordName != null and clanmemberRosterDto.discordName.length() > 0}">
-									<div>
-										<label>Discord Global Name (Verified):</label>
-										<p style="font-weight: bold;" th:text="*{discordName}"></p>
-									</div>
-
-									<div>
-										<label for="playerNickname">Server Nickname (Pre-filled from Discord Server Nickname):</label>
-										<input type="text" id="playerNickname" th:field="*{playerNickname}" />
-									</div>
-								</div>
-
-								<div>
-									<label for="ingameName">In-Game Name (Required for manual entry):</label>
-									<input type="text" id="ingameName" th:field="*{ingameName}"
-										   th:required="${clanmemberRosterDto.discordId == null || clanmemberRosterDto.discordId.isEmpty()}" />
-								</div>
-
-								<div>
-									<label for="clanRank">Clan Rank (Manual Entry):</label>
-									<select id="clanRank" th:field="*{clanRank}">
-										<option value="">-- Select Rank --</option>
-										<option th:each="rank : ${clanRanks}"
-												th:value="${rank}"
-												th:text="${rank.name}">Rank Name</option>
-									</select>
-								</div>
-
-								<div th:if="${clanmemberRosterDto.clanGroup != null}">
-									<label>Detected Clan:</label>
-									<p style="font-weight: bold;" th:text="${clanmemberRosterDto.clanGroup}"></p>
-									<input type="hidden" th:field="*{clanGroup}" />
-								</div>
-
-								<div th:if="${clanmemberRosterDto.clanGroup == null}">
-									<label for="clanGroupSelect">Clan Group (Please Select):</label>
-									<select id="clanGroupSelect" th:field="*{clanGroup}" required>
-										<option value="">-- Select Clan --</option>
-										<option th:each="group : ${T(com.rsl.clansite.model.enums.ClanGroup).values()}"
-												th:value="${group}"
-												th:text="${group.name}">Group Name</option>
-									</select>
-								</div>
-
-								<button type="submit" formnovalidate class="button special">Save Roster Entry</button>
-								<a th:href="@{/clanmembers}" class="button">Cancel</a>
-							</form>
-						</div>
-					</section>
-				</div>
-			</section>
-
-			<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
-			</div>
+<head>
+	<title>Raid Shadow Legends Fan Site</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+	<script th:src="@{/styles/js/main.js}"></script>
+</head>
+<body>
+<div id="page-wrapper">
+	<section id="header">
+		<div th:insert="~{inserts/nav :: nav}" class="container">
 		</div>
-	</body>
+	</section>
+
+	<section id="content">
+		<div class="container">
+			<section>
+				<h1>Add New Clanmember</h1>
+
+				<th:block th:unless="${lookupSuccess}">
+					<div th:replace="~{inserts/alerts :: error-box(${lookupError})}"></div>
+				</th:block>
+
+				<form th:action="@{/clanmembers/add}" method="get" style="margin-bottom: 30px; padding-bottom: 30px; border-bottom: 1px solid #ccc;">
+					<h3>Step 1: Discord ID Lookup</h3>
+					<label for="discordIdLookup">Discord ID:</label>
+					<input type="text" id="discordIdLookup" name="discordId"
+						   th:value="${clanmemberRosterDto.discordId}" required
+						   placeholder="Paste the user's copied Discord ID here" />
+					<button type="submit" class="button">Lookup User</button>
+					<br />
+					<a th:href="@{/clanmembers/add(skipLookup=true)}" class="button secondary" style="margin-left: 10px;">
+						Skip Discord Lookup
+					</a>
+				</form>
+
+				<div th:if="${lookupSuccess}">
+					<h3>Step 2: Verify and Save Roster Entry</h3>
+
+					<div th:replace="~{inserts/alerts :: error-box(${lookupError})}"></div>
+					<div th:replace="~{inserts/alerts :: warning-box(${lookupWarning})}"></div>
+
+					<form th:action="@{/clanmembers/save}" th:object="${clanmemberRosterDto}" method="post">
+
+						<input type="hidden" th:field="*{discordId}" />
+						<input type="hidden" th:field="*{discordName}" />
+						<input type="hidden" th:field="*{avatarHash}" />
+
+						<div th:each="roleId : *{discordRoles}">
+							<input type="hidden" name="discordRoles" th:value="${roleId}" />
+						</div>
+
+						<div th:if="${clanmemberRosterDto.discordName != null and clanmemberRosterDto.discordName.length() > 0}">
+							<div>
+								<label>Discord Global Name (Verified):</label>
+								<p style="font-weight: bold;" th:text="*{discordName}"></p>
+							</div>
+
+							<div>
+								<label for="playerNickname">Server Nickname (Pre-filled from Discord Server Nickname):</label>
+								<input type="text" id="playerNickname" th:field="*{playerNickname}" />
+							</div>
+						</div>
+
+						<div>
+							<label for="ingameName">In-Game Name (Required for manual entry):</label>
+							<input type="text" id="ingameName" th:field="*{ingameName}"
+								   th:required="${clanmemberRosterDto.discordId == null || clanmemberRosterDto.discordId.isEmpty()}" />
+						</div>
+
+						<div>
+							<label for="clanRank">Clan Rank (Manual Entry):</label>
+							<select id="clanRank" th:field="*{clanRank}">
+								<option value="">-- Select Rank --</option>
+								<option th:each="rank : ${clanRanks}"
+										th:value="${rank}"
+										th:text="${rank.name}">Rank Name</option>
+							</select>
+						</div>
+
+						<div th:if="${clanmemberRosterDto.clanGroup != null and clanmemberRosterDto.discordId != null and !clanmemberRosterDto.discordId.isEmpty()}">
+							<label>Detected Clan:</label>
+							<p style="font-weight: bold;" th:text="${clanmemberRosterDto.clanGroup}"></p>
+							<input type="hidden" th:field="*{clanGroup}" />
+						</div>
+
+						<div th:if="${clanmemberRosterDto.clanGroup == null or clanmemberRosterDto.discordId == null or clanmemberRosterDto.discordId.isEmpty()}">
+							<label for="clanGroupSelect">Clan Group (Please Select):</label>
+							<select id="clanGroupSelect" th:field="*{clanGroup}" required>
+								<option value="">-- Select Clan --</option>
+								<option th:each="group : ${T(com.rsl.clansite.model.enums.ClanGroup).values()}"
+										th:value="${group}"
+										th:text="${group.name}">Group Name</option>
+							</select>
+						</div>
+
+						<button type="submit" formnovalidate class="button special">Save Roster Entry</button>
+						<a th:href="@{/clanmembers}" class="button">Cancel</a>
+					</form>
+				</div>
+			</section>
+		</div>
+	</section>
+
+	<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+	</div>
+</div>
+</body>
 </html>

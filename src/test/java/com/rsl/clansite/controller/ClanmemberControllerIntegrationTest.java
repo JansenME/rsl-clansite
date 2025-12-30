@@ -3,6 +3,7 @@ package com.rsl.clansite.controller;
 import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.repository.ClanmemberRepository;
 import com.rsl.clansite.service.DiscordRoleService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpSession;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.session.Session;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.Base64;
 import java.util.List;
@@ -39,6 +41,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 class ClanmemberControllerIntegrationTest extends BaseControllerTest {
+    @MockitoBean
+    private ClanmemberRepository clanmemberRepository;
+
     @Test
     @DisplayName("GET /clanmembers - GUEST should access list but NOT see Add Button")
     void viewClanmembers_AsGuest_ShouldSucceed_NoAddButton() throws Exception {
@@ -192,7 +197,7 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
                         .param("clanRank", "MEMBER"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("clanmember-add"))
-                .andExpect(model().attributeHasFieldErrors("newClanmemberDTO", "clanRank"));
+                .andExpect(model().attributeHasFieldErrors("clanmemberRosterDto", "clanRank"));
     }
 
     @Test
@@ -230,5 +235,21 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
                         .with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("POST /save - Should show error if In-Game Name is already in use (Custom Validator)")
+    void saveClanmember_DuplicateName_ShouldShowError() throws Exception {
+        when(clanmemberRepository.existsByIngameName("ExistingPlayer")).thenReturn(true);
+
+        mockMvc.perform(post("/clanmembers/save")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(csrf())
+                        .param("ingameName", "ExistingPlayer") // Duplicate Name
+                        .param("clanRank", "SOLDIER")
+                        .param("clanGroup", "T1"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("clanmember-add"))
+                .andExpect(model().attributeHasFieldErrors("clanmemberRosterDto", "ingameName"));
     }
 }

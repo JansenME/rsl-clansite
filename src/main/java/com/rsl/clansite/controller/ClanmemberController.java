@@ -15,6 +15,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -96,25 +97,41 @@ public class ClanmemberController {
     @PostMapping("/save")
     @PreAuthorize("hasRole('ADMIN')")
     public String saveClanmember(
-            @Valid NewClanmemberDTO dto,
+            @ModelAttribute("clanmemberRosterDto") @Valid NewClanmemberDTO dto,
             BindingResult bindingResult,
             Model model,
             RedirectAttributes redirectAttributes,
             Authentication authentication) {
 
-        if (bindingResult.hasErrors()) {
-            return reloadFormWithError(model, dto, null);
-        }
-
-        if (clanmemberService.isPlayerIngameNameInUse(dto.getIngameName())) {
-            return reloadFormWithError(model, dto, "Failed to save member: The In-Game Name '" + dto.getIngameName() + "' already exists in the roster.");
-        }
-
         boolean isManualEntry = (dto.getDiscordId() == null || dto.getDiscordId().isBlank());
-        if (isManualEntry && (dto.getIngameName() == null || dto.getIngameName().isBlank())) {
-            redirectAttributes.addFlashAttribute("lookupError", "For manual entries, the In-Game Name is required so we know who this is!");
-            redirectAttributes.addFlashAttribute("clanmemberRosterDto", dto);
-            return "redirect:/clanmembers/add?skipLookup=true";
+        boolean missingIngameName = (dto.getIngameName() == null || dto.getIngameName().isBlank());
+        boolean manualEntryError = isManualEntry && missingIngameName;
+
+        if (bindingResult.hasErrors() || manualEntryError) {
+            StringBuilder errorMsg = new StringBuilder();
+
+            boolean hasRankError = bindingResult.hasFieldErrors("clanRank");
+            boolean hasGroupError = bindingResult.hasFieldErrors("clanGroup");
+
+            if (hasRankError && hasGroupError) {
+                errorMsg.append("You must select both a Clan Rank and a Clan Group. ");
+            } else {
+                if (hasRankError) errorMsg.append("You must select a Clan Rank. ");
+                if (hasGroupError) errorMsg.append("You must select a Clan Group. ");
+            }
+
+            if (bindingResult.hasFieldErrors("ingameName")) {
+                errorMsg.append(bindingResult.getFieldError("ingameName").getDefaultMessage()).append(" ");
+            }
+            if (bindingResult.hasFieldErrors("discordId")) {
+                errorMsg.append(bindingResult.getFieldError("discordId").getDefaultMessage()).append(" ");
+            }
+
+            if (manualEntryError) {
+                errorMsg.append("For manual entries, the In-Game Name is required so we know who this is! ");
+            }
+
+            return reloadFormWithError(model, dto, errorMsg.toString().trim());
         }
 
         try {
