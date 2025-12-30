@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
-	<title>My Profile</title>
+	<title>Profile</title>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
@@ -21,7 +21,9 @@
 				<div style="display: flex; flex-wrap: wrap; justify-content: space-between; text-align: left;">
 
 					<div style="flex: 1; min-width: 300px;">
-						<h2>My Profile & Roles</h2>
+						<h2>
+							<span th:text="${isOwnProfile ? 'My Profile & Roles' : 'Member Profile'}">Profile</span>
+						</h2>
 
 						<div sec:authorize="isAuthenticated()">
 							<div style="display: flex; align-items: flex-start; margin-bottom: 0px;">
@@ -31,9 +33,9 @@
 										 alt="Discord Avatar"
 										 style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
 								</div>
+								<div style="margin-left: 0; padding-left: 0;"><p style="margin: 0 0 20px 0; padding-left: 0;"><span th:text="${isOwnProfile ? 'Logged in as:' : 'Member:'}">User:</span><br /><strong th:text="${clanmemberViewData != null ? clanmemberViewData.discordUserName : 'User'}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong>
+								</p>
 
-								<div style="margin-left: 0; padding-left: 0;">
-									<p style="margin: 0 0 20px 0; padding-left: 0;">Logged in as: <br /><strong th:text="${clanmemberViewData != null ? clanmemberViewData.discordUserName : 'User'}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong></p>
 									<p style="font-weight: bold; margin-bottom: 5px; margin-left: 0; padding-left: 0;">Roles:</p>
 
 									<ul style="list-style: disc; margin-left: 20px; padding: 0; text-align: left;"
@@ -44,14 +46,15 @@
 									</ul>
 								</div>
 							</div>
-							<form th:action="@{/perform_logout}" method="post" style="margin-top: 20px;"><button type="submit">Logout</button></form>
 						</div>
+
 						<div sec:authorize="isAnonymous()">
 							<p>Please <a th:href="@{/oauth2/authorization/discord}">log in</a> to view your profile.</p>
 						</div>
 					</div>
 
-					<div style="width: 250px; border-left: 1px solid #eee; padding-left: 30px; margin-left: 20px;" sec:authorize="hasRole('COORDINATOR')">
+					<div th:if="${isOwnProfile}"
+						 style="width: 250px; border-left: 1px solid #eee; padding-left: 30px; margin-left: 20px;">
 						<h2 style="font-size: 1.4em;">Quick Links</h2>
 						<ul style="list-style: none; padding: 0; margin: 0;">
 
@@ -67,9 +70,16 @@
 								<a th:href="@{/audit-log}" class="button small fit" style="display: block; width: 100%; text-align: center;">Audit Log</a>
 							</li>
 
+							<li style="margin-bottom: 10px;">
+								<form th:action="@{/perform_logout}" method="post" style="margin: 0;">
+									<button type="submit" class="button small fit" style="display: block; width: 100%; text-align: center;">Logout</button>
+								</form>
+							</li>
 						</ul>
 					</div>
-				</div> </section>
+
+				</div>
+			</section>
 		</div>
 	</section>
 

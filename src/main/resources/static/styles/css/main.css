@@ -317,3 +317,13 @@ tbody tr:hover {
     display: flex;
     gap: 10px;
 }
+
+/* Clickable Rows */
+tr.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+tr.clickable-row:hover {
+    background-color: #e8e8e8 !important; /* Slightly darker than standard hover */
+}

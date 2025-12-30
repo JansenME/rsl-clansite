@@ -2,6 +2,7 @@ package com.rsl.clansite.service;
 
 import com.rsl.clansite.client.DiscordApiClient;
 import com.rsl.clansite.exceptions.UnlinkedAccountException;
+import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
@@ -595,5 +596,71 @@ class ClanmemberServiceTest {
 
         verify(discordApiClient, never()).getDiscordMember(any());
         verify(clanmemberRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("getMemberById - Should return member if found")
+    void getMemberById_Found_ShouldReturnMember() {
+        ObjectId id = new ObjectId();
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setId(id);
+
+        when(clanmemberRepository.findById(id)).thenReturn(Optional.of(member));
+
+        ClanmemberEntity result = clanmemberService.getMemberById(id.toHexString());
+
+        assertNotNull(result);
+        assertEquals(id, result.getId());
+    }
+
+    @Test
+    @DisplayName("getMemberById - Should throw exception if ID is invalid format")
+    void getMemberById_InvalidFormat_ShouldThrowException() {
+        assertThrows(IllegalArgumentException.class, () ->
+                clanmemberService.getMemberById("invalid-hex-string")
+        );
+    }
+
+    @Test
+    @DisplayName("getMemberById - Should throw exception if ID is null")
+    void getMemberById_NullId_ShouldThrowException() {
+        assertThrows(IllegalArgumentException.class, () ->
+                clanmemberService.getMemberById(null)
+        );
+    }
+
+    @Test
+    @DisplayName("getMemberById - Should throw exception if member not found")
+    void getMemberById_NotFound_ShouldThrowException() {
+        ObjectId id = new ObjectId();
+        when(clanmemberRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThrows(UnlinkedAccountException.class, () ->
+                clanmemberService.getMemberById(id.toHexString())
+        );
+    }
+
+    @Test
+    @DisplayName("getViewDataForMember - Should correctly map entity fields")
+    void getViewDataForMember_ShouldMapFields() {
+        String discordId = "12345";
+        String avatarHash = "abc";
+        String roleId = "999";
+        String roleName = "Soldier";
+
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setDiscordName("TestUser");
+        member.setDiscordId(discordId);
+        member.setAvatarHash(avatarHash);
+        member.setDiscordRoles(List.of(roleId));
+
+        when(discordRoleService.getRoleName(roleId)).thenReturn(roleName);
+
+        ClanmemberViewData result = clanmemberService.getViewDataForMember(member);
+
+        assertEquals("TestUser", result.getDiscordUserName());
+        assertTrue(result.getDiscordUserRoles().contains(roleName));
+        assertTrue(result.getDiscordAvatarUrl().contains(discordId));
+        assertTrue(result.getDiscordAvatarUrl().contains(avatarHash));
     }
 }

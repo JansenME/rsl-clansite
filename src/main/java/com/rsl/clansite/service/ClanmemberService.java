@@ -135,8 +135,7 @@ public class ClanmemberService {
     public List<ClanmemberEntity> getLinkedClanmembers(final String discordId) {
         if (discordId == null) return List.of();
 
-        List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordId(discordId);
-        return linkedMembers;
+        return clanmemberRepository.findAllByDiscordId(discordId);
     }
 
     public List<ClanmemberEntity> findAllClanmemberEntities() {
@@ -223,6 +222,29 @@ public class ClanmemberService {
                 targetName,
                 "Deleted from Roster List"
         );
+    }
+
+    public ClanmemberEntity getMemberById(String id) {
+        if (id == null || !ObjectId.isValid(id)) {
+            throw new IllegalArgumentException("Invalid Member ID provided");
+        }
+        return clanmemberRepository.findById(new ObjectId(id))
+                .orElseThrow(() -> new UnlinkedAccountException("Member not found with ID: " + id));
+    }
+
+    public ClanmemberViewData getViewDataForMember(ClanmemberEntity member) {
+        String discordUserName = member.getDiscordName() != null ? member.getDiscordName() : "Unknown";
+
+        List<String> roleNames = List.of();
+        if (member.getDiscordRoles() != null) {
+            roleNames = member.getDiscordRoles().stream()
+                    .map(discordRoleService::getRoleName)
+                    .toList();
+        }
+
+        String avatarUrl = buildAvatarUrl(member.getDiscordId(), member.getAvatarHash());
+
+        return new ClanmemberViewData(discordUserName, roleNames, avatarUrl);
     }
 
     private boolean tryUpdateMemberRoles(ClanmemberEntity member) {
