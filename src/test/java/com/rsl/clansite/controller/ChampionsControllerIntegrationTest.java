@@ -1,5 +1,6 @@
 package com.rsl.clansite.controller;
 
+import com.rsl.clansite.backup.BackupService;
 import com.rsl.clansite.exceptions.ChampionSaveException;
 import com.rsl.clansite.model.dto.ChampionEntryDTO;
 import com.rsl.clansite.repository.ChampionRepository;
@@ -28,6 +29,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @MockitoBean
     private ChampionRepository championRepository;
+    @MockitoBean
+    private BackupService backupService;
 
     @Test
     @DisplayName("GET /champions - OWNER should see 'Add new Champion' button")
@@ -220,48 +223,6 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     }
 
     @Test
-    @DisplayName("GET /restore-backup - OWNER should succeed")
-    void saveCsv_AsOwner_ShouldSucceed() throws Exception {
-        mockMvc.perform(get("/champions/restore-backup")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @DisplayName("GET /restore-backup - ADMIN should be denied")
-    void saveCsv_AsAdmin_ShouldFail() throws Exception {
-        mockMvc.perform(get("/champions/restore-backup")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/error/403"));
-    }
-
-    @Test
-    @DisplayName("GET /restore-backup - COORDINATOR should be denied (403)")
-    void saveCsv_AsCoordinator_ShouldFail() throws Exception {
-        mockMvc.perform(get("/champions/restore-backup")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_COORDINATOR"))))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/error/403"));
-    }
-
-    @Test
-    @DisplayName("GET /restore-backup - MEMBER should be denied (403)")
-    void saveCsv_AsMember_ShouldFail() throws Exception {
-        mockMvc.perform(get("/champions/restore-backup")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/error/403"));
-    }
-
-    @Test
-    @DisplayName("GET /restore-backup - GUEST should be redirected to Login (302)")
-    void saveCsv_AsGuest_ShouldRedirect() throws Exception {
-        mockMvc.perform(get("/champions/restore-backup"))
-                .andExpect(status().is3xxRedirection());
-    }
-
-    @Test
     @DisplayName("POST /save - Should show errors for Duplicate Name, Missing Enum, and Negative Stat")
     void saveChampion_ValidationFailures_ShouldShowErrors() throws Exception {
         when(championRepository.existsByName("Existing Champion")).thenReturn(true);
@@ -279,5 +240,47 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(model().attributeHasFieldErrors("newChampion", "name"))
                 .andExpect(model().attributeHasFieldErrors("newChampion", "hp"))
                 .andExpect(model().attributeHasFieldErrors("newChampion", "rarity"));
+    }
+
+    @Test
+    @DisplayName("GET /restore-backup - OWNER should succeed")
+    void restoreBackup_AsOwner_ShouldSucceed() throws Exception {
+        mockMvc.perform(get("/backup/restore-backup")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /restore-backup - ADMIN should be denied")
+    void restoreBackup_AsAdmin_ShouldFail() throws Exception {
+        mockMvc.perform(get("/backup/restore-backup")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("GET /restore-backup - COORDINATOR should be denied (403)")
+    void restoreBackup_AsCoordinator_ShouldFail() throws Exception {
+        mockMvc.perform(get("/backup/restore-backup")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_COORDINATOR"))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("GET /restore-backup - MEMBER should be denied (403)")
+    void restoreBackup_AsMember_ShouldFail() throws Exception {
+        mockMvc.perform(get("/backup/restore-backup")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("GET /restore-backup - GUEST should be redirected to Login (302)")
+    void restoreBackup_AsGuest_ShouldRedirect() throws Exception {
+        mockMvc.perform(get("/backup/restore-backup"))
+                .andExpect(status().is3xxRedirection());
     }
 }

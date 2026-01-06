@@ -81,30 +81,6 @@ public class ChampionsController {
         return "redirect:/champions";
     }
 
-    @GetMapping("/restore-backup")
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<List<ChampionEntity>> restoreBackup() {
-        return ResponseEntity.of(Optional.of(championsService.restoreChampionsFromBackup()));
-    }
-
-    @GetMapping("/export")
-    @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<byte[]> exportChampions() {
-        try {
-            List<ChampionEntity> champions = championsService.getAllChampionsEntityList();
-
-            ObjectMapper mapper = new ObjectMapper();
-            byte[] jsonBytes = mapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(champions);
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=champions.json")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(jsonBytes);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to export champions", e);
-        }
-    }
-
     private void fillModel(Model model, Authentication authentication) {
         commonsService.fillModel(model, authentication);
 

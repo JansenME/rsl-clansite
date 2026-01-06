@@ -6,7 +6,6 @@ import com.rsl.clansite.model.Champion;
 import com.rsl.clansite.model.dto.ChampionEntryDTO;
 import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.repository.ChampionRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,12 +13,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.core.io.Resource;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,16 +30,8 @@ class ChampionsServiceTest {
     @Mock
     private ChampionRepository championRepository;
 
-    @Mock
-    private Resource championsBackupFile;
-
     @InjectMocks
     private ChampionsService championsService;
-
-    @BeforeEach
-    void setUp() {
-        ReflectionTestUtils.setField(championsService, "championsBackupFile", championsBackupFile);
-    }
 
     @Test
     @DisplayName("getAllChampions should return sorted list of champions")
@@ -101,33 +87,6 @@ class ChampionsServiceTest {
 
         ChampionSaveException ex = assertThrows(ChampionSaveException.class, () -> championsService.saveNewChampion(dto));
         assertEquals("Failed to save champion: DB Connection Failed", ex.getMessage());
-    }
-
-    @Test
-    @DisplayName("restoreChampionsFromBackup - Happy Path - Should parse JSON and Reload DB")
-    void restoreChampionsFromBackup_ShouldReloadData() throws IOException {
-        String jsonContent = "[{\"name\":\"ImportedChamp\", \"rarity\":\"LEGENDARY\"}]";
-        ByteArrayInputStream inputStream = new ByteArrayInputStream(jsonContent.getBytes(StandardCharsets.UTF_8));
-
-        when(championsBackupFile.exists()).thenReturn(true);
-        when(championsBackupFile.getInputStream()).thenReturn(inputStream);
-
-        List<ChampionEntity> result = championsService.restoreChampionsFromBackup();
-
-        assertEquals(1, result.size());
-        assertEquals("ImportedChamp", result.get(0).getName());
-
-        verify(championRepository).deleteAll();
-        verify(championRepository).saveAll(any());
-    }
-
-    @Test
-    @DisplayName("restoreChampionsFromBackup - File Missing - Should Throw Exception")
-    void restoreChampionsFromBackup_WhenFileMissing_ShouldThrow() {
-        when(championsBackupFile.exists()).thenReturn(false);
-
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> championsService.restoreChampionsFromBackup());
-        assertTrue(ex.getMessage().contains("Backup file champions.json not found"));
     }
 
     @Test

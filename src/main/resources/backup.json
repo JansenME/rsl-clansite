@@ -1,0 +1,253 @@
+{
+  "version" : "1.0",
+  "timestamp" : [ 2026, 1, 6, 17, 22, 48, 701876300 ],
+  "champions" : [ {
+    "id" : {
+      "timestamp" : 1767693697,
+      "date" : 1767693697000
+    },
+    "name" : "Rotos the Lost Groom",
+    "rarity" : "LEGENDARY",
+    "type" : "ATTACK",
+    "affinity" : "MAGIC",
+    "faction" : "UNDEAD_HORDES",
+    "baseStats" : {
+      "hp" : 11895,
+      "attack" : 1520,
+      "defense" : 1266,
+      "speed" : 90,
+      "criticalRate" : 15,
+      "criticalDamage" : 63,
+      "resistance" : 40,
+      "accuracy" : 0
+    },
+    "aura" : null,
+    "arenaScore" : 5.0,
+    "imagename" : "rotos-the-lost-groom.png"
+  }, {
+    "id" : {
+      "timestamp" : 1767693697,
+      "date" : 1767693697000
+    },
+    "name" : "April O'Neill",
+    "rarity" : "LEGENDARY",
+    "type" : "SUPPORT",
+    "affinity" : "MAGIC",
+    "faction" : "THE_SACRED_ORDER",
+    "baseStats" : {
+      "hp" : 19320,
+      "attack" : 1046,
+      "defense" : 1244,
+      "speed" : 108,
+      "criticalRate" : 15,
+      "criticalDamage" : 50,
+      "resistance" : 30,
+      "accuracy" : 20
+    },
+    "aura" : {
+      "amount" : 28,
+      "stat" : "ALLY_SPD",
+      "location" : "ARENA",
+      "percentage" : true
+    },
+    "arenaScore" : 4.5,
+    "imagename" : "april-o-neill.png"
+  }, {
+    "id" : {
+      "timestamp" : 1767693697,
+      "date" : 1767693697000
+    },
+    "name" : "Gracchos Turn-Drake",
+    "rarity" : "LEGENDARY",
+    "type" : "HP",
+    "affinity" : "SPIRIT",
+    "faction" : "DEMONSPAWN",
+    "baseStats" : {
+      "hp" : 22635,
+      "attack" : 826,
+      "defense" : 1244,
+      "speed" : 99,
+      "criticalRate" : 15,
+      "criticalDamage" : 63,
+      "resistance" : 30,
+      "accuracy" : 10
+    },
+    "aura" : {
+      "amount" : 28,
+      "stat" : "ALLY_HP",
+      "location" : "ALL_BATTLES",
+      "percentage" : true
+    },
+    "arenaScore" : 3.5,
+    "imagename" : "gracchos-turn-drake.png"
+  }, {
+    "id" : {
+      "timestamp" : 1767693697,
+      "date" : 1767693697000
+    },
+    "name" : "Arbiter",
+    "rarity" : "LEGENDARY",
+    "type" : "SUPPORT",
+    "affinity" : "VOID",
+    "faction" : "HIGH_ELVES",
+    "baseStats" : {
+      "hp" : 21135,
+      "attack" : 1068,
+      "defense" : 1101,
+      "speed" : 110,
+      "criticalRate" : 15,
+      "criticalDamage" : 50,
+      "resistance" : 30,
+      "accuracy" : 10
+    },
+    "aura" : {
+      "amount" : 30,
+      "stat" : "ALLY_SPD",
+      "location" : "ARENA",
+      "percentage" : true
+    },
+    "arenaScore" : 5.0,
+    "imagename" : "arbiter.png"
+  }, {
+    "id" : {
+      "timestamp" : 1767693697,
+      "date" : 1767693697000
+    },
+    "name" : "Geomancer",
+    "rarity" : "EPIC",
+    "type" : "ATTACK",
+    "affinity" : "FORCE",
+    "faction" : "DWARVES",
+    "baseStats" : {
+      "hp" : 15525,
+      "attack" : 1343,
+      "defense" : 925,
+      "speed" : 94,
+      "criticalRate" : 15,
+      "criticalDamage" : 60,
+      "resistance" : 30,
+      "accuracy" : 0
+    },
+    "aura" : {
+      "amount" : 25,
+      "stat" : "ALLY_HP",
+      "location" : "ALL_BATTLES",
+      "percentage" : true
+    },
+    "arenaScore" : 2.0,
+    "imagename" : "geomancer.png"
+  }, {
+    "id" : {
+      "timestamp" : 1767693697,
+      "date" : 1767693697000
+    },
+    "name" : "Amoch the First Satrap",
+    "rarity" : "LEGENDARY",
+    "type" : "SUPPORT",
+    "affinity" : "MAGIC",
+    "faction" : "LIZARDMEN",
+    "baseStats" : {
+      "hp" : 21645,
+      "attack" : 870,
+      "defense" : 1266,
+      "speed" : 100,
+      "criticalRate" : 15,
+      "criticalDamage" : 50,
+      "resistance" : 40,
+      "accuracy" : 20
+    },
+    "aura" : {
+      "amount" : 28,
+      "stat" : "ALLY_HP",
+      "location" : "ALL_BATTLES",
+      "percentage" : true
+    },
+    "arenaScore" : 4.0,
+    "imagename" : "amoch-the-first-satrap.png"
+  } ],
+  "clanmembers" : [ {
+    "id" : {
+      "timestamp" : 1765827062,
+      "date" : 1765827062000
+    },
+    "clanGroup" : "T2",
+    "discordName" : "Kleoperd",
+    "discordId" : "270588526267990017",
+    "avatarHash" : "30636966a9f26dace03f0bc4fe77950c",
+    "discordRoles" : [ "1298810856804454461", "1428676592791453778", "1374237716149174453", "1404036150078734468" ],
+    "playerNickname" : "Kloep",
+    "ingameName" : "Kloep",
+    "clanRank" : "DEPUTY",
+    "champions" : [ ]
+  }, {
+    "id" : {
+      "timestamp" : 1766000430,
+      "date" : 1766000430000
+    },
+    "clanGroup" : "T1",
+    "discordName" : "Darth Cdeos",
+    "discordId" : "525184889331384323",
+    "avatarHash" : "41928f38c2ac7c991d7fe591c2ba92b5",
+    "discordRoles" : [ "1298810713309057067", "1298811143699169350" ],
+    "playerNickname" : "Darth Cdeos",
+    "ingameName" : "Darth Cdeos",
+    "clanRank" : "LEADER",
+    "champions" : [ ]
+  }, {
+    "id" : {
+      "timestamp" : 1766059267,
+      "date" : 1766059267000
+    },
+    "clanGroup" : "T2",
+    "discordName" : "Shinecal",
+    "discordId" : "598781965549830146",
+    "avatarHash" : "729fdcf19343e781db270a3c4f7e9882",
+    "discordRoles" : [ "1298810856804454461", "1374237716149174453" ],
+    "playerNickname" : "RuthlesLove",
+    "ingameName" : "RuthlesLove",
+    "clanRank" : "LEADER",
+    "champions" : [ ]
+  }, {
+    "id" : {
+      "timestamp" : 1766075520,
+      "date" : 1766075520000
+    },
+    "clanGroup" : "T2",
+    "discordName" : "",
+    "discordId" : "",
+    "avatarHash" : "",
+    "discordRoles" : [ ],
+    "playerNickname" : null,
+    "ingameName" : "bertcoo2",
+    "clanRank" : "SOLDIER",
+    "champions" : [ ]
+  }, {
+    "id" : {
+      "timestamp" : 1766515963,
+      "date" : 1766515963000
+    },
+    "clanGroup" : "T2",
+    "discordName" : "Kleoperd",
+    "discordId" : "270588526267990017",
+    "avatarHash" : "30636966a9f26dace03f0bc4fe77950c",
+    "discordRoles" : [ "1298810856804454461", "1428676592791453778", "1374237716149174453", "1404036150078734468" ],
+    "playerNickname" : "Kloep",
+    "ingameName" : "sgdf",
+    "clanRank" : "SOLDIER",
+    "champions" : [ ]
+  }, {
+    "id" : {
+      "timestamp" : 1766516885,
+      "date" : 1766516885000
+    },
+    "clanGroup" : "T1",
+    "discordName" : "Toussaint24",
+    "discordId" : "318357631771344897",
+    "avatarHash" : "74700f550980ef1ad4c33ce33ee6cc98",
+    "discordRoles" : [ "1298811143699169350", "1374237716149174453" ],
+    "playerNickname" : "Toussaint24",
+    "ingameName" : "Toussaint24",
+    "clanRank" : "LIEUTENANT",
+    "champions" : [ ]
+  } ]
+}
