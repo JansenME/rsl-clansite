@@ -33,16 +33,19 @@ public class ClanmemberService {
     private final DiscordRoleService discordRoleService;
     private final AuditLogService auditLogService;
     private final DiscordApiClient discordApiClient;
+    private final SiteAssetService siteAssetService;
 
     @Autowired
     public ClanmemberService(final ClanmemberRepository clanmemberRepository,
                              final DiscordRoleService discordRoleService,
                              final AuditLogService auditLogService,
-                             final DiscordApiClient discordApiClient) {
+                             final DiscordApiClient discordApiClient,
+                             final SiteAssetService siteAssetService) {
         this.clanmemberRepository = clanmemberRepository;
         this.discordRoleService = discordRoleService;
         this.auditLogService = auditLogService;
         this.discordApiClient = discordApiClient;
+        this.siteAssetService = siteAssetService;
     }
 
     public String manageActiveMemberSession(HttpSession session, Authentication authentication) {
@@ -105,6 +108,8 @@ public class ClanmemberService {
     @Transactional
     public void updateAllClanmemberDiscordRoles() {
         log.info("Starting scheduled Discord role verification job.");
+
+        siteAssetService.syncFavicon();
 
         List<ClanmemberEntity> allLinkedMembers = clanmemberRepository.findAllByDiscordIdIsNotNull();
 

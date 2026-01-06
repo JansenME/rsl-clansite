@@ -64,6 +64,37 @@ public class DiscordApiClient {
         }
     }
 
+    public String getGuildIconHash() {
+        try {
+            String jsonResponse = webClient.get()
+                    .uri("")
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            JsonNode root = objectMapper.readTree(jsonResponse);
+            JsonNode iconNode = root.path("icon");
+
+            return iconNode.isMissingNode() || iconNode.isNull() ? null : iconNode.asText();
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch Guild Icon Hash: " + e.getMessage());
+        }
+    }
+
+    public byte[] downloadImage(String fullUrl) {
+        try {
+            return WebClient.create()
+                    .get()
+                    .uri(fullUrl)
+                    .retrieve()
+                    .bodyToMono(byte[].class)
+                    .block();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to download image from " + fullUrl + ": " + e.getMessage());
+        }
+    }
+
     private NewClanmemberDTO parseDiscordResponse(String discordId, String json) throws Exception {
         JsonNode root = objectMapper.readTree(json);
         JsonNode userNode = root.path("user");
