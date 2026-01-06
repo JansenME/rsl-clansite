@@ -327,3 +327,92 @@ tr.clickable-row {
 tr.clickable-row:hover {
     background-color: #e8e8e8 !important; /* Slightly darker than standard hover */
 }
+
+/* Simple "Bootstraps" (Card Styles) */
+.details-container {
+   display: flex;
+   flex-wrap: wrap;
+   gap: 30px;
+   justify-content: center;
+}
+.details-card {
+   background: #fff;
+   border: 1px solid #ddd;
+   border-radius: 8px;
+   padding: 20px;
+   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+   flex: 1;
+   min-width: 300px;
+   max-width: 500px;
+}
+.stat-row {
+   display: flex;
+   justify-content: space-between;
+   padding: 8px 0;
+   border-bottom: 1px solid #eee;
+}
+.stat-row:last-child {
+   border-bottom: none;
+}
+.badge {
+   display: inline-block;
+   padding: 4px 8px;
+   border-radius: 4px;
+   color: #fff;
+   font-size: 0.9em;
+   font-weight: bold;
+   margin-right: 5px;
+}
+
+.badge-faction { background-color: #444; }
+
+/* Rarity Badges */
+.badge-common {
+    background-color: #808080; /* Grey */
+}
+.badge-uncommon {
+    background-color: #2e7d32; /* Deep Green */
+}
+.badge-rare {
+    background-color: #1976d2; /* Strong Blue */
+}
+.badge-epic {
+    background-color: #9c27b0; /* Purple */
+}
+.badge-legendary {
+    background-color: #d4af37; /* Gold */
+}
+.badge-mythical {
+    background-color: #d32f2f; /* Red */
+}
+
+/* Affinity Badges */
+.badge-force {
+    background-color: #d32f2f; /* Red */
+}
+.badge-magic {
+    background-color: #0288d1; /* Blue */
+}
+.badge-spirit {
+    background-color: #388e3c; /* Green */
+}
+.badge-void {
+    background-color: #7b1fa2; /* Purple */
+}
+
+/* Faction Badges - Edit colors as desired */
+.badge-banner_lords { background-color: #1BE357; }
+.badge-high_elves { background-color: #1B9AE3; }
+.badge-the_sacred_order { background-color: #000000; }
+.badge-ogryn_tribes { background-color: #A32900; }
+.badge-lizardmen { background-color: #C3DB00; }
+.badge-skinwalkers { background-color: #FF7D3D; }
+.badge-orcs { background-color: #FF0A0A; }
+.badge-demonspawn { background-color: #9C001A; }
+.badge-undead_hordes { background-color: #0E210E; }
+.badge-dark_elves { background-color: #4A104A; }
+.badge-knights_revenant { background-color: #1A0000; }
+.badge-barbarians { background-color: #C74C00; }
+.badge-shadowkin { background-color: #595959; }
+.badge-sylvan_watchers { background-color: #007804; }
+.badge-dwarves { background-color: #918F5C; }

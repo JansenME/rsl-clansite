@@ -268,14 +268,14 @@ function createStarHtml(score) {
     const starStyle = `style="width: ${starSize}; height: ${starSize}; vertical-align: top;"`;
 
     for (let i = 0; i < fullStars; i++) {
-        starHtml += `<img src="../images/star_full.png" ${starStyle}>`;
+        starHtml += `<img src="/images/star_full.png" ${starStyle}>`;
     }
 
     if (hasHalfStar) {
         const halfStarContainerStyle = `style="width: ${halfWidth}; height: ${starSize}; overflow: hidden; display: inline-block; vertical-align: top;"`;
 
         starHtml += `<div ${halfStarContainerStyle}>`;
-        starHtml += `<img src="../images/star_full.png" ${starStyle}>`;
+        starHtml += `<img src="/images/star_full.png" ${starStyle}>`;
         starHtml += `</div>`;
     }
 
@@ -284,6 +284,9 @@ function createStarHtml(score) {
 
 function toggleAuraFields() {
     const checkbox = document.getElementById('auraExists');
+
+    if (!checkbox) return;
+
     const statSelect = document.getElementById('stat');
     const locationSelect = document.getElementById('location');
     const amountInput = document.getElementById('amount');
@@ -333,6 +336,19 @@ function toggleFilter() {
     }
 }
 
+function initChampionDetails() {
+    const container = document.getElementById('details-score-container');
+
+    if (!container) return;
+
+    const score = container.getAttribute('data-score');
+    const starContainer = document.getElementById('details-star-rating');
+
+    if (starContainer) {
+        starContainer.innerHTML = createStarHtml(score);
+    }
+}
+
 window.checkAll = (shouldCheck) => {
     const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
 
@@ -355,6 +371,8 @@ document.addEventListener('DOMContentLoaded', () => {
     applyChampionFilters();
     toggleAuraFields();
     setupStarListeners();
+
+    initChampionDetails();
 
     window.checkAll(true);
 });

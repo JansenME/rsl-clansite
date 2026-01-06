@@ -1,0 +1,115 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${champion.name} + ' - Raid Details'">Champion Details</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+    <script th:src="@{/styles/js/main.js}"></script>
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container"></div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <section>
+                <div style="text-align: center; margin-bottom: 40px;">
+                    <h2 th:text="${champion.name}" style="margin-bottom: 10px;">Champion Name</h2>
+                    <div>
+                        <span class="badge"
+                            th:classappend="'badge-' + ${champion.rarity.name().toLowerCase()}"
+                            th:text="${champion.rarity.getName()}">
+                            Rarity
+                        </span>
+
+                        <span class="badge"
+                            th:classappend="'badge-' + ${champion.affinity.name().toLowerCase()}"
+                            th:text="${champion.affinity.getName()}">
+                            Affinity
+                        </span>
+
+                        <span class="badge"
+                            th:classappend="'badge-' + ${champion.faction.name().toLowerCase()}"
+                            th:text="${champion.faction.getName()}">
+                            Faction
+                        </span>
+                    </div>
+                </div>
+
+                <div class="details-container">
+                    <div class="details-card" style="text-align: center;">
+                        <img th:src="@{/images/champions/{imagename}(imagename=${champion.imagename})}"
+                             style="width: 200px; border-radius: 10px; margin-bottom: 20px;" />
+
+                        <p><strong>Type:</strong> <span th:text="${champion.type.getName()}">Attack</span></p>
+
+                        <div th:if="${champion.aura != null}" style="background: #f0f8ff; padding: 10px; border-radius: 5px; margin-top: 15px;">
+                            <strong>Aura:</strong><br/>
+                            <span th:text="'Increases ' + ${champion.aura.stat.getName()} + ' in ' + ${champion.aura.location.getName()} + ' by ' + ${champion.aura.amount} + (${champion.aura.percentage} ? '%' : '')">
+                               Aura Description
+                            </span>
+                        </div>
+
+                        <div th:if="${champion.arenaScore != null}"
+                             style="margin-top: 15px;"
+                             th:data-score="${champion.arenaScore}"
+                             id="details-score-container">
+
+                            <strong>HellHades Arena Score:</strong>
+                            <br/>
+                            <div id="details-star-rating" style="margin-top: 5px;"></div>
+                        </div>
+                    </div>
+
+                    <div class="details-card">
+                        <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">Base Stats (Level 60)</h3>
+
+                        <div class="stat-row">
+                            <span><strong>HP:</strong></span>
+                            <span th:text="${#numbers.formatInteger(champion.baseStats.hp, 1, 'DEFAULT')}">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span><strong>Attack:</strong></span>
+                            <span th:text="${#numbers.formatInteger(champion.baseStats.attack, 1, 'DEFAULT')}">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span><strong>Defense:</strong></span>
+                            <span th:text="${#numbers.formatInteger(champion.baseStats.defense, 1, 'DEFAULT')}">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span><strong>Speed:</strong></span>
+                            <span th:text="${champion.baseStats.speed}">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span><strong>C. Rate:</strong></span>
+                            <span th:text="${champion.baseStats.criticalRate} + '%'">0%</span>
+                        </div>
+                        <div class="stat-row">
+                            <span><strong>C. Damage:</strong></span>
+                            <span th:text="${champion.baseStats.criticalDamage} + '%'">0%</span>
+                        </div>
+                        <div class="stat-row">
+                            <span><strong>Resistance:</strong></span>
+                            <span th:text="${#numbers.formatInteger(champion.baseStats.resistance, 1, 'DEFAULT')}">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span><strong>Accuracy:</strong></span>
+                            <span th:text="${#numbers.formatInteger(champion.baseStats.accuracy, 1, 'DEFAULT')}">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 40px;">
+                    <a th:href="@{/champions}" class="button">Back to Champions List</a>
+                </div>
+            </section>
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright"></div>
+</div>
+</body>
+</html>

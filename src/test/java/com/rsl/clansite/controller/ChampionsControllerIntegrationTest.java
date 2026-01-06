@@ -3,6 +3,7 @@ package com.rsl.clansite.controller;
 import com.rsl.clansite.backup.BackupService;
 import com.rsl.clansite.exceptions.ChampionSaveException;
 import com.rsl.clansite.model.dto.ChampionEntryDTO;
+import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.repository.ChampionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -282,5 +283,21 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     void restoreBackup_AsGuest_ShouldRedirect() throws Exception {
         mockMvc.perform(get("/backup/restore-backup"))
                 .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    @DisplayName("GET /champions/{id} - Should return Details View")
+    void viewChampionDetails_ShouldReturnPage() throws Exception {
+        String id = "507f1f77bcf86cd799439011";
+        ChampionEntity mockEntity = new ChampionEntity();
+        mockEntity.setId(new org.bson.types.ObjectId(id));
+        mockEntity.setName("Galek");
+
+        when(championsService.getChampionById(id)).thenReturn(mockEntity);
+
+        mockMvc.perform(get("/champions/" + id))
+                .andExpect(status().isOk())
+                .andExpect(view().name("champion-details"))
+                .andExpect(model().attributeExists("champion"));
     }
 }

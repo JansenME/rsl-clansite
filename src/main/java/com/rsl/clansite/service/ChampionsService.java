@@ -49,6 +49,15 @@ public class ChampionsService {
         }
     }
 
+    public ChampionEntity getChampionById(String id) {
+        if (!ObjectId.isValid(id)) {
+            throw new IllegalArgumentException("Invalid Champion ID: " + id);
+        }
+
+        return championRepository.findById(new ObjectId(id))
+                .orElseThrow(() -> new RuntimeException("Champion not found with ID: " + id));
+    }
+
     private ChampionEntity mapDtoToEntity(final ChampionEntryDTO dto) {
         return new ChampionEntity(
                 ObjectId.get(),
@@ -99,6 +108,7 @@ public class ChampionsService {
 
     private Champion mapEntityToChampion(final ChampionEntity championEntity) {
         return new Champion(
+                championEntity.getId().toHexString(),
                 championEntity.getName(),
                 championEntity.getRarity(),
                 championEntity.getType(),

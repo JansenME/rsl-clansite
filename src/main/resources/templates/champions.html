@@ -149,7 +149,13 @@
 								 th:data-alliance="${champion.getFaction().getAlliance().getName()}"
 								 th:data-name="${champion.getName()}"
 								 th:data-score="${champion.getArenaScore()}">
-								<img th:src="@{/images/champions/{imagename}(imagename=${champion.getImagename()})}" style="width:140px;"/>
+
+								<a th:href="@{/champions/{id}(id=${champion.getId()})}" style="text-decoration: none; border-bottom: none;">
+									<img th:src="@{/images/champions/{imagename}(imagename=${champion.getImagename()})}"
+										 style="width:140px; transition: transform 0.2s;"
+										 onmouseover="this.style.transform='scale(1.05)'"
+										 onmouseout="this.style.transform='scale(1.0)'" />
+								</a>
 								<div class="champion-rating-placeholder"></div>
 								<p class="champion-name" th:text="${champion.getName()}"></p>
 							</div>

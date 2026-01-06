@@ -19,6 +19,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -79,6 +80,15 @@ public class ChampionsController {
         }
 
         return "redirect:/champions";
+    }
+
+    @GetMapping("/{id}")
+    public String viewChampionDetails(@PathVariable String id, Model model, Authentication authentication) {
+        commonsService.fillModel(model, authentication);
+
+        model.addAttribute("champion", championsService.getChampionById(id));
+
+        return "champion-details";
     }
 
     private void fillModel(Model model, Authentication authentication) {

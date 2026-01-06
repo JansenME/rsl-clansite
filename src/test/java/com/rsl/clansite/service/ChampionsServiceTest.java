@@ -108,4 +108,45 @@ class ChampionsServiceTest {
         assertEquals(33, savedAura.getAmount());
         assertTrue(savedAura.isPercentage());
     }
+
+    @Test
+    @DisplayName("getChampionById - Valid ID and Found - Should return Entity")
+    void getChampionById_Valid_ShouldReturnEntity() {
+        String id = "507f1f77bcf86cd799439011";
+        ChampionEntity entity = new ChampionEntity();
+        entity.setId(new org.bson.types.ObjectId(id));
+        entity.setName("Kael");
+
+        when(championRepository.findById(new org.bson.types.ObjectId(id))).thenReturn(java.util.Optional.of(entity));
+
+        ChampionEntity result = championsService.getChampionById(id);
+
+        assertNotNull(result);
+        assertEquals("Kael", result.getName());
+    }
+
+    @Test
+    @DisplayName("getChampionById - Invalid ID Format - Should throw IllegalArgumentException")
+    void getChampionById_InvalidFormat_ShouldThrow() {
+        String invalidId = "invalid-id";
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                championsService.getChampionById(invalidId)
+        );
+
+        assertTrue(ex.getMessage().contains("Invalid Champion ID"));
+    }
+
+    @Test
+    @DisplayName("getChampionById - Valid ID but Not Found - Should throw RuntimeException")
+    void getChampionById_NotFound_ShouldThrow() {
+        String id = "507f1f77bcf86cd799439011";
+        when(championRepository.findById(any())).thenReturn(java.util.Optional.empty());
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                championsService.getChampionById(id)
+        );
+
+        assertTrue(ex.getMessage().contains("Champion not found"));
+    }
 }

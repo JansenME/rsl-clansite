@@ -10,6 +10,7 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class Champion {
+    private String id;
     private String name;
     private Rarity rarity;
     private Type type;
