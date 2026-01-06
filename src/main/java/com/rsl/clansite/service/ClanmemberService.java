@@ -22,7 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -104,17 +106,26 @@ public class ClanmemberService {
     public void updateAllClanmemberDiscordRoles() {
         log.info("Starting scheduled Discord role verification job.");
 
-        List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordIdIsNotNull();
+        List<ClanmemberEntity> allLinkedMembers = clanmemberRepository.findAllByDiscordIdIsNotNull();
+
+        Map<String, List<ClanmemberEntity>> membersByDiscordId = allLinkedMembers.stream()
+                .collect(Collectors.groupingBy(ClanmemberEntity::getDiscordId));
+
         int membersUpdated = 0;
 
-        for (ClanmemberEntity member : linkedMembers) {
-            if (tryUpdateMemberRoles(member)) {
-                membersUpdated++;
+        for (Map.Entry<String, List<ClanmemberEntity>> entry : membersByDiscordId.entrySet()) {
+            List<ClanmemberEntity> userAccounts = entry.getValue();
+            boolean isMultiAccount = userAccounts.size() > 1;
+
+            for (ClanmemberEntity member : userAccounts) {
+                if (tryUpdateMemberRoles(member, isMultiAccount)) {
+                    membersUpdated++;
+                }
             }
         }
 
         log.info("Completed scheduled role verification. Total members checked: {}, Updated: {}",
-                linkedMembers.size(), membersUpdated);
+                allLinkedMembers.size(), membersUpdated);
     }
 
     public void linkClanmember(final String discordId, final String globalName, final String avatarHash, final List<String> currentDiscordRoles) {
@@ -247,7 +258,7 @@ public class ClanmemberService {
         return new ClanmemberViewData(discordUserName, roleNames, avatarUrl);
     }
 
-    private boolean tryUpdateMemberRoles(ClanmemberEntity member) {
+    private boolean tryUpdateMemberRoles(ClanmemberEntity member, boolean isMultiAccount) {
         try {
             if (!StringUtils.hasText(member.getDiscordId())) {
                 return false;
@@ -264,20 +275,27 @@ public class ClanmemberService {
             List<String> sortedRoles = discordRoleService.sortRoles(discordData.getDiscordRoles());
             String newAvatarHash = discordData.getAvatarHash();
 
+            ClanGroup newDetectedGroup = resolveClanGroup(sortedRoles);
+
             boolean rolesChanged = !sortedRoles.equals(member.getDiscordRoles());
             boolean avatarChanged = member.getAvatarHash() == null || !newAvatarHash.equals(member.getAvatarHash());
+            boolean groupChanged = false;
+
+            if (!isMultiAccount && newDetectedGroup != null && !newDetectedGroup.equals(member.getClanGroup())) {
+                member.setClanGroup(newDetectedGroup);
+                groupChanged = true;
+                log.debug("Clan Group auto-updated for single-account member: {} -> {}", member.getDiscordName(), newDetectedGroup);
+            }
 
             if (rolesChanged) {
                 member.setDiscordRoles(sortedRoles);
-                log.debug("Roles changed for member: {}", member.getDiscordName());
             }
 
             if (avatarChanged) {
                 member.setAvatarHash(newAvatarHash);
-                log.debug("Avatar hash changed for member: {}", member.getDiscordName());
             }
 
-            if (rolesChanged || avatarChanged) {
+            if (rolesChanged || avatarChanged || groupChanged) {
                 clanmemberRepository.save(member);
                 return true;
             }
