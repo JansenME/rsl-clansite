@@ -258,6 +258,45 @@ public class ClanmemberService {
         return new ClanmemberViewData(discordUserName, roleNames, avatarUrl);
     }
 
+    public NewClanmemberDTO mapEntityToDto(ClanmemberEntity entity) {
+        NewClanmemberDTO dto = new NewClanmemberDTO();
+        dto.setDiscordId(entity.getDiscordId());
+        dto.setDiscordName(entity.getDiscordName());
+        dto.setPlayerNickname(entity.getPlayerNickname());
+        dto.setIngameName(entity.getIngameName());
+
+        if (entity.getClanRank() != null) {
+            dto.setClanRank(ClanRank.valueOf(entity.getClanRank()));
+        }
+
+        dto.setClanGroup(entity.getClanGroup());
+        dto.setAvatarHash(entity.getAvatarHash());
+        dto.setDiscordRoles(entity.getDiscordRoles());
+        return dto;
+    }
+
+    public void updateClanmember(String id, NewClanmemberDTO dto, Authentication authentication) {
+        ClanmemberEntity member = getMemberById(id);
+
+        Optional<ClanmemberEntity> existingWithSameName = clanmemberRepository.findByIngameName(dto.getIngameName());
+        if (existingWithSameName.isPresent() && !existingWithSameName.get().getId().toHexString().equals(id)) {
+            throw new IllegalArgumentException("The In-Game Name '" + dto.getIngameName() + "' is already in use by another member.");
+        }
+
+        member.setIngameName(dto.getIngameName());
+        member.setClanRank(dto.getClanRank().name());
+        member.setClanGroup(dto.getClanGroup());
+
+        clanmemberRepository.save(member);
+
+        auditLogService.logAction(
+                authentication,
+                AuditAction.MEMBER_UPDATE,
+                member.getIngameName(),
+                "Updated details for: " + member.getIngameName()
+        );
+    }
+
     private boolean tryUpdateMemberRoles(ClanmemberEntity member, boolean isMultiAccount) {
         try {
             if (!StringUtils.hasText(member.getDiscordId())) {

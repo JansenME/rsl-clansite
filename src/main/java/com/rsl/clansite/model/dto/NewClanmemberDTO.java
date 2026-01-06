@@ -2,6 +2,7 @@ package com.rsl.clansite.model.dto;
 
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.ClanRank;
+import com.rsl.clansite.validation.OnCreate;
 import com.rsl.clansite.validation.UniqueIngameName;
 import com.rsl.clansite.validation.ValidClanAssignment;
 import jakarta.validation.Valid;
@@ -25,7 +26,7 @@ public class NewClanmemberDTO implements Serializable {
 
     private ClanGroup clanGroup;
 
-    @UniqueIngameName
+    @UniqueIngameName(groups = OnCreate.class)
     private String ingameName;
 
     private ClanRank clanRank;

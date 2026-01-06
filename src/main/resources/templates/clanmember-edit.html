@@ -1,0 +1,113 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Edit Clanmember</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+    <script th:src="@{/styles/js/main.js}"></script>
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container">
+        </div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <section>
+                <div class="form-container">
+                    <h2 style="text-align: center;">Edit Clanmember</h2>
+
+                    <div th:replace="~{inserts/alerts :: error-box(${errorMessage})}"></div>
+
+                    <form action="#"
+                          th:action="@{/clanmembers/edit/{id}(id=${editingMemberId})}"
+                          th:object="${clanmemberRosterDto}"
+                          method="POST">
+
+                        <input type="hidden" th:field="*{discordId}" />
+                        <input type="hidden" th:field="*{discordName}" />
+                        <input type="hidden" th:field="*{playerNickname}" />
+                        <input type="hidden" th:field="*{avatarHash}" />
+
+                        <div th:if="${clanmemberRosterDto.discordId != null and !clanmemberRosterDto.discordId.isEmpty()}"
+                             style="background: #f4f4f4; padding: 20px; border-radius: 5px; margin-bottom: 25px; border: 1px solid #ddd; text-align: center;">
+
+                            <h3 style="margin-top: 0; margin-bottom: 15px;">Linked Discord Account</h3>
+
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 15px; text-align: left;">
+                                <div th:if="${clanmemberRosterDto.avatarHash != null}">
+                                    <img th:src="'https://cdn.discordapp.com/avatars/' + ${clanmemberRosterDto.discordId} + '/' + ${clanmemberRosterDto.avatarHash} + '.png'"
+                                         alt="Avatar" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+                                </div>
+
+                                <div>
+                                    <div style="font-weight: bold; font-size: 1.1em;" th:text="${clanmemberRosterDto.discordName}">Global Name</div>
+                                    <div style="font-size: 0.9em; color: #555;">
+                                        Nickname: <span th:text="${clanmemberRosterDto.playerNickname}">Nick</span>
+                                    </div>
+                                    <div style="font-size: 0.8em; color: #888;">
+                                        ID: <span th:text="${clanmemberRosterDto.discordId}">12345</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p style="font-size: 0.85em; color: #666; margin-top: 15px; margin-bottom: 0;">
+                                <i class="fa fa-info-circle"></i> managed automatically via synchronization.
+                            </p>
+                        </div>
+
+                        <div th:if="${clanmemberRosterDto.discordId == null or clanmemberRosterDto.discordId.isEmpty()}"
+                             style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #ffeeba; text-align: center;">
+                            <strong>Manual Entry:</strong> This member is not linked to a Discord account.
+                        </div>
+
+                        <h3 style="text-align: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">Roster Details</h3>
+
+                        <div class="form-group" style="max-width: 500px; margin: 0 auto 20px auto;">
+                            <label for="ingameName">In-Game Name:</label>
+                            <input type="text" id="ingameName" th:field="*{ingameName}" required />
+                            <span th:if="${#fields.hasErrors('ingameName')}"
+                                  th:errors="*{ingameName}"
+                                  style="color: #cc0000; font-weight: bold; display: block; margin-top: 5px;">Error</span>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 500px; margin: 0 auto;">
+                            <div class="form-group">
+                                <label for="clanRank">Clan Rank:</label>
+                                <select id="clanRank" th:field="*{clanRank}" required>
+                                    <option value="">-- Select Rank --</option>
+                                    <option th:each="rank : ${clanRanks}"
+                                            th:value="${rank}"
+                                            th:text="${rank.getName()}">Rank Name</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="clanGroup">Clan Group:</label>
+                                <select id="clanGroup" th:field="*{clanGroup}" required>
+                                    <option value="">-- Select Clan --</option>
+                                    <option th:each="group : ${T(com.rsl.clansite.model.enums.ClanGroup).values()}"
+                                            th:value="${group}"
+                                            th:text="${group.name}">Group Name</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 30px; display: flex; justify-content: center; gap: 15px;">
+                            <button type="submit" class="button primary">Update Member</button>
+                            <a th:href="@{/clanmembers}" class="button">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+    </div>
+</div>
+</body>
+</html>

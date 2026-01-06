@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ClanmemberRepository extends MongoRepository<ClanmemberEntity, ObjectId> {
@@ -13,4 +14,5 @@ public interface ClanmemberRepository extends MongoRepository<ClanmemberEntity, 
     long countByDiscordId(String discordId);
     boolean existsByIngameName(String ingameName);
     List<ClanmemberEntity> findAllByDiscordIdIsNotNull();
+    Optional<ClanmemberEntity> findByIngameName(String ingameName);
 }

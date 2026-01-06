@@ -663,4 +663,163 @@ class ClanmemberServiceTest {
         assertTrue(result.getDiscordAvatarUrl().contains(discordId));
         assertTrue(result.getDiscordAvatarUrl().contains(avatarHash));
     }
+
+    @Test
+    @DisplayName("updateClanmember - Should update fields when name is unique")
+    void updateClanmember_Valid_ShouldUpdate() {
+        String id = new ObjectId().toHexString();
+        NewClanmemberDTO dto = new NewClanmemberDTO();
+        dto.setIngameName("NewName");
+        dto.setClanRank(ClanRank.SOLDIER);
+        dto.setClanGroup(ClanGroup.T1);
+
+        ClanmemberEntity existingMember = new ClanmemberEntity();
+        existingMember.setId(new ObjectId(id));
+        existingMember.setIngameName("OldName");
+
+        when(clanmemberRepository.findById(new ObjectId(id))).thenReturn(Optional.of(existingMember));
+        when(clanmemberRepository.findByIngameName("NewName")).thenReturn(Optional.empty());
+
+        clanmemberService.updateClanmember(id, dto, authentication);
+
+        assertEquals("NewName", existingMember.getIngameName());
+        assertEquals("SOLDIER", existingMember.getClanRank());
+        assertEquals(ClanGroup.T1, existingMember.getClanGroup());
+
+        verify(clanmemberRepository).save(existingMember);
+        verify(auditLogService).logAction(eq(authentication), eq(AuditAction.MEMBER_UPDATE), any(), any());
+    }
+
+    @Test
+    @DisplayName("updateClanmember - Should FAIL if name is taken by DIFFERENT user")
+    void updateClanmember_NameTakenByOther_ShouldThrow() {
+        String myId = new ObjectId().toHexString();
+        String otherId = new ObjectId().toHexString();
+
+        NewClanmemberDTO dto = new NewClanmemberDTO();
+        dto.setIngameName("TakenName");
+
+        ClanmemberEntity me = new ClanmemberEntity();
+        me.setId(new ObjectId(myId));
+
+        ClanmemberEntity otherUser = new ClanmemberEntity();
+        otherUser.setId(new ObjectId(otherId));
+
+        when(clanmemberRepository.findById(new ObjectId(myId))).thenReturn(Optional.of(me));
+
+        when(clanmemberRepository.findByIngameName("TakenName")).thenReturn(Optional.of(otherUser));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                clanmemberService.updateClanmember(myId, dto, authentication)
+        );
+
+        assertEquals("The In-Game Name 'TakenName' is already in use by another member.", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("updateClanmember - Should SUCCEED if name is taken by SELF (Updating own profile)")
+    void updateClanmember_NameTakenBySelf_ShouldSuccess() {
+        String myId = new ObjectId().toHexString();
+
+        NewClanmemberDTO dto = new NewClanmemberDTO();
+        dto.setIngameName("MyCurrentName");
+        dto.setClanRank(ClanRank.SOLDIER);
+        dto.setClanGroup(ClanGroup.T2);
+
+        ClanmemberEntity me = new ClanmemberEntity();
+        me.setId(new ObjectId(myId));
+        me.setIngameName("MyCurrentName");
+
+        when(clanmemberRepository.findById(new ObjectId(myId))).thenReturn(Optional.of(me));
+
+        when(clanmemberRepository.findByIngameName("MyCurrentName")).thenReturn(Optional.of(me));
+
+        clanmemberService.updateClanmember(myId, dto, authentication);
+
+        verify(clanmemberRepository).save(me);
+    }
+
+    @Test
+    @DisplayName("mapEntityToDto - Should map all fields correctly")
+    void mapEntityToDto_ShouldMapCorrectly() {
+        ClanmemberEntity entity = new ClanmemberEntity();
+        entity.setDiscordId("123");
+        entity.setDiscordName("User");
+        entity.setPlayerNickname("Nick");
+        entity.setIngameName("GameName");
+        entity.setClanRank("SOLDIER");
+        entity.setClanGroup(ClanGroup.T1);
+        entity.setAvatarHash("hash123");
+        entity.setDiscordRoles(java.util.List.of("Role1"));
+
+        NewClanmemberDTO dto = clanmemberService.mapEntityToDto(entity);
+
+        assertEquals("123", dto.getDiscordId());
+        assertEquals("User", dto.getDiscordName());
+        assertEquals("Nick", dto.getPlayerNickname());
+        assertEquals("GameName", dto.getIngameName());
+        assertEquals(ClanRank.SOLDIER, dto.getClanRank());
+        assertEquals(ClanGroup.T1, dto.getClanGroup());
+        assertEquals("hash123", dto.getAvatarHash());
+        assertEquals("Role1", dto.getDiscordRoles().get(0));
+    }
+
+    @Test
+    @DisplayName("updateAllClanmemberDiscordRoles - Single Account + Group Change -> SHOULD Update Group (Smart Sync)")
+    void scheduledJob_SingleAccount_ShouldUpdateGroup() {
+        String discordId = "12345";
+
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setDiscordId(discordId);
+        member.setClanGroup(ClanGroup.T1);
+        member.setDiscordRoles(java.util.List.of("OldRole"));
+
+        when(clanmemberRepository.findAllByDiscordIdIsNotNull()).thenReturn(java.util.List.of(member));
+
+        NewClanmemberDTO discordData = new NewClanmemberDTO();
+        discordData.setDiscordRoles(java.util.List.of("T2_ROLE_ID"));
+        discordData.setAvatarHash("newHash");
+        when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(discordData));
+
+        when(discordRoleService.sortRoles(any())).thenReturn(java.util.List.of("T2_ROLE_ID"));
+
+        String T2_ID = DiscordRoleService.T2_ROLE_ID;
+        discordData.setDiscordRoles(java.util.List.of(T2_ID));
+        when(discordRoleService.sortRoles(any())).thenReturn(java.util.List.of(T2_ID));
+
+        clanmemberService.updateAllClanmemberDiscordRoles();
+
+        assertEquals(ClanGroup.T2, member.getClanGroup());
+        verify(clanmemberRepository).save(member);
+    }
+
+    @Test
+    @DisplayName("updateAllClanmemberDiscordRoles - Multi Account + Group Change -> SHOULD NOT Update Group (Safety Lock)")
+    void scheduledJob_MultiAccount_ShouldNotUpdateGroup() {
+        String discordId = "99999";
+
+        ClanmemberEntity main = new ClanmemberEntity();
+        main.setDiscordId(discordId);
+        main.setClanGroup(ClanGroup.T1);
+
+        ClanmemberEntity alt = new ClanmemberEntity();
+        alt.setDiscordId(discordId);
+        alt.setClanGroup(ClanGroup.T2);
+
+        when(clanmemberRepository.findAllByDiscordIdIsNotNull()).thenReturn(java.util.List.of(main, alt));
+
+        String T1_ID = DiscordRoleService.T1_ROLE_ID;
+        NewClanmemberDTO discordData = new NewClanmemberDTO();
+        discordData.setDiscordRoles(java.util.List.of(T1_ID));
+        discordData.setAvatarHash("newHash");
+
+        when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(discordData));
+        when(discordRoleService.sortRoles(any())).thenReturn(java.util.List.of(T1_ID));
+
+        clanmemberService.updateAllClanmemberDiscordRoles();
+
+        assertEquals(ClanGroup.T2, alt.getClanGroup());
+
+        verify(clanmemberRepository, org.mockito.Mockito.times(2)).save(any());
+    }
 }

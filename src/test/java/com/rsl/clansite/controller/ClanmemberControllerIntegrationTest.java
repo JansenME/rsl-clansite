@@ -3,6 +3,7 @@ package com.rsl.clansite.controller;
 import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.repository.ClanmemberRepository;
 import com.rsl.clansite.service.DiscordRoleService;
 import jakarta.servlet.http.Cookie;
@@ -27,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -34,6 +36,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -294,5 +297,80 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("clanmember-add"))
                 .andExpect(model().attribute("lookupError", containsString("For manual entries, the In-Game Name is required")));
+    }
+
+    @Test
+    @DisplayName("GET /edit/{id} - ADMIN should see edit form with pre-filled data")
+    void editClanmemberForm_AsAdmin_ShouldShowForm() throws Exception {
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setId(new ObjectId());
+        member.setIngameName("OriginalName");
+        when(clanmemberService.getMemberById(anyString())).thenReturn(member);
+
+        NewClanmemberDTO dto = new NewClanmemberDTO();
+        dto.setIngameName("OriginalName");
+        when(clanmemberService.mapEntityToDto(member)).thenReturn(dto);
+
+        mockMvc.perform(get("/clanmembers/edit/" + member.getId().toHexString())
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("clanmember-edit"))
+                .andExpect(model().attributeExists("clanmemberRosterDto"))
+                .andExpect(model().attribute("editingMemberId", member.getId().toHexString()));
+    }
+
+    @Test
+    @DisplayName("POST /edit/{id} - Valid Update should redirect to list")
+    void updateClanmember_ValidData_ShouldRedirect() throws Exception {
+        mockMvc.perform(post("/clanmembers/edit/12345")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(csrf())
+                        .param("ingameName", "UpdatedName")
+                        .param("clanRank", "SOLDIER")
+                        .param("clanGroup", "T1"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/clanmembers"));
+
+        verify(clanmemberService).updateClanmember(eq("12345"), any(NewClanmemberDTO.class), any());
+    }
+
+    @Test
+    @DisplayName("POST /edit/{id} - Duplicate Name (Service Exception) should reload form with error")
+    void updateClanmember_DuplicateName_ShouldShowError() throws Exception {
+        doThrow(new IllegalArgumentException("Name taken")).when(clanmemberService).updateClanmember(anyString(), any(), any());
+
+        mockMvc.perform(post("/clanmembers/edit/12345")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(csrf())
+                        .param("ingameName", "ExistingName")
+                        .param("clanRank", "SOLDIER")
+                        .param("clanGroup", "T2"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("clanmember-edit"))
+                .andExpect(model().attribute("errorMessage", "Name taken"));
+    }
+
+    @Test
+    @DisplayName("GET /clanmembers - MEMBER should NOT see Edit buttons in the UI")
+    void viewClanmembers_AsMember_ShouldNotShowEditButtons() throws Exception {
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setId(new ObjectId());
+        member.setClanGroup(ClanGroup.T1);
+
+        when(clanmemberService.findAllClanmemberEntities()).thenReturn(List.of(member));
+        when(clanmemberService.getLinkedClanmembers(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/clanmembers")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("/clanmembers/edit/" + member.getId().toHexString()))));
+    }
+
+    @Test
+    @DisplayName("GET /edit/{id} - MEMBER trying to access URL directly should be Redirected (Access Denied)")
+    void editClanmemberForm_AsMember_ShouldBeForbidden() throws Exception {
+        mockMvc.perform(get("/clanmembers/edit/12345")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                .andExpect(status().is3xxRedirection());
     }
 }
