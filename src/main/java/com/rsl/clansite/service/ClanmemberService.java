@@ -311,7 +311,7 @@ public class ClanmemberService {
             Optional<NewClanmemberDTO> discordDataOpt = discordApiClient.getDiscordMember(member.getDiscordId());
 
             if (discordDataOpt.isEmpty()) {
-                log.warn("User {} not found in guild. May have left the server.", member.getDiscordId());
+                log.warn("SYNC: User {} not found in guild. May have left the server.", member.getIngameName());
                 return false;
             }
 
@@ -326,16 +326,20 @@ public class ClanmemberService {
             boolean groupChanged = false;
 
             if (!isMultiAccount && newDetectedGroup != null && !newDetectedGroup.equals(member.getClanGroup())) {
+                log.info("SYNC: Clan Group change detected for '{}': {} -> {}",
+                        member.getIngameName(), member.getClanGroup(), newDetectedGroup);
+
                 member.setClanGroup(newDetectedGroup);
                 groupChanged = true;
-                log.debug("Clan Group auto-updated for single-account member: {} -> {}", member.getDiscordName(), newDetectedGroup);
             }
 
             if (rolesChanged) {
+                log.info("SYNC: Discord Roles updated for '{}'", member.getIngameName());
                 member.setDiscordRoles(sortedRoles);
             }
 
             if (avatarChanged) {
+                log.info("SYNC: Avatar updated for '{}'", member.getIngameName());
                 member.setAvatarHash(newAvatarHash);
             }
 
@@ -344,7 +348,7 @@ public class ClanmemberService {
                 return true;
             }
         } catch (Exception e) {
-            log.error("General error during scheduled update for {}: {}", member.getDiscordId(), e.getMessage());
+            log.error("SYNC: General error during scheduled update for {}: {}", member.getIngameName(), e.getMessage());
         }
         return false;
     }
