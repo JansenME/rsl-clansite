@@ -6,6 +6,7 @@ import com.rsl.clansite.model.Champion;
 import com.rsl.clansite.model.dto.ChampionEntryDTO;
 import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.repository.ChampionRepository;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,9 +38,11 @@ class ChampionsServiceTest {
     @DisplayName("getAllChampions should return sorted list of champions")
     void getAllChampions_ShouldReturnSortedList() {
         ChampionEntity c1 = new ChampionEntity();
+        c1.setId(ObjectId.get());
         c1.setName("Z-Champ");
 
         ChampionEntity c2 = new ChampionEntity();
+        c2.setId(ObjectId.get());
         c2.setName("A-Champ");
 
         when(championRepository.findAll()).thenReturn(List.of(c1, c2));
@@ -148,5 +151,22 @@ class ChampionsServiceTest {
         );
 
         assertTrue(ex.getMessage().contains("Champion not found"));
+    }
+
+    @Test
+    @DisplayName("Mapping Check - Should correctly map Entity ID to Domain ID")
+    void mapping_ShouldMapIdCorrectly() {
+        String hexId = "507f1f77bcf86cd799439011";
+        ChampionEntity entity = new ChampionEntity();
+        entity.setId(new org.bson.types.ObjectId(hexId));
+        entity.setName("TestMap");
+
+        when(championRepository.findAll()).thenReturn(List.of(entity));
+
+        List<Champion> result = championsService.getAllChampions();
+
+        assertEquals(1, result.size());
+        assertEquals(hexId, result.get(0).getId());
+        assertEquals("TestMap", result.get(0).getName());
     }
 }

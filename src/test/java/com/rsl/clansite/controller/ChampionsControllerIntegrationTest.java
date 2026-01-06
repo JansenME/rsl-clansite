@@ -2,8 +2,13 @@ package com.rsl.clansite.controller;
 
 import com.rsl.clansite.backup.BackupService;
 import com.rsl.clansite.exceptions.ChampionSaveException;
+import com.rsl.clansite.model.BaseStats;
 import com.rsl.clansite.model.dto.ChampionEntryDTO;
 import com.rsl.clansite.model.entity.ChampionEntity;
+import com.rsl.clansite.model.enums.Affinity;
+import com.rsl.clansite.model.enums.Faction;
+import com.rsl.clansite.model.enums.Rarity;
+import com.rsl.clansite.model.enums.Type;
 import com.rsl.clansite.repository.ChampionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,6 +16,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -286,18 +293,33 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     }
 
     @Test
-    @DisplayName("GET /champions/{id} - Should return Details View")
+    @DisplayName("GET /champions/{id} - Should return Details View with Correct Data")
     void viewChampionDetails_ShouldReturnPage() throws Exception {
         String id = "507f1f77bcf86cd799439011";
+
         ChampionEntity mockEntity = new ChampionEntity();
         mockEntity.setId(new org.bson.types.ObjectId(id));
         mockEntity.setName("Galek");
+        mockEntity.setRarity(Rarity.RARE);
+        mockEntity.setAffinity(Affinity.MAGIC);
+        mockEntity.setFaction(Faction.ORCS);
+        mockEntity.setType(Type.ATTACK);
+        mockEntity.setImagename("galek.png");
+        mockEntity.setBaseStats(new BaseStats(1000, 100, 100, 100, 15, 50, 30, 0));
 
         when(championsService.getChampionById(id)).thenReturn(mockEntity);
 
-        mockMvc.perform(get("/champions/" + id))
+        mockMvc.perform(get("/champions/" + id)
+                        .with(oauth2Login()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("champion-details"))
-                .andExpect(model().attributeExists("champion"));
+
+                .andExpect(model().attributeExists("champion"))
+                .andExpect(model().attribute("champion", hasProperty("name", is("Galek"))))
+
+                .andExpect(content().string(containsString("Galek")))
+                .andExpect(content().string(containsString("Base Stats")))
+                .andExpect(content().string(containsString("badge-rare")))
+                .andExpect(content().string(containsString("badge-orcs")));
     }
 }
