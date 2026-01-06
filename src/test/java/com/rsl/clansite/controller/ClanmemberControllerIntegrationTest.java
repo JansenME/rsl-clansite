@@ -245,11 +245,54 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
         mockMvc.perform(post("/clanmembers/save")
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
                         .with(csrf())
-                        .param("ingameName", "ExistingPlayer") // Duplicate Name
+                        .param("ingameName", "ExistingPlayer")
                         .param("clanRank", "SOLDIER")
                         .param("clanGroup", "T1"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("clanmember-add"))
                 .andExpect(model().attributeHasFieldErrors("clanmemberRosterDto", "ingameName"));
+    }
+
+    @Test
+    @DisplayName("POST /save - Invalid Discord ID (Regex) should show error")
+    void saveClanmember_InvalidDiscordId_ShouldShowError() throws Exception {
+        mockMvc.perform(post("/clanmembers/save")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(csrf())
+                        .param("discordId", "NotANumber")
+                        .param("ingameName", "ValidName")
+                        .param("clanRank", "SOLDIER")
+                        .param("clanGroup", "T1"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("clanmember-add"))
+                .andExpect(model().attributeHasFieldErrors("clanmemberRosterDto", "discordId"));
+    }
+
+    @Test
+    @DisplayName("POST /save - Missing Rank AND Group should show combined error message")
+    void saveClanmember_MissingRankAndGroup_ShouldShowCombinedError() throws Exception {
+        mockMvc.perform(post("/clanmembers/save")
+                                .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                                .with(csrf())
+                                .param("ingameName", "ValidName")
+                )
+                .andExpect(status().isOk())
+                .andExpect(view().name("clanmember-add"))
+                .andExpect(model().attribute("lookupError", containsString("You must select both a Clan Rank and a Clan Group.")));
+    }
+
+    @Test
+    @DisplayName("POST /save - Manual Entry without In-Game Name should show error")
+    void saveClanmember_ManualEntry_MissingName_ShouldShowError() throws Exception {
+        mockMvc.perform(post("/clanmembers/save")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(csrf())
+                        .param("discordId", "")
+                        .param("ingameName", "")
+                        .param("clanRank", "SOLDIER")
+                        .param("clanGroup", "T1"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("clanmember-add"))
+                .andExpect(model().attribute("lookupError", containsString("For manual entries, the In-Game Name is required")));
     }
 }

@@ -1,168 +1,209 @@
 <!DOCTYPE HTML>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-	<head>
-		<title>Add new champion</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
-		<script th:src="@{/styles/js/main.js}"></script>
-	</head>
-	<body>
-		<div id="page-wrapper">
-			<section id="header">
-				<div th:insert="~{inserts/nav :: nav}" class="container">
-				</div>
-			</section>
-
-			<section id="content">
-				<div class="container">
-					<section>
-						<div class="form-container">
-							<h2>Add new Champion</h2>
-
-							<div th:replace="~{inserts/alerts :: error-box(${errorMessage})}"></div>
-							<div th:replace="~{inserts/alerts :: success-box(${successMessage})}"></div>
-
-							<form action="#"
-								  th:action="@{/champions/save}"
-								  th:object="${newChampion}"
-								  method="POST">
-
-								<h3>Champion Identity</h3>
-								<div class="form-group">
-									<label for="name">Name:</label>
-									<input type="text" id="name" th:field="*{name}" required />
-								</div>
-
-								<div class="identity-grid-4 form-grid-container">
-									<div class="form-group">
-										<label for="rarity">Rarity:</label>
-										<select id="rarity" th:field="*{rarity}" required>
-											<option value="">-- Select Rarity --</option>
-											<option th:each="r : ${rarities}"
-													th:value="${r.name()}"
-													th:text="${r.getName()}"></option>
-										</select>
-									</div>
-
-									<div class="form-group">
-										<label for="type">Type:</label>
-										<select id="type" th:field="*{type}" required>
-											<option value="">-- Select Type --</option>
-											<option th:each="t : ${types}"
-													th:value="${t.name()}"
-													th:text="${t.getName()}"></option>
-										</select>
-									</div>
-
-									<div class="form-group">
-										<label for="affinity">Affinity:</label>
-										<select id="affinity" th:field="*{affinity}" required>
-											<option value="">-- Select Affinity --</option>
-											<option th:each="a : ${affinities}"
-													th:value="${a.name()}"
-													th:text="${a.getName()}"></option>
-										</select>
-									</div>
-
-									<div class="form-group">
-										<label for="faction">Faction:</label>
-										<select id="faction" th:field="*{faction}" required>
-											<option value="">-- Select Faction --</option>
-											<option th:each="f : ${factions}"
-													th:value="${f.name()}"
-													th:text="${f.getName()}"></option>
-										</select>
-									</div>
-								</div>
-								<br />
-								<div class="form-group rating-group">
-									<label>Arena Score (Rating on HellHades):</label>
-									<div class="star-rating" id="arena-score-rating">
-										<label for="score-50" title="5.0 Stars" onclick="setScore(5.0, event)"></label>
-										<label for="score-40" title="4.0 Stars" onclick="setScore(4.0, event)"></label>
-										<label for="score-30" title="3.0 Stars" onclick="setScore(3.0, event)"></label>
-										<label for="score-20" title="2.0 Stars" onclick="setScore(2.0, event)"></label>
-										<label for="score-10" title="1.0 Stars" onclick="setScore(1.0, event)"></label>
-										<input type="hidden" id="finalArenaScore" th:field="*{arenaScore}" value="0.0"/>
-									</div>
-								</div>
-
-								<hr/>
-
-								<h3>Base Stats (On max level)</h3>
-								<div class="stat-group" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
-									<div class="form-group"><label for="hp">HP:</label><input type="number" id="hp" th:field="*{hp}" required value="0" /></div>
-									<div class="form-group"><label for="attack">Attack:</label><input type="number" id="attack" th:field="*{attack}" required value="0" /></div>
-									<div class="form-group"><label for="defense">Defense:</label><input type="number" id="defense" th:field="*{defense}" required value="0" /></div>
-									<div class="form-group"><label for="speed">Speed:</label><input type="number" id="speed" th:field="*{speed}" required value="0" /></div>
-
-									<div class="form-group"><label for="cr">Crit Rate:</label><input type="number" id="cr" th:field="*{criticalRate}" required value="15" /></div>
-									<div class="form-group"><label for="cd">Crit Damage:</label><input type="number" id="cd" th:field="*{criticalDamage}" required value="50" /></div>
-									<div class="form-group"><label for="res">Resistance:</label><input type="number" id="res" th:field="*{resistance}" required value="0" /></div>
-									<div class="form-group"><label for="acc">Accuracy:</label><input type="number" id="acc" th:field="*{accuracy}" required value="0" /></div>
-								</div>
-
-								<hr />
-
-								<h3>Aura Details</h3>
-								<div class="form-group">
-									<input type="checkbox" id="auraExists" th:field="*{auraExists}" onchange="toggleAuraFields()" />
-									<label for="auraExists">Champion has an Aura</label>
-								</div>
-
-								<div class="aura-fields" id="aura-fields-container"
-									 th:style="${newChampion.auraExists} ? 'display: block; margin-top: 15px;' : 'display: none;'">
-
-									<label>Aura Applies As:</label>
-									<div class="radio-group" style="margin-bottom: 10px;">
-										<input type="radio" id="isPercent" th:field="*{percentageAura}" th:value="true" checked />
-										<label for="isPercent">% Increase</label>
-
-										<input type="radio" id="isFlat" th:field="*{percentageAura}" th:value="false" />
-										<label for="isFlat">Flat Value</label>
-									</div>
-
-									<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
-										<div>
-											<label for="amount">Amount (Value/Percent):</label>
-											<input type="number" id="amount" th:field="*{amount}" min="1" max="100" />
-										</div>
-
-										<div>
-											<label for="stat">Aura Stat:</label>
-											<select id="stat" th:field="*{stat}" required>
-												<option value="">-- Select Stat --</option>
-												<option th:each="s : ${auraStats}"
-														th:value="${s.name()}"
-														th:text="${s.getName()}"></option>
-											</select>
-										</div>
-									</div>
-
-									<div class="form-group" style="margin-top: 10px;">
-										<label for="location">Location:</label>
-										<select id="location" th:field="*{location}" required>
-											<option value="">-- Select Location --</option>
-											<option th:each="l : ${auraLocations}"
-													th:value="${l.name()}"
-													th:text="${l.getName()}"></option>
-										</select>
-									</div>
-
-								</div>
-
-								<button type="submit" class="button primary" style="margin-top: 20px; padding: 10px 20px;">
-									Save Champion
-								</button>
-							</form>
-						</div>
-					</section>
-				</div>
-			</section>
-
-			<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
-			</div>
+<head>
+	<title>Add new champion</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+	<script th:src="@{/styles/js/main.js}"></script>
+</head>
+<body>
+<div id="page-wrapper">
+	<section id="header">
+		<div th:insert="~{inserts/nav :: nav}" class="container">
 		</div>
-	</body>
+	</section>
+
+	<section id="content">
+		<div class="container">
+			<section>
+				<div class="form-container">
+					<h2>Add new Champion</h2>
+
+					<div th:replace="~{inserts/alerts :: error-box(${errorMessage})}"></div>
+					<div th:replace="~{inserts/alerts :: success-box(${successMessage})}"></div>
+
+					<form action="#"
+						  th:action="@{/champions/save}"
+						  th:object="${newChampion}"
+						  method="POST">
+
+						<h3>Champion Identity</h3>
+						<div class="form-group">
+							<label for="name">Name:</label>
+							<input type="text" id="name" th:field="*{name}" required />
+							<span th:if="${#fields.hasErrors('name')}"
+								  th:errors="*{name}"
+								  style="color: #cc0000; font-weight: bold; display: block; margin-top: 5px;">
+                               Name Error
+                            </span>
+						</div>
+
+						<div class="identity-grid-4 form-grid-container">
+							<div class="form-group">
+								<label for="rarity">Rarity:</label>
+								<select id="rarity" th:field="*{rarity}" required>
+									<option value="">-- Select Rarity --</option>
+									<option th:each="r : ${rarities}"
+											th:value="${r.name()}"
+											th:text="${r.getName()}"></option>
+								</select>
+								<span th:if="${#fields.hasErrors('rarity')}" th:errors="*{rarity}" style="color: #cc0000; font-weight: bold; display: block; margin-top: 5px;">Error</span>
+							</div>
+
+							<div class="form-group">
+								<label for="type">Type:</label>
+								<select id="type" th:field="*{type}" required>
+									<option value="">-- Select Type --</option>
+									<option th:each="t : ${types}"
+											th:value="${t.name()}"
+											th:text="${t.getName()}"></option>
+								</select>
+								<span th:if="${#fields.hasErrors('type')}" th:errors="*{type}" style="color: #cc0000; font-weight: bold; display: block; margin-top: 5px;">Error</span>
+							</div>
+
+							<div class="form-group">
+								<label for="affinity">Affinity:</label>
+								<select id="affinity" th:field="*{affinity}" required>
+									<option value="">-- Select Affinity --</option>
+									<option th:each="a : ${affinities}"
+											th:value="${a.name()}"
+											th:text="${a.getName()}"></option>
+								</select>
+								<span th:if="${#fields.hasErrors('affinity')}" th:errors="*{affinity}" style="color: #cc0000; font-weight: bold; display: block; margin-top: 5px;">Error</span>
+							</div>
+
+							<div class="form-group">
+								<label for="faction">Faction:</label>
+								<select id="faction" th:field="*{faction}" required>
+									<option value="">-- Select Faction --</option>
+									<option th:each="f : ${factions}"
+											th:value="${f.name()}"
+											th:text="${f.getName()}"></option>
+								</select>
+								<span th:if="${#fields.hasErrors('faction')}" th:errors="*{faction}" style="color: #cc0000; font-weight: bold; display: block; margin-top: 5px;">Error</span>
+							</div>
+						</div>
+						<br />
+						<div class="form-group rating-group">
+							<label>Arena Score (Rating on HellHades):</label>
+							<div class="star-rating" id="arena-score-rating">
+								<label for="score-50" title="5.0 Stars" onclick="setScore(5.0, event)"></label>
+								<label for="score-40" title="4.0 Stars" onclick="setScore(4.0, event)"></label>
+								<label for="score-30" title="3.0 Stars" onclick="setScore(3.0, event)"></label>
+								<label for="score-20" title="2.0 Stars" onclick="setScore(2.0, event)"></label>
+								<label for="score-10" title="1.0 Stars" onclick="setScore(1.0, event)"></label>
+								<input type="hidden" id="finalArenaScore" th:field="*{arenaScore}" value="0.0"/>
+							</div>
+						</div>
+
+						<hr/>
+
+						<h3>Base Stats (On max level)</h3>
+						<div class="stat-group" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+							<div class="form-group">
+								<label for="hp">HP:</label>
+								<input type="number" id="hp" th:field="*{hp}" required value="0" />
+								<span th:if="${#fields.hasErrors('hp')}" th:errors="*{hp}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+							</div>
+							<div class="form-group">
+								<label for="attack">Attack:</label>
+								<input type="number" id="attack" th:field="*{attack}" required value="0" />
+								<span th:if="${#fields.hasErrors('attack')}" th:errors="*{attack}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+							</div>
+							<div class="form-group">
+								<label for="defense">Defense:</label>
+								<input type="number" id="defense" th:field="*{defense}" required value="0" />
+								<span th:if="${#fields.hasErrors('defense')}" th:errors="*{defense}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+							</div>
+							<div class="form-group">
+								<label for="speed">Speed:</label>
+								<input type="number" id="speed" th:field="*{speed}" required value="0" />
+								<span th:if="${#fields.hasErrors('speed')}" th:errors="*{speed}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+							</div>
+
+							<div class="form-group">
+								<label for="cr">Crit Rate:</label>
+								<input type="number" id="cr" th:field="*{criticalRate}" required value="15" />
+								<span th:if="${#fields.hasErrors('criticalRate')}" th:errors="*{criticalRate}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+							</div>
+							<div class="form-group">
+								<label for="cd">Crit Damage:</label>
+								<input type="number" id="cd" th:field="*{criticalDamage}" required value="50" />
+								<span th:if="${#fields.hasErrors('criticalDamage')}" th:errors="*{criticalDamage}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+							</div>
+							<div class="form-group">
+								<label for="res">Resistance:</label>
+								<input type="number" id="res" th:field="*{resistance}" required value="0" />
+								<span th:if="${#fields.hasErrors('resistance')}" th:errors="*{resistance}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+							</div>
+							<div class="form-group">
+								<label for="acc">Accuracy:</label>
+								<input type="number" id="acc" th:field="*{accuracy}" required value="0" />
+								<span th:if="${#fields.hasErrors('accuracy')}" th:errors="*{accuracy}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+							</div>
+						</div>
+
+						<hr />
+
+						<h3>Aura Details</h3>
+						<div class="form-group">
+							<input type="checkbox" id="auraExists" th:field="*{auraExists}" onchange="toggleAuraFields()" />
+							<label for="auraExists">Champion has an Aura</label>
+						</div>
+
+						<div class="aura-fields" id="aura-fields-container"
+							 th:style="${newChampion.auraExists} ? 'display: block; margin-top: 15px;' : 'display: none;'">
+
+							<label>Aura Applies As:</label>
+							<div class="radio-group" style="margin-bottom: 10px;">
+								<input type="radio" id="isPercent" th:field="*{percentageAura}" th:value="true" checked />
+								<label for="isPercent">% Increase</label>
+
+								<input type="radio" id="isFlat" th:field="*{percentageAura}" th:value="false" />
+								<label for="isFlat">Flat Value</label>
+							</div>
+
+							<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+								<div>
+									<label for="amount">Amount (Value/Percent):</label>
+									<input type="number" id="amount" th:field="*{amount}" min="1" max="100" />
+								</div>
+
+								<div>
+									<label for="stat">Aura Stat:</label>
+									<select id="stat" th:field="*{stat}" required>
+										<option value="">-- Select Stat --</option>
+										<option th:each="s : ${auraStats}"
+												th:value="${s.name()}"
+												th:text="${s.getName()}"></option>
+									</select>
+								</div>
+							</div>
+
+							<div class="form-group" style="margin-top: 10px;">
+								<label for="location">Location:</label>
+								<select id="location" th:field="*{location}" required>
+									<option value="">-- Select Location --</option>
+									<option th:each="l : ${auraLocations}"
+											th:value="${l.name()}"
+											th:text="${l.getName()}"></option>
+								</select>
+							</div>
+
+						</div>
+
+						<button type="submit" formnovalidate class="button primary" style="margin-top: 20px; padding: 10px 20px;">
+							Save Champion
+						</button>
+					</form>
+				</div>
+			</section>
+		</div>
+	</section>
+
+	<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+	</div>
+</div>
+</body>
 </html>

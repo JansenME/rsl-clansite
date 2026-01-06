@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ChampionRepository extends MongoRepository<ChampionEntity, ObjectId> {
+    boolean existsByName(String name);
 }

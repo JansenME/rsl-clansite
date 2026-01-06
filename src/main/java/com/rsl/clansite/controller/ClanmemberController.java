@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -102,30 +103,14 @@ public class ClanmemberController {
             Model model,
             RedirectAttributes redirectAttributes,
             Authentication authentication) {
-
-        boolean isManualEntry = (dto.getDiscordId() == null || dto.getDiscordId().isBlank());
-        boolean missingIngameName = (dto.getIngameName() == null || dto.getIngameName().isBlank());
-        boolean manualEntryError = isManualEntry && missingIngameName;
+        boolean manualEntryError = !StringUtils.hasText(dto.getDiscordId()) && !StringUtils.hasText(dto.getIngameName());
 
         if (bindingResult.hasErrors() || manualEntryError) {
             StringBuilder errorMsg = new StringBuilder();
 
-            boolean hasRankError = bindingResult.hasFieldErrors("clanRank");
-            boolean hasGroupError = bindingResult.hasFieldErrors("clanGroup");
-
-            if (hasRankError && hasGroupError) {
-                errorMsg.append("You must select both a Clan Rank and a Clan Group. ");
-            } else {
-                if (hasRankError) errorMsg.append("You must select a Clan Rank. ");
-                if (hasGroupError) errorMsg.append("You must select a Clan Group. ");
-            }
-
-            if (bindingResult.hasFieldErrors("ingameName")) {
-                errorMsg.append(bindingResult.getFieldError("ingameName").getDefaultMessage()).append(" ");
-            }
-            if (bindingResult.hasFieldErrors("discordId")) {
-                errorMsg.append(bindingResult.getFieldError("discordId").getDefaultMessage()).append(" ");
-            }
+            bindingResult.getAllErrors().forEach(error ->
+                    errorMsg.append(error.getDefaultMessage()).append(" ")
+            );
 
             if (manualEntryError) {
                 errorMsg.append("For manual entries, the In-Game Name is required so we know who this is! ");

@@ -2,15 +2,18 @@ package com.rsl.clansite.controller;
 
 import com.rsl.clansite.exceptions.ChampionSaveException;
 import com.rsl.clansite.model.dto.ChampionEntryDTO;
+import com.rsl.clansite.repository.ChampionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -23,6 +26,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 class ChampionsControllerIntegrationTest extends BaseControllerTest {
+    @MockitoBean
+    private ChampionRepository championRepository;
+
     @Test
     @DisplayName("GET /champions - OWNER should see 'Add new Champion' button")
     void viewChampions_AsOwner_ShouldShowAddButton() throws Exception {
@@ -30,19 +36,16 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
                 .andExpect(status().isOk())
                 .andExpect(view().name("champions"))
-                // CHECK: Owner MUST see the link
                 .andExpect(content().string(containsString("href=\"/champions/new\"")));
     }
 
     @Test
     @DisplayName("GET /champions - ADMIN should NOT see 'Add new Champion' button")
     void viewChampions_AsAdmin_ShouldNotShowAddButton() throws Exception {
-        // Admin < Owner, so strict check "hasRole('OWNER')" should hide it
         mockMvc.perform(get("/champions")
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isOk())
                 .andExpect(view().name("champions"))
-                // CHECK: Admin should NOT see the link
                 .andExpect(content().string(not(containsString("href=\"/champions/new\""))));
     }
 
@@ -124,7 +127,18 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER")))
                         .with(csrf())
                         .param("name", "TestChamp")
+                        .param("rarity", "LEGENDARY")
+                        .param("type", "ATTACK")
+                        .param("affinity", "MAGIC")
+                        .param("faction", "BANNER_LORDS")
                         .param("hp", "100")
+                        .param("attack", "100")
+                        .param("defense", "100")
+                        .param("speed", "100")
+                        .param("criticalRate", "15")
+                        .param("criticalDamage", "50")
+                        .param("resistance", "0")
+                        .param("accuracy", "0")
                         .param("percentageAura", "false"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/champions"))
@@ -178,18 +192,31 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     }
 
     @Test
-    @DisplayName("POST /save - Service Exception should redirect back to form with error")
-    void saveChampion_ServiceError_ShouldRedirectBack() throws Exception {
-        doThrow(new ChampionSaveException("Name empty")).when(championsService).saveNewChampion(any());
+    @DisplayName("POST /save - Service Exception should return form with error (No Redirect)")
+    void saveChampion_ServiceError_ShouldReturnForm() throws Exception {
+        doThrow(new ChampionSaveException("Database error")).when(championsService).saveNewChampion(any());
 
         mockMvc.perform(post("/champions/save")
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER")))
                         .with(csrf())
-                        .param("name", "")
+                        .param("name", "Valid Name")
+                        .param("rarity", "LEGENDARY")
+                        .param("type", "ATTACK")
+                        .param("affinity", "MAGIC")
+                        .param("faction", "BANNER_LORDS")
+                        .param("hp", "100")
+                        .param("attack", "100")
+                        .param("defense", "100")
+                        .param("speed", "100")
+                        .param("criticalRate", "15")
+                        .param("criticalDamage", "50")
+                        .param("resistance", "0")
+                        .param("accuracy", "0")
                         .param("percentageAura", "false"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/champions/new"))
-                .andExpect(flash().attributeExists("errorMessage"));
+                .andExpect(status().isOk())
+                .andExpect(view().name("champion-entry"))
+                .andExpect(model().attributeExists("errorMessage"))
+                .andExpect(model().attribute("errorMessage", "Database error"));
     }
 
     @Test
@@ -232,5 +259,25 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     void saveCsv_AsGuest_ShouldRedirect() throws Exception {
         mockMvc.perform(get("/champions/saveChampsFromCsv"))
                 .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    @DisplayName("POST /save - Should show errors for Duplicate Name, Missing Enum, and Negative Stat")
+    void saveChampion_ValidationFailures_ShouldShowErrors() throws Exception {
+        when(championRepository.existsByName("Existing Champion")).thenReturn(true);
+
+        mockMvc.perform(post("/champions/save")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER")))
+                        .with(csrf())
+                        .param("name", "Existing Champion")
+                        .param("hp", "-100")
+                        .param("type", "ATTACK")
+                        .param("affinity", "MAGIC")
+                        .param("faction", "BANNER_LORDS"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("champion-entry"))
+                .andExpect(model().attributeHasFieldErrors("newChampion", "name"))
+                .andExpect(model().attributeHasFieldErrors("newChampion", "hp"))
+                .andExpect(model().attributeHasFieldErrors("newChampion", "rarity"));
     }
 }

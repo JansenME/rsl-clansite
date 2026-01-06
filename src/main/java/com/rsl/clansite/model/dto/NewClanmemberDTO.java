@@ -3,6 +3,8 @@ package com.rsl.clansite.model.dto;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.ClanRank;
 import com.rsl.clansite.validation.UniqueIngameName;
+import com.rsl.clansite.validation.ValidClanAssignment;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
@@ -13,6 +15,7 @@ import java.util.List;
 
 @Data
 @NoArgsConstructor
+@ValidClanAssignment
 public class NewClanmemberDTO implements Serializable {
     @Pattern(regexp = "^\\d*$", message = "Discord ID must contain only numbers.")
     private String discordId;
@@ -20,13 +23,11 @@ public class NewClanmemberDTO implements Serializable {
     private String discordName;
     private String playerNickname;
 
-    @NotNull(message = "You must select a Clan Group.")
     private ClanGroup clanGroup;
 
     @UniqueIngameName
     private String ingameName;
 
-    @NotNull(message = "You must select a Clan Rank.")
     private ClanRank clanRank;
 
     private String avatarHash;
