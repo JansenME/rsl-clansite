@@ -47,18 +47,16 @@ import static org.mockito.Mockito.when;
 class ClanmemberServiceTest {
     @Mock
     private ClanmemberRepository clanmemberRepository;
-
     @Mock
     private DiscordRoleService discordRoleService;
-
     @Mock
     private AuditLogService auditLogService;
-
     @Mock
     private DiscordApiClient discordApiClient;
-
     @Mock
     private Authentication authentication;
+    @Mock
+    private SiteAssetService siteAssetService;
 
     @InjectMocks
     private ClanmemberService clanmemberService;

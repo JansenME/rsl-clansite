@@ -6,7 +6,7 @@ import com.rsl.clansite.model.Champion;
 import com.rsl.clansite.model.dto.ChampionEntryDTO;
 import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.repository.ChampionRepository;
-import com.rsl.clansite.repository.ChampionsCsvRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,15 +14,20 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.io.Resource;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -32,10 +37,15 @@ class ChampionsServiceTest {
     private ChampionRepository championRepository;
 
     @Mock
-    private ChampionsCsvRepository championsCsvRepository;
+    private Resource championsBackupFile;
 
     @InjectMocks
     private ChampionsService championsService;
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(championsService, "championsBackupFile", championsBackupFile);
+    }
 
     @Test
     @DisplayName("getAllChampions should return sorted list of champions")
@@ -65,25 +75,25 @@ class ChampionsServiceTest {
     }
 
     @Test
-    @DisplayName("saveNewChampion (Happy Path) should save to DB and append to CSV")
-    void saveNewChampion_ShouldSaveToDbAndCsv() throws ChampionSaveException {
+    @DisplayName("saveNewChampion (Happy Path) should save ONLY to DB (No CSV)")
+    void saveNewChampion_ShouldSaveToDb() throws ChampionSaveException {
         ChampionEntryDTO dto = new ChampionEntryDTO(false);
         dto.setName("TestChamp");
         dto.setHp(100);
+
         championsService.saveNewChampion(dto);
 
         ArgumentCaptor<ChampionEntity> entityCaptor = ArgumentCaptor.forClass(ChampionEntity.class);
         verify(championRepository).save(entityCaptor.capture());
+
         ChampionEntity savedEntity = entityCaptor.getValue();
         assertEquals("TestChamp", savedEntity.getName());
         assertEquals(100, savedEntity.getBaseStats().getHp());
-
-        verify(championsCsvRepository).appendChampion(savedEntity);
     }
 
     @Test
     @DisplayName("saveNewChampion should wrap DB exceptions in ChampionSaveException")
-    void saveNewChampion_ShouldWrapExceptions() throws ChampionSaveException {
+    void saveNewChampion_ShouldWrapExceptions() {
         ChampionEntryDTO dto = new ChampionEntryDTO(false);
         dto.setName("ErrorChamp");
 
@@ -91,23 +101,33 @@ class ChampionsServiceTest {
 
         ChampionSaveException ex = assertThrows(ChampionSaveException.class, () -> championsService.saveNewChampion(dto));
         assertEquals("Failed to save champion: DB Connection Failed", ex.getMessage());
-
-        verify(championsCsvRepository, never()).appendChampion(any());
     }
 
     @Test
-    @DisplayName("saveAllChampionsFromCsv should reload data (Read CSV -> Wipe DB -> Save DB)")
-    void saveAllChampionsFromCsv_ShouldReloadData() {
-        ChampionEntity entity = new ChampionEntity();
-        entity.setName("ImportedChamp");
+    @DisplayName("restoreChampionsFromBackup - Happy Path - Should parse JSON and Reload DB")
+    void restoreChampionsFromBackup_ShouldReloadData() throws IOException {
+        String jsonContent = "[{\"name\":\"ImportedChamp\", \"rarity\":\"LEGENDARY\"}]";
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(jsonContent.getBytes(StandardCharsets.UTF_8));
 
-        when(championsCsvRepository.readAllChampions()).thenReturn(List.of(entity));
+        when(championsBackupFile.exists()).thenReturn(true);
+        when(championsBackupFile.getInputStream()).thenReturn(inputStream);
 
-        List<ChampionEntity> result = championsService.saveAllChampionsFromCsv();
+        List<ChampionEntity> result = championsService.restoreChampionsFromBackup();
 
         assertEquals(1, result.size());
+        assertEquals("ImportedChamp", result.get(0).getName());
+
         verify(championRepository).deleteAll();
-        verify(championRepository).saveAll(List.of(entity));
+        verify(championRepository).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("restoreChampionsFromBackup - File Missing - Should Throw Exception")
+    void restoreChampionsFromBackup_WhenFileMissing_ShouldThrow() {
+        when(championsBackupFile.exists()).thenReturn(false);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> championsService.restoreChampionsFromBackup());
+        assertTrue(ex.getMessage().contains("Backup file champions.json not found"));
     }
 
     @Test
@@ -125,9 +145,7 @@ class ChampionsServiceTest {
         ChampionEntity savedEntity = entityCaptor.getValue();
 
         Aura savedAura = savedEntity.getAura();
-        if (savedAura == null) {
-            throw new AssertionError("Aura should not be null!");
-        }
+        assertNotNull(savedAura, "Aura should not be null!");
         assertEquals(33, savedAura.getAmount());
         assertTrue(savedAura.isPercentage());
     }

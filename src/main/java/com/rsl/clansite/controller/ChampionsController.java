@@ -1,19 +1,16 @@
 package com.rsl.clansite.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rsl.clansite.exceptions.ChampionSaveException;
 import com.rsl.clansite.model.CompleteChampionsFilter;
 import com.rsl.clansite.model.dto.ChampionEntryDTO;
 import com.rsl.clansite.model.entity.ChampionEntity;
-import com.rsl.clansite.model.enums.Affinity;
-import com.rsl.clansite.model.enums.Alliance;
-import com.rsl.clansite.model.enums.AuraLocation;
-import com.rsl.clansite.model.enums.AuraStat;
-import com.rsl.clansite.model.enums.Faction;
-import com.rsl.clansite.model.enums.Rarity;
-import com.rsl.clansite.model.enums.Type;
+import com.rsl.clansite.model.enums.*;
 import com.rsl.clansite.service.ChampionsService;
 import com.rsl.clansite.service.CommonsService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -54,9 +51,7 @@ public class ChampionsController {
     @PreAuthorize("hasRole('OWNER')")
     public String newChampionForm(Model model, Authentication authentication) {
         fillModel(model, authentication);
-
         model.addAttribute("newChampion", new ChampionEntryDTO(true));
-
         return "champion-entry";
     }
 
@@ -76,7 +71,7 @@ public class ChampionsController {
 
         try {
             championsService.saveNewChampion(dto);
-            redirectAttributes.addFlashAttribute("successMessage", "Champion '" + dto.getName() + "' saved to CSV (and Mongo if configured)!");
+            redirectAttributes.addFlashAttribute("successMessage", "Champion '" + dto.getName() + "' saved to Database!");
         } catch (ChampionSaveException e) {
             fillModel(model, authentication);
             model.addAttribute("errorMessage", e.getMessage());
@@ -86,10 +81,28 @@ public class ChampionsController {
         return "redirect:/champions";
     }
 
-    @GetMapping("/saveChampsFromCsv")
+    @GetMapping("/restore-backup")
     @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<List<ChampionEntity>> saveAllChampionsFromCsv() {
-        return ResponseEntity.of(Optional.of(championsService.saveAllChampionsFromCsv()));
+    public ResponseEntity<List<ChampionEntity>> restoreBackup() {
+        return ResponseEntity.of(Optional.of(championsService.restoreChampionsFromBackup()));
+    }
+
+    @GetMapping("/export")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<byte[]> exportChampions() {
+        try {
+            List<ChampionEntity> champions = championsService.getAllChampionsEntityList();
+
+            ObjectMapper mapper = new ObjectMapper();
+            byte[] jsonBytes = mapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(champions);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=champions.json")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(jsonBytes);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to export champions", e);
+        }
     }
 
     private void fillModel(Model model, Authentication authentication) {

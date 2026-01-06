@@ -220,44 +220,44 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     }
 
     @Test
-    @DisplayName("GET /saveChampsFromCsv - OWNER should succeed")
+    @DisplayName("GET /restore-backup - OWNER should succeed")
     void saveCsv_AsOwner_ShouldSucceed() throws Exception {
-        mockMvc.perform(get("/champions/saveChampsFromCsv")
+        mockMvc.perform(get("/champions/restore-backup")
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
                 .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("GET /saveChampsFromCsv - ADMIN should be denied")
+    @DisplayName("GET /restore-backup - ADMIN should be denied")
     void saveCsv_AsAdmin_ShouldFail() throws Exception {
-        mockMvc.perform(get("/champions/saveChampsFromCsv")
+        mockMvc.perform(get("/champions/restore-backup")
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
 
     @Test
-    @DisplayName("GET /saveChampsFromCsv - COORDINATOR should be denied (403)")
+    @DisplayName("GET /restore-backup - COORDINATOR should be denied (403)")
     void saveCsv_AsCoordinator_ShouldFail() throws Exception {
-        mockMvc.perform(get("/champions/saveChampsFromCsv")
+        mockMvc.perform(get("/champions/restore-backup")
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_COORDINATOR"))))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
 
     @Test
-    @DisplayName("GET /saveChampsFromCsv - MEMBER should be denied (403)")
+    @DisplayName("GET /restore-backup - MEMBER should be denied (403)")
     void saveCsv_AsMember_ShouldFail() throws Exception {
-        mockMvc.perform(get("/champions/saveChampsFromCsv")
+        mockMvc.perform(get("/champions/restore-backup")
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
 
     @Test
-    @DisplayName("GET /saveChampsFromCsv - GUEST should be redirected to Login (302)")
+    @DisplayName("GET /restore-backup - GUEST should be redirected to Login (302)")
     void saveCsv_AsGuest_ShouldRedirect() throws Exception {
-        mockMvc.perform(get("/champions/saveChampsFromCsv"))
+        mockMvc.perform(get("/champions/restore-backup"))
                 .andExpect(status().is3xxRedirection());
     }
 
