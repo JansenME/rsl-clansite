@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -357,5 +358,27 @@ class ChampionsServiceTest {
         assertTrue(loggedDetails.contains("Name: OldName->NewName"));
         assertTrue(loggedDetails.contains("HP: 100->200"));
         assertFalse(loggedDetails.contains("Rarity"));
+    }
+
+    @Test
+    @DisplayName("deleteChampion - Should Delete from Repo and Log Action")
+    void deleteChampion_ShouldDeleteAndLog() {
+        String id = "507f1f77bcf86cd799439011";
+        ChampionEntity entity = new ChampionEntity();
+        entity.setId(new ObjectId(id));
+        entity.setName("To Be Deleted");
+
+        when(championRepository.findById(new ObjectId(id))).thenReturn(Optional.of(entity));
+
+        championsService.deleteChampion(id, authentication);
+
+        verify(championRepository).delete(entity);
+
+        verify(auditLogService).logAction(
+                eq(authentication),
+                eq(com.rsl.clansite.model.enums.AuditAction.CHAMPION_DELETE),
+                eq("To Be Deleted"),
+                contains("Deleted champion manually")
+        );
     }
 }

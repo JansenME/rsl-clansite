@@ -16,13 +16,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.util.Optional;
-
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -484,5 +483,48 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(view().name("champion-entry"))
                 .andExpect(model().attribute("isEditMode", true))
                 .andExpect(model().attribute("errorMessage", "Champion name taken"));
+    }
+
+    @Test
+    @DisplayName("POST /delete - OWNER should delete and redirect (302 Found)")
+    void deleteChampion_AsOwner_ShouldSucceed() throws Exception {
+        String id = "507f1f77bcf86cd799439011";
+
+        mockMvc.perform(post("/champions/" + id + "/delete")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER")))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/champions"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        verify(championsService).deleteChampion(eq(id), any(Authentication.class));
+    }
+
+    @Test
+    @DisplayName("POST /delete - ADMIN should be denied (403 Forbidden)")
+    void deleteChampion_AsAdmin_ShouldFail() throws Exception {
+        mockMvc.perform(post("/champions/someId/delete")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("POST /delete - MEMBER should be denied (403 Forbidden)")
+    void deleteChampion_AsMember_ShouldFail() throws Exception {
+        mockMvc.perform(post("/champions/someId/delete")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER")))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("POST /delete - GUEST should be redirected to Login (302)")
+    void deleteChampion_AsGuest_ShouldRedirect() throws Exception {
+        mockMvc.perform(post("/champions/someId/delete")
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection());
     }
 }

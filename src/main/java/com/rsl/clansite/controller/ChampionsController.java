@@ -129,6 +129,14 @@ public class ChampionsController {
         return "redirect:/champions/" + id;
     }
 
+    @PostMapping("/{id}/delete")
+    @PreAuthorize("hasRole('OWNER')")
+    public String deleteChampion(@PathVariable String id, Authentication authentication, RedirectAttributes redirectAttributes) {
+        championsService.deleteChampion(id, authentication);
+        redirectAttributes.addFlashAttribute("successMessage", "Champion deleted successfully.");
+        return "redirect:/champions";
+    }
+
     private void fillModel(Model model, Authentication authentication) {
         commonsService.fillModel(model, authentication);
 

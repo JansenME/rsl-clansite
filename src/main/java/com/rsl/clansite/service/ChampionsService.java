@@ -153,6 +153,19 @@ public class ChampionsService {
         );
     }
 
+    public void deleteChampion(String id, Authentication authentication) {
+        ChampionEntity entity = getChampionById(id);
+
+        championRepository.delete(entity);
+
+        auditLogService.logAction(
+                authentication,
+                AuditAction.CHAMPION_DELETE,
+                entity.getName(),
+                "Deleted champion manually"
+        );
+    }
+
     private String generateDiff(ChampionEntity old, ChampionEntryDTO newly) {
         List<String> diffs = new ArrayList<>();
 

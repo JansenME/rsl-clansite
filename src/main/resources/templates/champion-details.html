@@ -110,6 +110,17 @@
                        style="display: inline-block; background: #0c2ccc; color: #fff; padding: 0 20px; line-height: 2.75em; text-decoration: none; border-radius: 4px; font-weight: bold; margin-left: 10px;">
                         Edit Champion
                     </a>
+
+                    <form sec:authorize="hasRole('OWNER')"
+                          th:action="@{/champions/{id}/delete(id=${champion.id})}"
+                          method="POST"
+                          onsubmit="return confirm('Are you sure you want to DELETE this champion? This action cannot be undone.');"
+                          style="display: inline-block; margin-left: 10px;">
+                        <button type="submit"
+                                style="background: #c0392b; color: #fff; border: none; padding: 0 20px; line-height: 2.75em; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                            Delete Champion
+                        </button>
+                    </form>
                 </div>
             </section>
         </div>
