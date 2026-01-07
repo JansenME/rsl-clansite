@@ -6,7 +6,6 @@ import com.rsl.clansite.model.enums.AuraStat;
 import com.rsl.clansite.model.enums.Faction;
 import com.rsl.clansite.model.enums.Rarity;
 import com.rsl.clansite.model.enums.Type;
-import com.rsl.clansite.validation.UniqueChampionName;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,8 +17,11 @@ import java.io.Serializable;
 @Data
 @NoArgsConstructor
 public class ChampionEntryDTO implements Serializable {
+    private String id;
+    private String imagename;
+    private String currentImageName;
+
     @NotBlank(message = "Champion Name is required.")
-    @UniqueChampionName
     private String name;
 
     @NotNull(message = "Rarity is required.")

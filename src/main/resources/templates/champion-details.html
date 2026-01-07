@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <title th:text="${champion.name} + ' - Raid Details'">Champion Details</title>
     <meta charset="utf-8" />
@@ -104,6 +104,12 @@
 
                 <div style="text-align: center; margin-top: 40px;">
                     <a th:href="@{/champions}" class="button">Back to Champions List</a>
+
+                    <a sec:authorize="hasRole('OWNER')"
+                       th:href="@{/champions/{id}/edit(id=${champion.id})}"
+                       style="display: inline-block; background: #0c2ccc; color: #fff; padding: 0 20px; line-height: 2.75em; text-decoration: none; border-radius: 4px; font-weight: bold; margin-left: 10px;">
+                        Edit Champion
+                    </a>
                 </div>
             </section>
         </div>

@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-	<title>Add new champion</title>
+	<title th:text="${isEditMode == true} ? 'Edit Champion' : 'Add New Champion'">Add new champion</title>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
@@ -18,17 +18,24 @@
 		<div class="container">
 			<section>
 				<div class="form-container">
-					<h2>Add new Champion</h2>
+					<h2 th:text="${isEditMode == true} ? 'Edit Champion' : 'Add New Champion'">Add new Champion</h2>
 
 					<div th:replace="~{inserts/alerts :: error-box(${errorMessage})}"></div>
 					<div th:replace="~{inserts/alerts :: success-box(${successMessage})}"></div>
 
 					<form action="#"
-						  th:action="@{/champions/save}"
+						  th:action="${isEditMode == true} ? @{/champions/{id}/edit(id=${newChampion.id})} : @{/champions/save}"
 						  th:object="${newChampion}"
 						  method="POST">
 
 						<h3>Champion Identity</h3>
+
+						<div class="form-group" th:if="${isEditMode == true and newChampion.currentImageName != null}" style="text-align: center; margin-bottom: 20px;">
+							<img th:src="@{/images/champions/{img}(img=${newChampion.currentImageName})}"
+								 style="width: 100px; height: auto; border-radius: 10px; border: 4px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.1);"
+								 title="Current Image" />
+						</div>
+
 						<div class="form-group">
 							<label for="name">Name:</label>
 							<input type="text" id="name" th:field="*{name}" required />
@@ -93,7 +100,7 @@
 								<label for="score-30" title="3.0 Stars" onclick="setScore(3.0, event)"></label>
 								<label for="score-20" title="2.0 Stars" onclick="setScore(2.0, event)"></label>
 								<label for="score-10" title="1.0 Stars" onclick="setScore(1.0, event)"></label>
-								<input type="hidden" id="finalArenaScore" th:field="*{arenaScore}" value="0.0"/>
+								<input type="hidden" id="finalArenaScore" th:field="*{arenaScore}" />
 							</div>
 						</div>
 
@@ -103,43 +110,43 @@
 						<div class="stat-group" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
 							<div class="form-group">
 								<label for="hp">HP:</label>
-								<input type="number" id="hp" th:field="*{hp}" required value="0" />
+								<input type="number" id="hp" th:field="*{hp}" required />
 								<span th:if="${#fields.hasErrors('hp')}" th:errors="*{hp}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
 							</div>
 							<div class="form-group">
 								<label for="attack">Attack:</label>
-								<input type="number" id="attack" th:field="*{attack}" required value="0" />
+								<input type="number" id="attack" th:field="*{attack}" required />
 								<span th:if="${#fields.hasErrors('attack')}" th:errors="*{attack}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
 							</div>
 							<div class="form-group">
 								<label for="defense">Defense:</label>
-								<input type="number" id="defense" th:field="*{defense}" required value="0" />
+								<input type="number" id="defense" th:field="*{defense}" required />
 								<span th:if="${#fields.hasErrors('defense')}" th:errors="*{defense}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
 							</div>
 							<div class="form-group">
 								<label for="speed">Speed:</label>
-								<input type="number" id="speed" th:field="*{speed}" required value="0" />
+								<input type="number" id="speed" th:field="*{speed}" required />
 								<span th:if="${#fields.hasErrors('speed')}" th:errors="*{speed}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
 							</div>
 
 							<div class="form-group">
 								<label for="cr">Crit Rate:</label>
-								<input type="number" id="cr" th:field="*{criticalRate}" required value="15" />
+								<input type="number" id="cr" th:field="*{criticalRate}" required />
 								<span th:if="${#fields.hasErrors('criticalRate')}" th:errors="*{criticalRate}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
 							</div>
 							<div class="form-group">
 								<label for="cd">Crit Damage:</label>
-								<input type="number" id="cd" th:field="*{criticalDamage}" required value="50" />
+								<input type="number" id="cd" th:field="*{criticalDamage}" required />
 								<span th:if="${#fields.hasErrors('criticalDamage')}" th:errors="*{criticalDamage}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
 							</div>
 							<div class="form-group">
 								<label for="res">Resistance:</label>
-								<input type="number" id="res" th:field="*{resistance}" required value="0" />
+								<input type="number" id="res" th:field="*{resistance}" required />
 								<span th:if="${#fields.hasErrors('resistance')}" th:errors="*{resistance}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
 							</div>
 							<div class="form-group">
 								<label for="acc">Accuracy:</label>
-								<input type="number" id="acc" th:field="*{accuracy}" required value="0" />
+								<input type="number" id="acc" th:field="*{accuracy}" required />
 								<span th:if="${#fields.hasErrors('accuracy')}" th:errors="*{accuracy}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
 							</div>
 						</div>
@@ -157,7 +164,7 @@
 
 							<label>Aura Applies As:</label>
 							<div class="radio-group" style="margin-bottom: 10px;">
-								<input type="radio" id="isPercent" th:field="*{percentageAura}" th:value="true" checked />
+								<input type="radio" id="isPercent" th:field="*{percentageAura}" th:value="true" />
 								<label for="isPercent">% Increase</label>
 
 								<input type="radio" id="isFlat" th:field="*{percentageAura}" th:value="false" />
@@ -172,7 +179,7 @@
 
 								<div>
 									<label for="stat">Aura Stat:</label>
-									<select id="stat" th:field="*{stat}" required>
+									<select id="stat" th:field="*{stat}">
 										<option value="">-- Select Stat --</option>
 										<option th:each="s : ${auraStats}"
 												th:value="${s.name()}"
@@ -183,7 +190,7 @@
 
 							<div class="form-group" style="margin-top: 10px;">
 								<label for="location">Location:</label>
-								<select id="location" th:field="*{location}" required>
+								<select id="location" th:field="*{location}">
 									<option value="">-- Select Location --</option>
 									<option th:each="l : ${auraLocations}"
 											th:value="${l.name()}"
@@ -193,7 +200,8 @@
 
 						</div>
 
-						<button type="submit" formnovalidate class="button primary" style="margin-top: 20px; padding: 10px 20px;">
+						<button type="submit" formnovalidate class="button primary" style="margin-top: 20px; padding: 10px 20px;"
+								th:text="${isEditMode == true} ? 'Update Champion' : 'Save Champion'">
 							Save Champion
 						</button>
 					</form>
@@ -204,6 +212,15 @@
 
 	<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
 	</div>
+
+	<script th:if="${isEditMode == true}">
+		document.addEventListener('DOMContentLoaded', function() {
+            const finalScore = parseFloat(document.getElementById('finalArenaScore').value);
+            if (!isNaN(finalScore)) {
+                updateVisuals(finalScore);
+            }
+        });
+	</script>
 </div>
 </body>
 </html>

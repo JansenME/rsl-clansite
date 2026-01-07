@@ -87,7 +87,12 @@
 								<td th:text="${log.action.description != null ? log.action.description : log.action}">Action</td>
 
 								<td th:text="${log.target}">Target Name</td>
-								<td th:text="${log.details}">Details</td>
+
+								<td th:title="${log.details}"
+									th:text="${#strings.length(log.details) > 35 ? #strings.substring(log.details, 0, 32) + '...' : log.details}"
+									style="cursor: help;">
+									Details
+								</td>
 
 								<td sec:authorize="hasRole('OWNER')" style="text-align: center;">
 									<form th:action="@{/audit-log/{id}/delete(id=${log.id})}" method="post"

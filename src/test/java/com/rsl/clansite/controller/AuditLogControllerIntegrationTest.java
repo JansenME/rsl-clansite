@@ -6,6 +6,7 @@ import org.bson.types.ObjectId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -177,7 +178,56 @@ class AuditLogControllerIntegrationTest extends BaseControllerTest {
 
         mockMvc.perform(get("/audit-log")
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
-                        .andExpect(status().isOk())
-                        .andExpect(model().attributeDoesNotExist("limitWarning"));
+                .andExpect(status().isOk())
+                .andExpect(model().attributeDoesNotExist("limitWarning"));
+    }
+
+    @Test
+    @DisplayName("Audit Log View - Should Truncate Long Details and Show Tooltip")
+    void viewAuditLog_LongDetails_ShouldTruncate() throws Exception {
+        String longDetails = "This is a very long message that exceeds the limit of 35";
+
+        String expectedTruncated = "This is a very long message that...";
+
+        AuditLogEntity logEntry = new AuditLogEntity(
+                null,
+                LocalDateTime.now(),
+                "123",
+                "AdminUser",
+                AuditAction.CHAMPION_UPDATE,
+                "Kael",
+                longDetails
+        );
+
+        when(auditLogService.searchLogs(any(), any(), any(), any(), any())).thenReturn(List.of(logEntry));
+
+        mockMvc.perform(get("/audit-log")
+                    .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("title=\"" + longDetails + "\"")))
+                .andExpect(content().string(containsString(">" + expectedTruncated)));
+    }
+
+    @Test
+    @DisplayName("Audit Log View - Should Display Short Details Normally")
+    void viewAuditLog_ShortDetails_ShouldNotTruncate() throws Exception {
+        String shortDetails = "Short message";
+
+        AuditLogEntity logEntry = new AuditLogEntity(
+                null,
+                LocalDateTime.now(),
+                "123",
+                "AdminUser",
+                AuditAction.CHAMPION_UPDATE,
+                "Kael",
+                shortDetails
+        );
+
+        when(auditLogService.searchLogs(any(), any(), any(), any(), any())).thenReturn(List.of(logEntry));
+
+        mockMvc.perform(get("/audit-log")
+                    .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(">" + shortDetails + "<")));
     }
 }
