@@ -38,11 +38,16 @@ public class ChampionsService {
     }
 
     public void saveNewChampion(final ChampionEntryDTO dto, Authentication authentication) throws ChampionSaveException {
+        saveNewChampion(dto, authentication, "Created new champion manually");
+    }
+
+    // New overloaded method - accepts custom audit details
+    public void saveNewChampion(final ChampionEntryDTO dto, Authentication authentication, String auditDetails) throws ChampionSaveException {
         if(!StringUtils.hasText(dto.getName())) {
             throw new ChampionSaveException("Champion name cannot be empty.");
         }
 
-        Optional<ChampionEntity> existing = championRepository.findByName(dto.getName());
+        Optional<ChampionEntity> existing = championRepository.findByNameIgnoreCase(dto.getName());
         if (existing.isPresent()) {
             throw new ChampionSaveException("Champion name '" + dto.getName() + "' is already taken.");
         }
@@ -55,7 +60,7 @@ public class ChampionsService {
                     authentication,
                     AuditAction.CHAMPION_ADD,
                     entity.getName(),
-                    "Created new champion manually"
+                    auditDetails // Use the passed message
             );
 
         } catch (Exception e) {
@@ -116,7 +121,7 @@ public class ChampionsService {
     public void updateChampion(String id, ChampionEntryDTO dto, Authentication authentication) throws ChampionSaveException {
         ChampionEntity entity = getChampionById(id);
 
-        Optional<ChampionEntity> existing = championRepository.findByName(dto.getName());
+        Optional<ChampionEntity> existing = championRepository.findByNameIgnoreCase(dto.getName());
         if (existing.isPresent() && !existing.get().getId().toHexString().equals(id)) {
             throw new ChampionSaveException("Champion name '" + dto.getName() + "' is already taken.");
         }

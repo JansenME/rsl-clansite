@@ -54,7 +54,6 @@ function setupStarListeners() {
         });
     });
 
-    // On leaving, clear all hover effects and restore the actual score visuals
     ratingContainer.addEventListener('mouseleave', () => {
         ratingContainer.querySelectorAll('label').forEach(lbl => lbl.classList.remove('half-star-hover'));
 
@@ -77,24 +76,15 @@ function setScore(fullScore, clickEvent) {
         const label = clickEvent.currentTarget;
         const rect = label.getBoundingClientRect();
 
-        // Use clickEvent.clientX (or event.clientX if passed)
-        // Since the event variable isn't explicitly passed in your HTML,
-        // we must assume 'event' is the global event object available in the inline onclick:
         const clickX = event.clientX - rect.left;
 
-        // CRITICAL FIX: Base the final score on the observed target value.
         if (clickX < rect.width / 2) {
-            // Clicked left side (Targeting X.5): The desired score is 0.5 less than the label's value.
-            // e.g., Clicked 3.0 label -> finalScore = 2.5
             finalScore = fullScore - 0.5;
         } else {
-            // Clicked right side (Targeting X.0): The desired score is the label's value.
-            // e.g., Clicked 3.0 label -> finalScore = 3.0
             finalScore = fullScore;
         }
     }
 
-    // Ensure the score is still within bounds (1.0 to 5.0)
     finalScore = Math.max(1.0, Math.min(5.0, finalScore));
     finalInput.value = finalScore.toFixed(1);
 
@@ -140,63 +130,45 @@ function applyChampionFilters() {
     const selectedFactions = Array.from(document.querySelectorAll('.filter-faction:checked')).map(cb => cb.getAttribute('data-filter-name').trim());
     const selectedAlliances = Array.from(document.querySelectorAll('.filter-alliance:checked')).map(cb => cb.getAttribute('data-filter-name').trim());
 
-    const totalRarities = document.querySelectorAll('.filter-rarity').length;
-    const totalTypes = document.querySelectorAll('.filter-type').length;
-    const totalAffinities = document.querySelectorAll('.filter-affinity').length;
-    const totalFactions = document.querySelectorAll('.filter-faction').length;
-    const totalAlliances = document.querySelectorAll('.filter-alliance').length;
-
     const championCards = document.querySelectorAll('.champion-card');
 
-    // Array to hold all champions that pass ALL filters/search criteria
     let allPassedCards = [];
 
-    // --- PHASE 1: FILTERING ---
     championCards.forEach(card => {
-        const rarity = card.getAttribute('data-rarity').trim();
-        const type = card.getAttribute('data-type').trim();
-        const affinity = card.getAttribute('data-affinity').trim();
-        const faction = card.getAttribute('data-faction').trim();
-        const alliance = card.getAttribute('data-alliance').trim();
+        const rarity = (card.getAttribute('data-rarity') || '').trim();
+        const type = (card.getAttribute('data-type') || '').trim();
+        const affinity = (card.getAttribute('data-affinity') || '').trim();
+        const faction = (card.getAttribute('data-faction') || '').trim();
+        const alliance = (card.getAttribute('data-alliance') || '').trim();
 
-        let passesFilters = true; // Local variable inside the loop
+        let passesFilters = true;
 
-        // Checkbox Filters
-        // Helper function to check if filtering should be skipped for a category
         const shouldSkipFilter = (selectedArray) => {
-            // Skips if the array is empty OR if all are selected (if you had the total logic)
-            // For now, only check if it is empty, as this is the failing state (Clear All)
             return selectedArray.length === 0;
         }
 
-        // Rarity Filter
         if (!shouldSkipFilter(selectedRarities) && !selectedRarities.includes(rarity)) {
             passesFilters = false;
         }
 
-        // Type Filter
         if (passesFilters && !shouldSkipFilter(selectedTypes) && !selectedTypes.includes(type)) {
             passesFilters = false;
         }
 
-        // Affinity Filter
         if (passesFilters && !shouldSkipFilter(selectedAffinities) && !selectedAffinities.includes(affinity)) {
             passesFilters = false;
         }
 
-        // Faction Filter
         if (passesFilters && !shouldSkipFilter(selectedFactions) && !selectedFactions.includes(faction)) {
             passesFilters = false;
         }
 
-        // Alliance Filter
         if (passesFilters && !shouldSkipFilter(selectedAlliances) && !selectedAlliances.includes(alliance)) {
             passesFilters = false;
         }
 
-        // Search Filter (No change)
         if (passesFilters && searchTerm.length > 0) {
-            const championName = card.getAttribute('data-name').toLowerCase();
+            const championName = (card.getAttribute('data-name') || '').toLowerCase();
             if (!championName.includes(searchTerm)) {
                 passesFilters = false;
             }
@@ -211,10 +183,10 @@ function applyChampionFilters() {
     const sortMethod = sortDropdown ? sortDropdown.value : 'name_asc';
 
     allPassedCards.sort((a, b) => {
-        const nameA = a.getAttribute('data-name').trim().toUpperCase();
-        const nameB = b.getAttribute('data-name').trim().toUpperCase();
-        const scoreA = parseFloat(a.getAttribute('data-score'));
-        const scoreB = parseFloat(b.getAttribute('data-score'));
+        const nameA = (a.getAttribute('data-name') || '').trim().toUpperCase();
+        const nameB = (b.getAttribute('data-name') || '').trim().toUpperCase();
+        const scoreA = parseFloat(a.getAttribute('data-score')) || 0;
+        const scoreB = parseFloat(b.getAttribute('data-score')) || 0;
 
         switch (sortMethod) {
             case 'score_asc': return scoreA - scoreB;
@@ -231,18 +203,13 @@ function applyChampionFilters() {
         });
     }
 
-    const visibleCards = [];
-
     championCards.forEach(card => {
         card.style.display = 'none';
     });
 
     allPassedCards.forEach((card) => {
-        card.style.display = ''; // Show all
-        visibleCards.push(card);
-    });
+        card.style.display = '';
 
-    visibleCards.forEach(card => {
         const score = card.getAttribute('data-score');
         const placeholder = card.querySelector('.champion-rating-placeholder');
         if (placeholder) {

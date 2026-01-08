@@ -220,7 +220,7 @@ class ChampionsServiceTest {
         dto.setRarity(Rarity.LEGENDARY);
 
         when(championRepository.findById(any())).thenReturn(Optional.of(existingEntity));
-        when(championRepository.findByName("NewName")).thenReturn(Optional.empty());
+        when(championRepository.findByNameIgnoreCase("NewName")).thenReturn(Optional.empty());
 
         championsService.updateChampion(id, dto, authentication);
 
@@ -247,7 +247,7 @@ class ChampionsServiceTest {
         dto.setName("TakenName");
 
         when(championRepository.findById(any())).thenReturn(Optional.of(targetEntity));
-        when(championRepository.findByName("TakenName")).thenReturn(Optional.of(conflictEntity));
+        when(championRepository.findByNameIgnoreCase("TakenName")).thenReturn(Optional.of(conflictEntity));
 
         assertThrows(ChampionSaveException.class, () ->
                 championsService.updateChampion(id1, dto, authentication)
@@ -260,9 +260,9 @@ class ChampionsServiceTest {
         ChampionEntryDTO dto = new ChampionEntryDTO(false);
         dto.setName("Duplicate");
 
-        when(championRepository.findByName("Duplicate")).thenReturn(Optional.of(new ChampionEntity()));
+        when(championRepository.findByNameIgnoreCase("Duplicate")).thenReturn(Optional.of(new ChampionEntity()));
 
-        assertThrows(ChampionSaveException.class, () -> championsService.saveNewChampion(dto, authentication));
+        assertThrows(ChampionSaveException.class, () -> championsService.saveNewChampion(dto, authentication, "Test Audit"));
     }
 
     @Test
@@ -302,10 +302,10 @@ class ChampionsServiceTest {
         dto.setPercentageAura(false);
         dto.setAmount(50);
         dto.setStat(AuraStat.ALLY_HP);
-        dto.setLocation(AuraLocation.DUNGEON);
+        dto.setLocation(AuraLocation.DUNGEONS);
 
         when(championRepository.findById(any())).thenReturn(Optional.of(existing));
-        when(championRepository.findByName("NewName")).thenReturn(Optional.empty());
+        when(championRepository.findByNameIgnoreCase("NewName")).thenReturn(Optional.empty());
 
         championsService.updateChampion(id, dto, authentication);
 
@@ -340,7 +340,7 @@ class ChampionsServiceTest {
         dto.setSpeed(100);
 
         when(championRepository.findById(any())).thenReturn(Optional.of(existing));
-        when(championRepository.findByName("NewName")).thenReturn(Optional.empty());
+        when(championRepository.findByNameIgnoreCase("NewName")).thenReturn(Optional.empty());
 
         championsService.updateChampion(id, dto, authentication);
 

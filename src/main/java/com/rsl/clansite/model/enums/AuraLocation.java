@@ -2,8 +2,9 @@ package com.rsl.clansite.model.enums;
 
 public enum AuraLocation {
     ARENA("Arena"),
-    DUNGEON("Dungeon"),
+    DUNGEONS("Dungeons"),
     FACTION_WARS("Faction Wars"),
+    DOOM_TOWER("Doom Tower"),
     ALL_BATTLES("All Battles"),;
 
     private final String name;

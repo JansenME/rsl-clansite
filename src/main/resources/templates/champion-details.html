@@ -20,20 +20,24 @@
                     <h2 th:text="${champion.name}" style="margin-bottom: 10px;">Champion Name</h2>
                     <div>
                         <span class="badge"
-                            th:classappend="'badge-' + ${champion.rarity.name().toLowerCase()}"
-                            th:text="${champion.rarity.getName()}">
+                              th:if="${champion.rarity != null}"
+                              th:classappend="'badge-' + ${champion.rarity.name().toLowerCase()}"
+                              th:text="${champion.rarity.getName()}">
                             Rarity
                         </span>
 
                         <span class="badge"
-                            th:classappend="'badge-' + ${champion.affinity.name().toLowerCase()}"
-                            th:text="${champion.affinity.getName()}">
+                              th:if="${champion.affinity != null}"
+                              th:classappend="'badge-' + ${champion.affinity.name().toLowerCase()}"
+                              th:text="${champion.affinity.getName()}">
                             Affinity
                         </span>
+                        <span class="badge" th:if="${champion.affinity == null}">No Affinity</span>
 
                         <span class="badge"
-                            th:classappend="'badge-' + ${champion.faction.name().toLowerCase()}"
-                            th:text="${champion.faction.getName()}">
+                              th:if="${champion.faction != null}"
+                              th:classappend="'badge-' + ${champion.faction.name().toLowerCase()}"
+                              th:text="${champion.faction.getName()}">
                             Faction
                         </span>
                     </div>
@@ -42,9 +46,8 @@
                 <div class="details-container">
                     <div class="details-card" style="text-align: center;">
                         <img th:src="@{/images/champions/{imagename}(imagename=${champion.imagename})}"
-                             style="width: 200px; border-radius: 10px; margin-bottom: 20px;" />
-
-                        <p><strong>Type:</strong> <span th:text="${champion.type.getName()}">Attack</span></p>
+                             style="width: 200px; border-radius: 10px; margin-bottom: 20px;" /><p><strong>Type: </strong><span th:text="${champion.type != null ? champion.type.getName() : 'Unknown'}">Attack</span>
+                        </p>
 
                         <div th:if="${champion.aura != null}" style="background: #f0f8ff; padding: 10px; border-radius: 5px; margin-top: 15px;">
                             <strong>Aura:</strong><br/>
@@ -67,37 +70,39 @@
                     <div class="details-card">
                         <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">Base Stats (Level 60)</h3>
 
-                        <div class="stat-row">
-                            <span><strong>HP:</strong></span>
-                            <span th:text="${#numbers.formatInteger(champion.baseStats.hp, 1, 'DEFAULT')}">0</span>
-                        </div>
-                        <div class="stat-row">
-                            <span><strong>Attack:</strong></span>
-                            <span th:text="${#numbers.formatInteger(champion.baseStats.attack, 1, 'DEFAULT')}">0</span>
-                        </div>
-                        <div class="stat-row">
-                            <span><strong>Defense:</strong></span>
-                            <span th:text="${#numbers.formatInteger(champion.baseStats.defense, 1, 'DEFAULT')}">0</span>
-                        </div>
-                        <div class="stat-row">
-                            <span><strong>Speed:</strong></span>
-                            <span th:text="${champion.baseStats.speed}">0</span>
-                        </div>
-                        <div class="stat-row">
-                            <span><strong>C. Rate:</strong></span>
-                            <span th:text="${champion.baseStats.criticalRate} + '%'">0%</span>
-                        </div>
-                        <div class="stat-row">
-                            <span><strong>C. Damage:</strong></span>
-                            <span th:text="${champion.baseStats.criticalDamage} + '%'">0%</span>
-                        </div>
-                        <div class="stat-row">
-                            <span><strong>Resistance:</strong></span>
-                            <span th:text="${#numbers.formatInteger(champion.baseStats.resistance, 1, 'DEFAULT')}">0</span>
-                        </div>
-                        <div class="stat-row">
-                            <span><strong>Accuracy:</strong></span>
-                            <span th:text="${#numbers.formatInteger(champion.baseStats.accuracy, 1, 'DEFAULT')}">0</span>
+                        <div th:if="${champion.baseStats != null}">
+                            <div class="stat-row">
+                                <span><strong>HP:</strong></span>
+                                <span th:text="${#numbers.formatInteger(champion.baseStats.hp, 1, 'DEFAULT')}">0</span>
+                            </div>
+                            <div class="stat-row">
+                                <span><strong>Attack:</strong></span>
+                                <span th:text="${#numbers.formatInteger(champion.baseStats.attack, 1, 'DEFAULT')}">0</span>
+                            </div>
+                            <div class="stat-row">
+                                <span><strong>Defense:</strong></span>
+                                <span th:text="${#numbers.formatInteger(champion.baseStats.defense, 1, 'DEFAULT')}">0</span>
+                            </div>
+                            <div class="stat-row">
+                                <span><strong>Speed:</strong></span>
+                                <span th:text="${champion.baseStats.speed}">0</span>
+                            </div>
+                            <div class="stat-row">
+                                <span><strong>C. Rate:</strong></span>
+                                <span th:text="${champion.baseStats.criticalRate} + '%'">0%</span>
+                            </div>
+                            <div class="stat-row">
+                                <span><strong>C. Damage:</strong></span>
+                                <span th:text="${champion.baseStats.criticalDamage} + '%'">0%</span>
+                            </div>
+                            <div class="stat-row">
+                                <span><strong>Resistance:</strong></span>
+                                <span th:text="${#numbers.formatInteger(champion.baseStats.resistance, 1, 'DEFAULT')}">0</span>
+                            </div>
+                            <div class="stat-row">
+                                <span><strong>Accuracy:</strong></span>
+                                <span th:text="${#numbers.formatInteger(champion.baseStats.accuracy, 1, 'DEFAULT')}">0</span>
+                            </div>
                         </div>
                     </div>
                 </div>

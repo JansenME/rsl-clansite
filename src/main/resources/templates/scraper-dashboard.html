@@ -1,0 +1,52 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Scraper Dashboard</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+    <script th:src="@{/styles/js/main.js}"></script>
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container"></div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <section>
+                <h2>Scraper Dashboard</h2>
+                <p>Select a faction to scan for missing champions.</p>
+
+                <div class="row aln-center">
+                    <div th:each="faction : ${factions}" class="col-4 col-12-medium" style="margin-bottom: 20px;">
+                        <div class="box" style="text-align: center; padding: 20px;">
+                            <h3 th:text="${faction.name}" style="margin-bottom: 10px;">Faction Name</h3>
+
+                            <a th:if="${faction.hellHadesUrl != null}"
+                               th:href="@{/admin/scraper/faction/{name}(name=${#strings.replace(faction.name, ' ', '-')})}"
+                               class="button primary fit small">
+                                Scan Faction
+                            </a>
+
+                            <span th:if="${faction.hellHadesUrl == null}"
+                                  class="button disabled fit small"
+                                  title="URL not configured yet">
+                                Not Configured
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <a th:href="@{/champions}" class="button">Back to Champions</a>
+                </div>
+            </section>
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright"></div>
+</div>
+</body>
+</html>

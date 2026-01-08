@@ -9,6 +9,5 @@ import java.util.Optional;
 
 @Repository
 public interface ChampionRepository extends MongoRepository<ChampionEntity, ObjectId> {
-    boolean existsByName(String name);
-    Optional<ChampionEntity> findByName(String name);
+    Optional<ChampionEntity> findByNameIgnoreCase(String name);
 }
