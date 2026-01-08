@@ -14,6 +14,7 @@ import com.rsl.clansite.model.enums.Type;
 import com.rsl.clansite.repository.ChampionRepository;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -29,7 +30,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -125,6 +128,42 @@ public class HellHadesScraperService {
                 log.error("Failed to scrape champion from URL: {}", context.getDetailUrl(), e);
             }
         }
+    }
+
+    public Map<Rarity, Integer> getOnlineCounts(Faction faction) {
+        Map<Rarity, Integer> counts = new HashMap<>();
+        for (Rarity r : Rarity.values()) counts.put(r, 0);
+
+        if (faction.getHellHadesUrl() == null) return counts;
+
+        try {
+            List<HellHadesChampionJson> champions = fetchJson(
+                    faction.getHellHadesUrl(),
+                    new TypeReference<>() {}
+            );
+
+            for (HellHadesChampionJson c : champions) {
+                Rarity r = parseRarity(c.getRarity());
+                if (r != null) {
+                    counts.put(r, counts.get(r) + 1);
+                }
+            }
+        } catch (IOException e) {
+            log.error("Failed to fetch counts for {}", faction.getName(), e);
+        }
+        return counts;
+    }
+
+    private Rarity parseRarity(String rarityString) {
+        if (rarityString == null) return null;
+        String lower = rarityString.toLowerCase();
+        if (lower.contains("common") && !lower.contains("un")) return Rarity.COMMON;
+        if (lower.contains("uncommon")) return Rarity.UNCOMMON;
+        if (lower.contains("rare")) return Rarity.RARE;
+        if (lower.contains("epic")) return Rarity.EPIC;
+        if (lower.contains("legendary")) return Rarity.LEGENDARY;
+        if (lower.contains("mythical")) return Rarity.MYTHICAL;
+        return null;
     }
 
     private void scrapeSingleChampion(ScrapeContext context, Faction faction, Authentication authentication) throws IOException, ChampionSaveException {
@@ -387,10 +426,11 @@ public class HellHadesScraperService {
     private static class HellHadesChampionJson {
         private String id;
         private String name;
+        private String rarity;
     }
 
     @Data
-    @lombok.NoArgsConstructor
+    @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static class HellHadesRatingJson {
         private String id;
@@ -399,7 +439,7 @@ public class HellHadesScraperService {
     }
 
     @Data
-    @lombok.NoArgsConstructor
+    @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static class HellHadesAuraJson {
         private String strength;
@@ -408,7 +448,7 @@ public class HellHadesScraperService {
     }
 
     @Data
-    @lombok.NoArgsConstructor
+    @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static class HellHadesStatJson {
         private String heroid;

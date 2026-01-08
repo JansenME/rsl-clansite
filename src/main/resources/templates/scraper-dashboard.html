@@ -6,6 +6,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
     <script th:src="@{/styles/js/main.js}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <style>
+        /* Custom styles for the data dashboard */
+        .diff-error { color: #e44c65; font-weight: bold; } /* Red: Missing champions */
+        .diff-ok { color: #4caf50; opacity: 0.7; }         /* Green: Complete */
+
+        table.dashboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8em;
+        }
+        table.dashboard-table th, table.dashboard-table td {
+            border: 1px solid #e1e1e1;
+            padding: 0.5em;
+            text-align: center;
+            vertical-align: middle;
+        }
+        table.dashboard-table th {
+            background-color: #f4f4f4;
+            color: #333;
+            font-weight: bold;
+        }
+        .border-left-thick { border-left: 2px solid #ccc !important; }
+        .text-left { text-align: left !important; }
+    </style>
 </head>
 <body>
 <div id="page-wrapper">
@@ -16,27 +41,73 @@
     <section id="content">
         <div class="container">
             <section>
-                <h2>Scraper Dashboard</h2>
-                <p>Select a faction to scan for missing champions.</p>
+                <h2>Champion Data Integrity Dashboard</h2>
+                <p>Compare your target data (JSON) against your Database. <br/>
+                    <small>The "Check" button only appears if HellHades has newer data than your database.</small>
+                </p>
 
-                <div class="row aln-center">
-                    <div th:each="faction : ${factions}" class="col-4 col-12-medium" style="margin-bottom: 20px;">
-                        <div class="box" style="text-align: center; padding: 20px;">
-                            <h3 th:text="${faction.name}" style="margin-bottom: 10px;">Faction Name</h3>
+                <div th:replace="~{inserts/alerts :: alerts}"></div>
 
-                            <a th:if="${faction.hellHadesUrl != null}"
-                               th:href="@{/admin/scraper/faction/{name}(name=${#strings.replace(faction.name, ' ', '-')})}"
-                               class="button primary fit small">
-                                Scan Faction
-                            </a>
+                <div style="overflow-x: auto; margin-top: 2em;">
+                    <table class="dashboard-table">
+                        <thead>
+                        <tr>
+                            <th rowspan="2">Faction</th>
 
-                            <span th:if="${faction.hellHadesUrl == null}"
-                                  class="button disabled fit small"
-                                  title="URL not configured yet">
-                                Not Configured
-                            </span>
-                        </div>
-                    </div>
+                            <th th:each="rarity : ${rarities}" colspan="3" class="border-left-thick" th:text="${rarity.name}">
+                                RARITY
+                            </th>
+
+                            <th rowspan="2" class="border-left-thick">Action</th>
+                        </tr>
+                        <tr>
+                            <th:block th:each="rarity : ${rarities}">
+                                <th class="border-left-thick" title="My Target (Json)">Tgt</th>
+                                <th title="In Database">DB</th>
+                                <th>Diff</th>
+                            </th:block>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="row : ${dashboardRows}">
+                            <td class="text-left" style="font-weight: bold;" th:text="${row.faction.name}">
+                                Faction Name
+                            </td>
+
+                            <th:block th:each="rarity : ${rarities}">
+                                <td class="border-left-thick" th:text="${row.targets.get(rarity)}">0</td>
+
+                                <td th:text="${row.database.get(rarity)}">0</td>
+
+                                <td th:with="diff=${row.getDiff(rarity)}"
+                                    th:text="${diff}"
+                                    th:classappend="${diff > 0} ? 'diff-error' : 'diff-ok'">
+                                    0
+                                </td>
+                            </th:block>
+
+                            <td class="border-left-thick">
+                                    <span th:if="${row.isComplete()}" class="diff-ok" title="Complete">
+                                        <i class="fas fa-check"></i>
+                                    </span>
+
+                                <form th:if="${!row.isComplete() and row.isUpdateAvailable()}"
+                                      method="post"
+                                      th:action="@{/admin/scraper/faction/{name}/execute(name=${#strings.replace(row.faction.name, ' ', '-')})}">
+                                    <button type="submit" class="button primary small fit">
+                                        Check
+                                    </button>
+                                </form>
+
+                                <span th:if="${!row.isComplete() and !row.isUpdateAvailable()}"
+                                      class="diff-error"
+                                      title="Missing champions not found on HellHades. Manual fix required.">
+                                        <i class="fas fa-times"></i>
+                                    </span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
                 </div>
 
                 <div style="text-align: center; margin-top: 20px;">

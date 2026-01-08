@@ -1,0 +1,83 @@
+package com.rsl.clansite.controller;
+
+import com.rsl.clansite.model.entity.ChampionEntity;
+import com.rsl.clansite.model.enums.Faction;
+import com.rsl.clansite.model.enums.Rarity;
+import com.rsl.clansite.service.HellHadesScraperService;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+
+class ScraperControllerIntegrationTest extends BaseControllerTest {
+
+    @Test
+    @DisplayName("Dashboard - Should prepare DashboardRows correctly")
+    void showDashboard_ShouldPrepareRows() throws Exception {
+        ChampionEntity existingChamp = new ChampionEntity();
+        existingChamp.setFaction(Faction.BANNER_LORDS);
+        existingChamp.setRarity(Rarity.LEGENDARY);
+        when(championRepository.findAll()).thenReturn(List.of(existingChamp));
+
+        when(targetService.getMyTotalForFaction(Faction.BANNER_LORDS)).thenReturn(2);
+        when(targetService.getTargetCount(Faction.BANNER_LORDS, Rarity.LEGENDARY)).thenReturn(2);
+
+        when(scraperService.getOnlineCounts(Faction.BANNER_LORDS))
+                .thenReturn(Map.of(Rarity.LEGENDARY, 2));
+
+        mockMvc.perform(get("/admin/scraper")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("scraper-dashboard"))
+                .andExpect(model().attributeExists("dashboardRows"))
+                .andExpect(model().attribute("dashboardRows", hasSize(Faction.values().length)))
+                .andExpect(model().attribute("dashboardRows", hasItem(
+                        allOf(
+                                hasProperty("faction", is(Faction.BANNER_LORDS)),
+                                hasProperty("myTotal", is(2))
+                        )
+                )));
+    }
+
+    @Test
+    @DisplayName("Action - Import Execute - Should call service and redirect")
+    void executeScrape_ShouldImportAndRedirect() throws Exception {
+        HellHadesScraperService.ScrapeContext context = new HellHadesScraperService.ScrapeContext("url", "img");
+        when(scraperService.scanForNewChampions(Faction.BANNER_LORDS))
+                .thenReturn(Collections.singletonList(context));
+
+        mockMvc.perform(post("/admin/scraper/faction/Banner-Lords/execute")
+                        .with(csrf())
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/scraper"))
+                .andExpect(flash().attribute("message", containsString("Successfully imported")));
+
+        verify(scraperService).importChampions(anyList(), eq(Faction.BANNER_LORDS), any());
+    }
+
+}

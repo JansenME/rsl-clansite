@@ -1,0 +1,130 @@
+{
+  "Banner Lords": {
+    "mythical": 2,
+    "legendary": 26,
+    "epic": 22,
+    "rare": 20,
+    "uncommon": 8,
+    "common": 4
+  },
+  "High Elves": {
+    "mythical": 1,
+    "legendary": 21,
+    "epic": 17,
+    "rare": 13,
+    "uncommon": 3,
+    "common": 0
+  },
+  "The Sacred Order": {
+    "mythical": 2,
+    "legendary": 30,
+    "epic": 24,
+    "rare": 21,
+    "uncommon": 10,
+    "common": 5
+  },
+  "Barbarians": {
+    "mythical": 1,
+    "legendary": 27,
+    "epic": 19,
+    "rare": 17,
+    "uncommon": 11,
+    "common": 1
+  },
+  "Ogryn Tribes": {
+    "mythical": 1,
+    "legendary": 23,
+    "epic": 20,
+    "rare": 15,
+    "uncommon": 5,
+    "common": 0
+  },
+  "Lizardmen": {
+    "mythical": 2,
+    "legendary": 20,
+    "epic": 15,
+    "rare": 13,
+    "uncommon": 4,
+    "common": 1
+  },
+  "Skinwalkers": {
+    "mythical": 2,
+    "legendary": 21,
+    "epic": 21,
+    "rare": 11,
+    "uncommon": 2,
+    "common": 0
+  },
+  "Orcs": {
+    "mythical": 2,
+    "legendary": 23,
+    "epic": 19,
+    "rare": 15,
+    "uncommon": 4,
+    "common": 1
+  },
+  "Demonspawn": {
+    "mythical": 3,
+    "legendary": 22,
+    "epic": 20,
+    "rare": 13,
+    "uncommon": 5,
+    "common": 0
+  },
+  "Undead Hordes": {
+    "mythical": 2,
+    "legendary": 24,
+    "epic": 18,
+    "rare": 18,
+    "uncommon": 5,
+    "common": 3
+  },
+  "Dark Elves": {
+    "mythical": 2,
+    "legendary": 23,
+    "epic": 18,
+    "rare": 14,
+    "uncommon": 3,
+    "common": 3
+  },
+  "Knights Revenant": {
+    "mythical": 2,
+    "legendary": 28,
+    "epic": 23,
+    "rare": 14,
+    "uncommon": 3,
+    "common": 1
+  },
+  "Dwarves": {
+    "mythical": 2,
+    "legendary": 22,
+    "epic": 17,
+    "rare": 20,
+    "uncommon": 5,
+    "common": 0
+  },
+  "Shadowkin": {
+    "mythical": 2,
+    "legendary": 25,
+    "epic": 20,
+    "rare": 9,
+    "uncommon": 2,
+    "common": 0
+  },
+  "Sylvan Watchers": {
+    "mythical": 3,
+    "legendary": 20,
+    "epic": 17,
+    "rare": 11,
+    "uncommon": 2,
+    "common": 0
+  },
+  "Argonites": {
+    "mythical": 0,
+    "legendary": 1,
+    "epic": 0,
+    "rare": 0,
+    "uncommon": 0,
+    "common": 0
+  }
+}

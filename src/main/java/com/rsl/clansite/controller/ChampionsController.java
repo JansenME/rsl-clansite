@@ -140,7 +140,7 @@ public class ChampionsController {
     private void fillModel(Model model, Authentication authentication) {
         commonsService.fillModel(model, authentication);
 
-        int totalAmountOfChampions = 301+239+266+177;
+        int totalAmountOfChampions = 305+240+267+178;
 
         model.addAttribute("rarities", Rarity.values());
         model.addAttribute("types", Type.values());

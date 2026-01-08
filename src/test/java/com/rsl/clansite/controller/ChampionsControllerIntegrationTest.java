@@ -38,8 +38,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @MockitoBean
-    private ChampionRepository championRepository;
-    @MockitoBean
     private BackupService backupService;
 
     @Test
