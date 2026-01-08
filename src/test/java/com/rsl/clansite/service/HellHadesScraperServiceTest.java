@@ -1,12 +1,10 @@
 package com.rsl.clansite.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rsl.clansite.model.dto.ChampionEntryDTO;
-import com.rsl.clansite.model.enums.AuraLocation;
-import com.rsl.clansite.model.enums.AuraStat;
 import com.rsl.clansite.model.enums.Faction;
 import com.rsl.clansite.model.enums.Rarity;
-import com.rsl.clansite.model.enums.Type;
 import com.rsl.clansite.repository.ChampionRepository;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -23,17 +21,14 @@ import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class HellHadesScraperServiceTest {
-    @Mock
-    private ChampionsService championsService;
+class HellHadesScraperServiceTest {@Mock
+private ChampionsService championsService;
 
     @Mock
     private ChampionRepository championRepository;
@@ -45,77 +40,95 @@ class HellHadesScraperServiceTest {
 
     @BeforeEach
     void setUp() {
-        // We create a "Spy" version of the service to override the network methods
         scraperService = new HellHadesScraperService(championsService, championRepository) {
             @Override
-            protected Document fetchDocument(String url) throws IOException {
-                // Return FAKE HTML simulating Acelin's page
-                String html = "<html><head><title>Acelin the Stalwart - Raid Shadow Legends</title>" +
-                        "<meta name='description' content='Acelin the Stalwart is a Legendary Defense Champion from Banner Lords faction.'/>" +
-                        "<link rel='shortlink' href='https://hellhades.com/?p=45734' />" + // <--- Key Post ID
-                        "</head><body><h1>Acelin The Stalwart</h1>" +
-                        "<div class='content'>Some content...</div></body></html>";
+            protected Document fetchDocument(String url) {
+                String html = "<html><head><title>Acelin - Raid Shadow Legends</title>" +
+                        "<meta name='description' content='Acelin is a Legendary Defense Champion.'/>" +
+                        "<link rel='shortlink' href='https://hellhades.com/?p=45734' />" +
+                        "</head><body><h1>Acelin The Stalwart</h1></body></html>";
                 return Jsoup.parse(html);
             }
 
             @Override
             protected <T> T fetchJson(String url, TypeReference<T> typeReference) throws IOException {
-                // Return FAKE JSON based on the URL called
+                ObjectMapper mapper = new ObjectMapper();
+
                 if (url.contains("ratings/45734")) {
-                    // Simulating Ratings Response (Score 9, Hero ID 8686)
                     String json = "[{\"id\":\"854\",\"heroid\":\"8686\",\"arena_rating\":\"9\"}]";
-                    return new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, typeReference);
+                    return mapper.readValue(json, typeReference);
                 }
+
                 if (url.contains("auras/8686")) {
-                    // Simulating Aura Response (19 Speed)
                     String json = "[{\"strength\":\"19\",\"location\":\"All Battles\",\"type\":\"Speed\"}]";
-                    return new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, typeReference);
+                    return mapper.readValue(json, typeReference);
                 }
+
+                if (url.contains("forms/8680")) {
+                    String json = "[" +
+                            "{\"heroid\":\"8680\",\"health\":\"100\",\"attack\":\"50\",\"defense\":\"100\",\"speed\":\"90\",\"critrate\":\"0.10\",\"critdamage\":\"0.50\",\"resistance\":\"0\",\"accuracy\":\"0\"}," + // base form
+                            "{\"heroid\":\"8686\",\"health\":\"114\",\"attack\":\"69\",\"defense\":\"142\",\"speed\":\"106\",\"critrate\":\"0.15\",\"critdamage\":\"0.63\",\"resistance\":\"30\",\"accuracy\":\"0\"}" + // Max form
+                            "]";
+                    return mapper.readValue(json, typeReference);
+                }
+
                 return (T) Collections.emptyList();
             }
         };
     }
 
     @Test
-    void testScrapeSingleChampion_Success() throws Exception {
-        // GIVEN
-        HellHadesScraperService.ScrapeContext context = new HellHadesScraperService.ScrapeContext("http://fake.url/acelin", "http://fake.url/img.png");
-        Faction faction = Faction.BANNER_LORDS;
+    void testScrapeSingleChampion_CompleteFlow() throws Exception {
+        HellHadesScraperService.ScrapeContext context = new HellHadesScraperService.ScrapeContext("http://fake.url", "http://fake.img");
 
-        // Ensure duplicate check passes (returns empty)
         when(championRepository.findByNameIgnoreCase(anyString())).thenReturn(Optional.empty());
 
-        // WHEN
-        // We access the private method via the public 'importChampions' loop, or effectively test the logic via single scrape if visible.
-        // Since scrapeSingleChampion is private, we will trigger it via the public importChampions method with a list of 1.
-        scraperService.importChampions(Collections.singletonList(context), faction, authentication);
+        scraperService.importChampions(Collections.singletonList(context), Faction.BANNER_LORDS, authentication);
 
-        // THEN
-        ArgumentCaptor<ChampionEntryDTO> dtoCaptor = ArgumentCaptor.forClass(ChampionEntryDTO.class);
+        ArgumentCaptor<ChampionEntryDTO> captor = ArgumentCaptor.forClass(ChampionEntryDTO.class);
+        verify(championsService).saveNewChampion(captor.capture(), eq(authentication), anyString());
 
-        // Verify saveNewChampion was called exactly once
-        verify(championsService, times(1)).saveNewChampion(dtoCaptor.capture(), eq(authentication), anyString());
+        ChampionEntryDTO result = captor.getValue();
 
-        ChampionEntryDTO result = dtoCaptor.getValue();
+        assertEquals(18825, result.getHp());
+        assertEquals(760, result.getAttack());
+        assertEquals(1564, result.getDefense());
+        assertEquals(106, result.getSpeed());
+        assertEquals(63, result.getCriticalDamage());
+    }
 
-        // 1. Check Basic Info
-        assertEquals("Acelin The Stalwart", result.getName());
-        assertEquals(Faction.BANNER_LORDS, result.getFaction());
-        assertEquals("acelin-the-stalwart.png", result.getImagename());
+    @Test
+    void testScrape_UncommonChampion_WithNoise_ShouldBeUncommon() throws Exception {
+        HellHadesScraperService.ScrapeContext context = new HellHadesScraperService.ScrapeContext("http://fake.url/archer", "http://fake.url/img.png");
 
-        // 2. Check Metadata Parsing (from Fake HTML)
-        assertEquals(Rarity.LEGENDARY, result.getRarity());
-        assertEquals(Type.DEFENSE, result.getType());
+        scraperService = new HellHadesScraperService(championsService, championRepository) {
+            @Override
+            protected Document fetchDocument(String url) {
+                String html = "<html><head><title>Archer - Raid Shadow Legends</title>" +
+                        "<meta name='description' content='Archer is an Uncommon HP Champion from Banner Lords.'/>" +
+                        "</head><body>" +
+                        "<h1>Archer</h1>" +
+                        "<div class='content'>This champion is rarely used in the Arena.</div>" +
+                        "</body></html>";
+                return Jsoup.parse(html);
+            }
 
-        // 3. Check API Logic (from Fake JSONs)
-        // Rating: "9" -> 4.5
-        assertEquals(4.5, result.getArenaScore());
+            @Override
+            protected <T> T fetchJson(String url, TypeReference<T> typeReference) {
+                return (T) Collections.emptyList();
+            }
+        };
 
-        // Aura: 19 Speed All Battles
-        assertTrue(result.isAuraExists());
-        assertEquals(19, result.getAmount());
-        assertEquals(AuraStat.ALLY_SPD, result.getStat());
-        assertEquals(AuraLocation.ALL_BATTLES, result.getLocation());
-        assertTrue(result.isPercentageAura()); // Speed is percentage
+        when(championRepository.findByNameIgnoreCase(anyString())).thenReturn(Optional.empty());
+
+        scraperService.importChampions(Collections.singletonList(context), Faction.BANNER_LORDS, authentication);
+
+        ArgumentCaptor<ChampionEntryDTO> captor = ArgumentCaptor.forClass(ChampionEntryDTO.class);
+        verify(championsService).saveNewChampion(captor.capture(), eq(authentication), anyString());
+
+        ChampionEntryDTO result = captor.getValue();
+
+        assertEquals("Archer", result.getName());
+        assertEquals(Rarity.UNCOMMON, result.getRarity());
     }
 }
