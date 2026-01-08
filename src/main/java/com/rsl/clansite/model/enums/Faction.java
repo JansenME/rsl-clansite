@@ -6,7 +6,7 @@ import lombok.Getter;
 public enum Faction {
     BANNER_LORDS("Banner Lords", Alliance.TELERIAN_LEAGUE, "https://hellhades.com/wp-json/hh-api/experimental/raid/index?config%5Bfaction%5D=banner-lords"),
     HIGH_ELVES("High Elves", Alliance.TELERIAN_LEAGUE, "https://hellhades.com/wp-json/hh-api/experimental/raid/index?config%5Bfaction%5D=high-elves"),
-    THE_SACRED_ORDER("The Sacred Order", Alliance.TELERIAN_LEAGUE, "https://hellhades.com/wp-json/hh-api/experimental/raid/index?config%5Bfaction%5D=sacred-order"),
+    SACRED_ORDER("Sacred Order", Alliance.TELERIAN_LEAGUE, "https://hellhades.com/wp-json/hh-api/experimental/raid/index?config%5Bfaction%5D=sacred-order"),
     BARBARIANS("Barbarians", Alliance.TELERIAN_LEAGUE, "https://hellhades.com/wp-json/hh-api/experimental/raid/index?config%5Bfaction%5D=barbarians"),
     OGRYN_TRIBES("Ogryn Tribes", Alliance.GAELLEN_PACT, "https://hellhades.com/wp-json/hh-api/experimental/raid/index?config%5Bfaction%5D=ogryn-tribes"),
     LIZARDMEN("Lizardmen", Alliance.GAELLEN_PACT, "https://hellhades.com/wp-json/hh-api/experimental/raid/index?config%5Bfaction%5D=lizardmen"),

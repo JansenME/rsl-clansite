@@ -525,4 +525,24 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
                         .with(csrf()))
                 .andExpect(status().is3xxRedirection());
     }
+
+    @Test
+    @DisplayName("UI - Scrape Button Visible for OWNER")
+    void getChampions_WhenOwner_ShouldShowScraperButton() throws Exception {
+        mockMvc.perform(get("/champions")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("champions"))
+                .andExpect(content().string(containsString("/admin/scraper")));
+    }
+
+    @Test
+    @DisplayName("UI - Scrape Button Hidden for MEMBER")
+    void getChampions_WhenMember_ShouldNotShowScraperButton() throws Exception {
+        mockMvc.perform(get("/champions")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("champions"))
+                .andExpect(content().string(not(containsString("/admin/scraper"))));
+    }
 }

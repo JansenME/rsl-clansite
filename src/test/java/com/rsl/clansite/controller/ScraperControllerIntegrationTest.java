@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -80,4 +81,33 @@ class ScraperControllerIntegrationTest extends BaseControllerTest {
         verify(scraperService).importChampions(anyList(), eq(Faction.BANNER_LORDS), any());
     }
 
+    @Test
+    @DisplayName("Security - Access Denied for Non-Owners")
+    void showDashboard_WhenNotOwner_ShouldReturnForbidden() throws Exception {
+        mockMvc.perform(get("/admin/scraper")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("Security - Dashboard Access Denied for MEMBER")
+    void showDashboard_WhenMember_ShouldReturnForbidden() throws Exception {
+        mockMvc.perform(get("/admin/scraper")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("Security - Import Execution Denied for MEMBER")
+    void executeScrape_WhenMember_ShouldReturnForbidden() throws Exception {
+        mockMvc.perform(post("/admin/scraper/faction/Banner-Lords/execute")
+                        .with(csrf())
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/error/403"));
+
+        verify(scraperService, never()).importChampions(anyList(), any(), any());
+    }
 }
