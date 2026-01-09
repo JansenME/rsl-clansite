@@ -416,3 +416,108 @@ tr.clickable-row:hover {
 .badge-shadowkin { background-color: #595959; }
 .badge-sylvan_watchers { background-color: #007804; }
 .badge-dwarves { background-color: #918F5C; }
+
+/* --- Champion Rarity Borders --- */
+/* Base style for the image to ensure the border sits nicely */
+.champion-portrait {
+    border-radius: 4px; /* Optional: Slight rounding looks more polished */
+    transition: transform 0.2s ease;
+}
+
+.champion-portrait:hover {
+    transform: scale(1.05); /* Subtle zoom effect on hover */
+}
+
+/* Specific Rarity Colors (Border + Glowing Shadow) */
+.rarity-border-common {
+    border: 4px solid #808080;
+    box-shadow: 0 0 15px #808080;
+}
+
+.rarity-border-uncommon {
+    border: 4px solid #2e7d32;
+    box-shadow: 0 0 15px #2e7d32;
+}
+
+.rarity-border-rare {
+    border: 4px solid #1976d2;
+    box-shadow: 0 0 15px #1976d2;
+}
+
+.rarity-border-epic {
+    border: 4px solid #9c27b0;
+    box-shadow: 0 0 15px #9c27b0;
+}
+
+.rarity-border-legendary {
+    border: 4px solid #d4af37;
+    box-shadow: 0 0 15px #d4af37;
+}
+
+.rarity-border-mythical {
+    border: 4px solid #d32f2f;
+    box-shadow: 0 0 15px #d32f2f;
+}
+
+/* --- Champion Grid Layout --- */
+
+#champion-grid-container {
+    display: grid;
+    gap: 15px; /* Slightly larger gap for breathing room */
+    width: 100%;
+
+    /* Default: Mobile Phones (1 or 2 columns depending on size) */
+    grid-template-columns: repeat(2, 1fr);
+    justify-items: center; /* Centers the card in its cell */
+}
+
+/* Very small phones (e.g. older iPhones) */
+@media (max-width: 400px) {
+    #champion-grid-container {
+        grid-template-columns: 1fr; /* 1 Column */
+    }
+}
+
+/* Tablets / Small Windows */
+@media (min-width: 600px) {
+    #champion-grid-container {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Small Laptops / Half-Screen */
+@media (min-width: 850px) {
+    #champion-grid-container {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Desktops */
+@media (min-width: 1100px) {
+    #champion-grid-container {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+/* Large Screens (Enforce Max 6) */
+@media (min-width: 1350px) {
+    #champion-grid-container {
+        grid-template-columns: repeat(6, 1fr);
+    }
+}
+
+/* --- Champion Card Styling --- */
+.champion-card {
+    padding: 10px;
+    text-align: center;
+    /* Optional: Add a subtle background to the card itself */
+    /* background-color: rgba(0,0,0,0.2); */
+    border-radius: 8px;
+}
+
+.champion-name {
+    margin-top: 8px;
+    font-weight: bold;
+    color: #fff; /* Ensure text is readable */
+    text-shadow: 1px 1px 2px black; /* Improves readability on light/dark backgrounds */
+}
