@@ -82,7 +82,7 @@ public class HellHadesScraperService {
                 String imageUrl = "https://hellhades.com/wp-content/plugins/rsl-assets/assets/champbyIds/" + json.getId() + ".png";
 
                 // Add to list
-                contexts.add(new ScrapingContext(name, detailUrl, imageUrl));
+                contexts.add(new ScrapingContext(name, detailUrl, imageUrl, json.getId()));
             }
             log.info("Faction {}: Found {} targets. Queueing {} for scraping.", faction, jsonChampions.size(), contexts.size());
 
@@ -267,17 +267,28 @@ public class HellHadesScraperService {
     }
 
     private void fetchBaseStatsFromApi(String heroId, ScrapedChampion dto) {
+        // Strategy 1: Try Standard Calculation (ID - 6)
         long formId = Long.parseLong(heroId) - 6;
+        if (tryFetchStats(heroId, formId, dto)) return;
+
+        // Strategy 2: If failed, try Direct ID (Fix for Commons/Pikeman)
+        long directId = Long.parseLong(heroId);
+        tryFetchStats(heroId, directId, dto);
+    }
+
+    private boolean tryFetchStats(String heroId, long formId, ScrapedChampion dto) {
         String url = "https://hellhades.com/wp-json/hh-api/v3/raid/forms/" + formId;
         try {
             List<HellHadesStatJson> stats = fetchJson(url, new TypeReference<>() {});
             HellHadesStatJson s = stats.stream().filter(st -> heroId.equals(st.getHeroid())).findFirst().orElse(null);
+
             if (s != null) {
+                // Parse Logic
                 if (s.getRole() != null) {
                     String r = s.getRole().toUpperCase();
-                    if (r.contains("DEF")) dto.setType(Type.DEFENSE);
+                    if (r.contains("DEF") || r.contains("DEFENSE")) dto.setType(Type.DEFENSE);
                     else if (r.contains("ATTACK")) dto.setType(Type.ATTACK);
-                    else if (r.contains("HP")) dto.setType(Type.HP);
+                    else if (r.contains("HP") || r.contains("HEALTH")) dto.setType(Type.HP);
                     else if (r.contains("SUPPORT")) dto.setType(Type.SUPPORT);
                 }
                 if (s.getRarity() != null) dto.setRarity(parseRarity(s.getRarity()));
@@ -293,8 +304,10 @@ public class HellHadesScraperService {
                 bs.setCriticalRate((int) (Double.parseDouble(s.getCritrate()) * 100));
                 bs.setCriticalDamage((int) (Double.parseDouble(s.getCritdamage()) * 100));
                 dto.setBaseStats(bs);
+                return true; // Success!
             }
         } catch (Exception e) { /* ignore */ }
+        return false; // Failed
     }
 
     private boolean containsIgnoreCase(String source, String subItem) {
@@ -348,14 +361,16 @@ public class HellHadesScraperService {
         private String name;
         private String detailUrl;
         private String imageUrl;
+        private String heroId;
         private ScrapedChampion scrapedData;
         private String error;
 
         // Constructor for discovery
-        public ScrapingContext(String name, String detailUrl, String imageUrl) {
+        public ScrapingContext(String name, String detailUrl, String imageUrl, String heroId) {
             this.name = name;
             this.detailUrl = detailUrl;
             this.imageUrl = imageUrl;
+            this.heroId = heroId;
         }
     }
 

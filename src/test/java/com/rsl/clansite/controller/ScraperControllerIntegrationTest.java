@@ -78,7 +78,7 @@ class ScraperControllerIntegrationTest extends BaseControllerTest {
     void executeScrape_ShouldImportAndRedirect() throws Exception {
         // 1. Fix Class Name and Constructor (Name, URL, Image)
         HellHadesScraperService.ScrapingContext context =
-                new HellHadesScraperService.ScrapingContext("Test Champion", "http://test-url.com", "http://test-img.png");
+                new HellHadesScraperService.ScrapingContext("Test Champion", "http://test-url.com", "http://test-img.png", "520");
 
         // 2. Fix Method Name and Arguments (Faction, forceRefresh=false)
         when(scraperService.scanForChampions(Faction.BANNER_LORDS, false))

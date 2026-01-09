@@ -1,7 +1,6 @@
 package com.rsl.clansite.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rsl.clansite.model.BaseStats;
 import com.rsl.clansite.model.dto.ScrapedChampion;
 import com.rsl.clansite.model.entity.ChampionEntity;
@@ -73,7 +72,7 @@ class HellHadesScraperServiceTest {
 
         // 2. Create the Context
         HellHadesScraperService.ScrapingContext context =
-                new HellHadesScraperService.ScrapingContext("Test Champion", "http://fake.url", "http://fake.img");
+                new HellHadesScraperService.ScrapingContext("Test Champion", "http://fake.url", "http://fake.img", "520");
         context.setScrapedData(scrapedData);
 
         // 3. Mock dependencies
