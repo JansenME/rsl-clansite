@@ -1,0 +1,103 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Data Health Dashboard</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+    <script th:src="@{/styles/js/main.js}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <style>
+        .issue-tag {
+            display: inline-block;
+            background: #e44c65; /* Red background */
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-right: 5px;
+            margin-bottom: 2px;
+        }
+        .issue-tag.warning {
+            background: #eebb00; /* Orange/Yellow for non-critical */
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container"></div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <section>
+                <h2>Data Health Dashboard</h2>
+                <p>Champions listed below have missing data or broken image links.</p>
+
+                <div th:replace="~{inserts/alerts :: alerts}"></div>
+
+                <div class="table-wrapper">
+                    <table class="alt">
+                        <thead>
+                        <tr>
+                            <th>Champion</th>
+                            <th>Issues Found</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="row : ${problems}">
+                            <td>
+                                <strong th:text="${row.champion.name}">Name</strong>
+                                <br/>
+                                <a th:href="@{/champions/{id}(id=${row.champion.id})}" style="font-size: 0.8em;">View</a>
+                            </td>
+
+                            <td>
+                                <span th:each="issue : ${row.issues}"
+                                      class="issue-tag"
+                                      th:text="${issue}">
+                                    Missing Rarity
+                                </span>
+                            </td>
+
+                            <td>
+                                <div th:if="${row.champion.faction != null}">
+                                    <form method="post"
+                                          th:action="@{/admin/scraper/faction/{name}/execute(name=${#strings.replace(row.champion.faction.name, ' ', '-')})}">
+                                        <button type="submit" class="button small">
+                                            <i class="fas fa-sync"></i> Re-Scrape
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <div th:if="${row.champion.faction == null}">
+                                    <a th:href="@{/champions/{id}(id=${row.champion.id})}" class="button small">
+                                        <i class="fas fa-edit"></i> Manual Fix
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr th:if="${problems.empty}">
+                            <td colspan="3" style="text-align: center; color: green; font-weight: bold;">
+                                <i class="fas fa-check-circle"></i> No Data Issues Found! Great job!
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <a th:href="@{/admin/scraper}" class="button">Back to Scraper Dashboard</a>
+                </div>
+            </section>
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright"></div>
+</div>
+</body>
+</html>

@@ -20,13 +20,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Controller
-@RequestMapping("/admin/scraper")
+@RequestMapping("/admin")
 public class ScraperController {
 
     private final HellHadesScraperService scraperService;
@@ -39,7 +42,7 @@ public class ScraperController {
         this.championRepository = championRepository;
     }
 
-    @GetMapping("")
+    @GetMapping("/scraper")
     @PreAuthorize("hasRole('OWNER')")
     public String scraperDashboard(Model model) {
         // 1. Fetch all champions once
@@ -95,29 +98,90 @@ public class ScraperController {
         return "scraper-dashboard";
     }
 
-    @PostMapping("/faction/{factionName}/execute")
+    @PostMapping("/scraper/faction/{factionName}/execute")
     @PreAuthorize("hasRole('OWNER')")
-    public String executeScrape(@PathVariable String factionName, Authentication authentication, RedirectAttributes redirectAttributes) {
+    public String executeScrape(@PathVariable String factionName,
+                                @org.springframework.web.bind.annotation.RequestHeader(value = "Referer", required = false) String referer,
+                                Authentication authentication,
+                                RedirectAttributes redirectAttributes) {
+
         Faction faction = Faction.getFactionByName(factionName.replace("-", " "));
         if (faction == null) {
             redirectAttributes.addFlashAttribute("errorMessage", "Invalid Faction Name.");
             return "redirect:/admin/scraper";
         }
 
-        // 1. Scan
-        var newContexts = scraperService.scanForNewChampions(faction);
+        // 1. Determine Strategy based on where the user clicked
+        // If coming from "data-health", we are fixing data -> Force Refresh
+        boolean forceRefresh = (referer != null && referer.contains("data-health"));
 
-        if (newContexts.isEmpty()) {
-            redirectAttributes.addFlashAttribute("message", "No new champions found for " + faction.getName());
+        // 2. Scan (using the new service signature)
+        var contexts = scraperService.scanForChampions(faction, forceRefresh);
+
+        if (contexts.isEmpty()) {
+            redirectAttributes.addFlashAttribute("message", "No champions found for " + faction.getName());
             redirectAttributes.addFlashAttribute("alertClass", "alert-info");
         } else {
-            // 2. Import immediately
-            scraperService.importChampions(newContexts, faction, authentication);
-            redirectAttributes.addFlashAttribute("message", "Successfully imported " + newContexts.size() + " champions into " + faction.getName());
+            // 3. Import (Upsert logic in service handles updates vs inserts)
+            scraperService.importChampions(contexts, faction, authentication);
+
+            String actionType = forceRefresh ? "Refreshed/Updated" : "Imported";
+            redirectAttributes.addFlashAttribute("message", "Successfully " + actionType + " " + contexts.size() + " champions into " + faction.getName());
             redirectAttributes.addFlashAttribute("alertClass", "alert-success");
         }
 
+        // 4. Smart Redirect
+        if (forceRefresh) {
+            return "redirect:/admin/data-health";
+        }
+
         return "redirect:/admin/scraper";
+    }
+
+    @GetMapping("/data-health")
+    @PreAuthorize("hasRole('OWNER')")
+    public String showDataHealth(Model model) {
+        List<ChampionEntity> allChampions = championRepository.findAll();
+        List<ProblemRow> problems = new ArrayList<>();
+
+        String imageBasePath = "src/main/resources/static/images/champions/";
+
+        for (ChampionEntity c : allChampions) {
+            List<String> issues = new ArrayList<>();
+
+            // 1. Check Data Integrity
+            if (c.getType() == null) issues.add("Missing Type");
+            if (c.getAffinity() == null) issues.add("Missing Affinity");
+            if (c.getRarity() == null) issues.add("Missing Rarity");
+            if (c.getFaction() == null) issues.add("Missing Faction");
+            if (c.getBaseStats() == null) issues.add("Missing Stats");
+
+            // 2. Check Image Reference
+            if (c.getImagename() == null || c.getImagename().isEmpty()) {
+                issues.add("No Image Name in DB");
+            } else {
+                // 3. Check Physical File
+                Path path = Paths.get(imageBasePath + c.getImagename());
+                if (!Files.exists(path)) {
+                    issues.add("File Missing on Disk");
+                }
+            }
+
+            // Only add to list if there are actual issues
+            if (!issues.isEmpty()) {
+                problems.add(new ProblemRow(c, issues));
+            }
+        }
+
+        model.addAttribute("problems", problems);
+        return "data-health";
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class ProblemRow {
+        private ChampionEntity champion;
+        private List<String> issues;
     }
 
     @Data

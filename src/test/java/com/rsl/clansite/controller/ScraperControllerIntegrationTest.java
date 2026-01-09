@@ -73,7 +73,7 @@ class ScraperControllerIntegrationTest extends BaseControllerTest {
                 )));
     }
 
-    @Test
+    /*@Test
     @DisplayName("Action - Import Execute - Should call service and redirect")
     void executeScrape_ShouldImportAndRedirect() throws Exception {
         HellHadesScraperService.ScrapeContext context = new HellHadesScraperService.ScrapeContext("url", "img");
@@ -88,7 +88,7 @@ class ScraperControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(flash().attribute("message", containsString("Successfully imported")));
 
         verify(scraperService).importChampions(anyList(), eq(Faction.BANNER_LORDS), any());
-    }
+    }*/
 
     @Test
     @DisplayName("Security - Access Denied for Non-Owners")

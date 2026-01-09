@@ -26,6 +26,15 @@ public class CommonsService {
         this.buildProperties = buildProperties;
     }
 
+    public String generateImageFilename(String championName) {
+        if (championName == null || championName.isEmpty()) {
+            return "placeholder.png";
+        }
+
+        String cleanName = championName.toLowerCase().replaceAll("[^a-z0-9 ]", "");
+        return cleanName.trim().replace(" ", "-") + ".png";
+    }
+
     public void fillModel(Model model, Authentication authentication) {
         model.addAttribute("versionNumber", getAppVersion());
         model.addAttribute("currentYear", String.valueOf(Year.now().getValue()));

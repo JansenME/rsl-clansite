@@ -147,23 +147,23 @@ function applyChampionFilters() {
             return selectedArray.length === 0;
         }
 
-        if (!shouldSkipFilter(selectedRarities) && !selectedRarities.includes(rarity)) {
+        if (rarity !== '' && !shouldSkipFilter(selectedRarities) && !selectedRarities.includes(rarity)) {
             passesFilters = false;
         }
 
-        if (passesFilters && !shouldSkipFilter(selectedTypes) && !selectedTypes.includes(type)) {
+        if (passesFilters && type !== '' && !shouldSkipFilter(selectedTypes) && !selectedTypes.includes(type)) {
             passesFilters = false;
         }
 
-        if (passesFilters && !shouldSkipFilter(selectedAffinities) && !selectedAffinities.includes(affinity)) {
+        if (passesFilters && affinity !== '' && !shouldSkipFilter(selectedAffinities) && !selectedAffinities.includes(affinity)) {
             passesFilters = false;
         }
 
-        if (passesFilters && !shouldSkipFilter(selectedFactions) && !selectedFactions.includes(faction)) {
+        if (passesFilters && faction !== '' && !shouldSkipFilter(selectedFactions) && !selectedFactions.includes(faction)) {
             passesFilters = false;
         }
 
-        if (passesFilters && !shouldSkipFilter(selectedAlliances) && !selectedAlliances.includes(alliance)) {
+        if (passesFilters && alliance !== '' && !shouldSkipFilter(selectedAlliances) && !selectedAlliances.includes(alliance)) {
             passesFilters = false;
         }
 

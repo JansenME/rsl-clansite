@@ -3,8 +3,11 @@ package com.rsl.clansite.service;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rsl.clansite.exceptions.ChampionSaveException;
-import com.rsl.clansite.model.dto.ChampionEntryDTO;
+import com.rsl.clansite.model.Aura;
+import com.rsl.clansite.model.BaseStats;
+import com.rsl.clansite.model.dto.ScrapedChampion;
+import com.rsl.clansite.model.dto.ScrapingContext;
+import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.model.enums.Affinity;
 import com.rsl.clansite.model.enums.AuraLocation;
 import com.rsl.clansite.model.enums.AuraStat;
@@ -15,6 +18,7 @@ import com.rsl.clansite.repository.ChampionRepository;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -26,7 +30,6 @@ import org.springframework.stereotype.Service;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -38,226 +41,171 @@ import java.util.regex.Pattern;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class HellHadesScraperService {
 
-    private final ChampionsService championsService;
     private final ChampionRepository championRepository;
+    private final CommonsService commonsService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String IMAGE_SAVE_DIR = "src/main/resources/static/images/champions/";
-
     private static final double LEVEL_60_MULTIPLIER = 11.014;
 
-    public HellHadesScraperService(ChampionsService championsService, ChampionRepository championRepository) {
-        this.championsService = championsService;
-        this.championRepository = championRepository;
+    // --- MAIN FLOW: SCANNING ---
+
+    public List<ScrapingContext> scanForChampions(Faction faction, boolean forceRefresh) {
+        List<ScrapingContext> contexts = new ArrayList<>();
+
+        if (faction.getHellHadesUrl() == null) {
+            log.warn("No JSON URL configured for faction: {}", faction);
+            return contexts;
+        }
+
+        try {
+            // 1. JSON DISCOVERY (The "Old Way" - Robust & Correct Images)
+            log.info("Fetching JSON from: {}", faction.getHellHadesUrl());
+            List<HellHadesChampionJson> jsonChampions = fetchJson(faction.getHellHadesUrl(), new TypeReference<>() {});
+
+            // 2. Build Contexts
+            for (HellHadesChampionJson json : jsonChampions) {
+                String name = json.getName().trim();
+
+                // Skip if exists AND not forcing refresh
+                if (!forceRefresh && championRepository.findByNameIgnoreCase(name).isPresent()) {
+                    continue;
+                }
+
+                // Construct URLs using the Old Logic
+                String slug = name.toLowerCase().replace(" ", "-").replace("'", "").replace(".", "");
+                String detailUrl = "https://hellhades.com/raid/champions/" + slug + "/";
+
+                // THE MAGIC LINE: Construct the Image URL from ID
+                String imageUrl = "https://hellhades.com/wp-content/plugins/rsl-assets/assets/champbyIds/" + json.getId() + ".png";
+
+                // Add to list
+                contexts.add(new ScrapingContext(name, detailUrl, imageUrl));
+            }
+            log.info("Faction {}: Found {} targets. Queueing {} for scraping.", faction, jsonChampions.size(), contexts.size());
+
+        } catch (IOException e) {
+            log.error("Failed to fetch faction JSON", e);
+        }
+
+        // 3. Parallel Scraping
+        contexts.parallelStream().forEach(ctx -> {
+            try {
+                ScrapedChampion scraped = scrapeSingleChampion(ctx.getDetailUrl());
+
+                // IMPORTANT: Use the image URL we constructed from the JSON ID
+                scraped.setImageUrl(ctx.getImageUrl());
+                // Ensure name matches exactly what we found in JSON
+                scraped.setName(ctx.getName());
+
+                ctx.setScrapedData(scraped);
+            } catch (Exception e) {
+                log.error("Failed to scrape {}: {}", ctx.getName(), e.getMessage());
+                ctx.setError(e.getMessage());
+            }
+        });
+
+        return contexts;
     }
 
+    // --- MAIN FLOW: IMPORTING (UPSERT) ---
+
+    public void importChampions(List<ScrapingContext> contexts, Faction faction, Authentication authentication) {
+        List<ChampionEntity> entitiesToSave = new ArrayList<>();
+
+        for (ScrapingContext ctx : contexts) {
+            if (ctx.getScrapedData() == null) continue;
+
+            ScrapedChampion data = ctx.getScrapedData();
+            ChampionEntity champion = championRepository.findByNameIgnoreCase(data.getName())
+                    .orElse(new ChampionEntity());
+
+            champion.setName(data.getName());
+            champion.setFaction(faction);
+
+            if (data.getRarity() != null) champion.setRarity(data.getRarity());
+            if (data.getType() != null) champion.setType(data.getType());
+            if (data.getAffinity() != null) champion.setAffinity(data.getAffinity());
+            if (data.getBaseStats() != null) champion.setBaseStats(data.getBaseStats());
+            if (data.getAura() != null) champion.setAura(data.getAura());
+            if (data.getArenaScore() != null) champion.setArenaScore(data.getArenaScore());
+
+            // Image Filename
+            String generatedFileName = commonsService.generateImageFilename(data.getName());
+            champion.setImagename(generatedFileName);
+
+            // Download Logic: Use the URL we got from the JSON ID
+            if (data.getImageUrl() != null) {
+                downloadImage(data.getImageUrl(), generatedFileName);
+            }
+
+            entitiesToSave.add(champion);
+        }
+
+        championRepository.saveAll(entitiesToSave);
+        log.info("Imported/Updated {} champions for {}", entitiesToSave.size(), faction);
+    }
+
+    // --- SCRAPING LOGIC ---
+
+    private ScrapedChampion scrapeSingleChampion(String url) throws IOException {
+        // Fallback for document fetching if URL is slightly off
+        Document doc;
+        try {
+            doc = fetchDocument(url);
+        } catch (IOException e) {
+            // Try removing "/raid" if it fails, or vice versa (Simple retry)
+            if (url.contains("/raid/")) url = url.replace("/raid/", "/");
+            doc = fetchDocument(url);
+        }
+
+        ScrapedChampion dto = new ScrapedChampion();
+        dto.setUrl(url);
+
+        String postId = extractPostId(doc);
+        if (postId != null) {
+            fetchRatingsAuraAndStats(postId, dto);
+        }
+
+        // HTML Fallbacks for missing API data
+        if (dto.getRarity() == null) {
+            String raritySource = (doc.title() + " " + getMetaContent(doc, "description")).toLowerCase();
+            dto.setRarity(parseRarity(raritySource));
+        }
+
+        if (dto.getType() == null) {
+            String text = doc.text().toLowerCase();
+            if (text.contains("attack champion")) dto.setType(Type.ATTACK);
+            else if (text.contains("defense champion") || text.contains("defence champion")) dto.setType(Type.DEFENSE);
+            else if (text.contains("hp champion") || text.contains("health champion")) dto.setType(Type.HP);
+            else if (text.contains("support champion")) dto.setType(Type.SUPPORT);
+        }
+
+        String html = doc.html();
+        if (containsIgnoreCase(html, "affinity/magic.png")) dto.setAffinity(Affinity.MAGIC);
+        else if (containsIgnoreCase(html, "affinity/force.png")) dto.setAffinity(Affinity.FORCE);
+        else if (containsIgnoreCase(html, "affinity/spirit.png")) dto.setAffinity(Affinity.SPIRIT);
+        else if (containsIgnoreCase(html, "affinity/void.png")) dto.setAffinity(Affinity.VOID);
+
+        return dto;
+    }
+
+    // --- HELPER METHODS ---
+
     protected Document fetchDocument(String url) throws IOException {
-        return Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-                .get();
+        return Jsoup.connect(url).userAgent("Mozilla/5.0").get();
     }
 
     protected <T> T fetchJson(String url, TypeReference<T> typeReference) throws IOException {
         return objectMapper.readValue(new URL(url), typeReference);
     }
 
-    // --- PHASE 1: SCAN ---
-
-    public List<ScrapeContext> scanForNewChampions(Faction faction) {
-        List<ScrapeContext> newChampions = new ArrayList<>();
-
-        if (faction.getHellHadesUrl() == null) {
-            log.warn("No HellHades URL configured for faction: {}", faction.getName());
-            return newChampions;
-        }
-
-        try {
-            log.info("Fetching JSON from: {}", faction.getHellHadesUrl());
-            List<HellHadesChampionJson> champions = fetchJson(
-                    faction.getHellHadesUrl(),
-                    new TypeReference<>() {}
-            );
-
-            log.info("Found {} champions in JSON response.", champions.size());
-
-            for (HellHadesChampionJson jsonChamp : champions) {
-                String name = jsonChamp.getName().trim();
-
-                if (championRepository.findByNameIgnoreCase(name).isEmpty()) {
-                    String slug = name.toLowerCase()
-                            .replace(" ", "-")
-                            .replace("'", "")
-                            .replace(".", "");
-
-                    String detailUrl = "https://hellhades.com/raid/champions/" + slug + "/";
-                    String imageUrl = "https://hellhades.com/wp-content/plugins/rsl-assets/assets/champbyIds/" + jsonChamp.getId() + ".png";
-
-                    boolean alreadyInBatch = newChampions.stream().anyMatch(c -> c.getDetailUrl().equals(detailUrl));
-
-                    if (!alreadyInBatch) {
-                        newChampions.add(new ScrapeContext(detailUrl, imageUrl));
-                    }
-                }
-            }
-
-        } catch (IOException e) {
-            log.error("Failed to fetch/parse faction JSON: {}", faction.getHellHadesUrl(), e);
-        }
-
-        return newChampions;
-    }
-
-    // --- PHASE 2: IMPORT ---
-
-    public void importChampions(List<ScrapeContext> targets, Faction faction, Authentication authentication) {
-        log.info("Starting bulk import of {} champions for {}", targets.size(), faction.getName());
-
-        try {
-            Files.createDirectories(Paths.get(IMAGE_SAVE_DIR));
-        } catch (IOException e) {
-            log.error("Could not create image directory: " + IMAGE_SAVE_DIR, e);
-        }
-
-        for (ScrapeContext context : targets) {
-            try {
-                scrapeSingleChampion(context, faction, authentication);
-                Thread.sleep(1500);
-            } catch (Exception e) {
-                log.error("Failed to scrape champion from URL: {}", context.getDetailUrl(), e);
-            }
-        }
-    }
-
-    public Map<Rarity, Integer> getOnlineCounts(Faction faction) {
-        Map<Rarity, Integer> counts = new HashMap<>();
-        for (Rarity r : Rarity.values()) counts.put(r, 0);
-
-        if (faction.getHellHadesUrl() == null) return counts;
-
-        try {
-            List<HellHadesChampionJson> champions = fetchJson(
-                    faction.getHellHadesUrl(),
-                    new TypeReference<>() {}
-            );
-
-            for (HellHadesChampionJson c : champions) {
-                Rarity r = parseRarity(c.getRarity());
-                if (r != null) {
-                    counts.put(r, counts.get(r) + 1);
-                }
-            }
-        } catch (IOException e) {
-            log.error("Failed to fetch counts for {}", faction.getName(), e);
-        }
-        return counts;
-    }
-
-    private Rarity parseRarity(String rarityString) {
-        if (rarityString == null) return null;
-        String lower = rarityString.toLowerCase();
-        if (lower.contains("common") && !lower.contains("un")) return Rarity.COMMON;
-        if (lower.contains("uncommon")) return Rarity.UNCOMMON;
-        if (lower.contains("rare")) return Rarity.RARE;
-        if (lower.contains("epic")) return Rarity.EPIC;
-        if (lower.contains("legendary")) return Rarity.LEGENDARY;
-        if (lower.contains("mythical")) return Rarity.MYTHICAL;
-        return null;
-    }
-
-    private void scrapeSingleChampion(ScrapeContext context, Faction faction, Authentication authentication) throws IOException, ChampionSaveException {
-        Document doc = fetchDocument(context.getDetailUrl());
-
-        String name = doc.select("h1").text().trim();
-        log.info("Scraping details for: {}", name);
-
-        if (championRepository.findByNameIgnoreCase(name).isPresent()) {
-            return;
-        }
-
-        ChampionEntryDTO dto = new ChampionEntryDTO(false);
-        dto.setName(name);
-        dto.setFaction(faction);
-
-        String fullPageText = doc.text();
-        String fullHtml = doc.html();
-
-        // 1. Meta Description (High confidence)
-        String metaDescription = "";
-        Element metaDescEl = doc.select("meta[name='description']").first();
-        if (metaDescEl != null) metaDescription = metaDescEl.attr("content");
-
-        // 2. OG Description
-        Element ogDescEl = doc.select("meta[property='og:description']").first();
-        String ogDescription = (ogDescEl != null) ? ogDescEl.attr("content") : "";
-
-        // --- RARITY CHECK (Low Noise) ---
-        // We ONLY use the Title and Meta tags here. We DO NOT include fullPageText.
-        String raritySource = (doc.title() + " " + metaDescription + " " + ogDescription).toLowerCase();
-
-        // Initialize as NULL so we can detect missing data later
-        dto.setRarity(null);
-
-        if (raritySource.contains("mythical")) dto.setRarity(Rarity.MYTHICAL);
-        else if (raritySource.contains("legendary")) dto.setRarity(Rarity.LEGENDARY);
-        else if (raritySource.contains("epic")) dto.setRarity(Rarity.EPIC);
-        else if (raritySource.contains("uncommon")) dto.setRarity(Rarity.UNCOMMON); // Check Uncommon BEFORE Rare/Common
-        else if (raritySource.contains("rare")) dto.setRarity(Rarity.RARE);
-        else if (raritySource.contains("common")) dto.setRarity(Rarity.COMMON);
-
-        // --- TYPE & AFFINITY CHECK (High Context) ---
-        // For Type, we still want the full text because "Support Champion" might be mentioned further down.
-        String fullInfo = (raritySource + " " + fullPageText).toLowerCase();
-
-        // Affinity
-        if (containsIgnoreCase(fullHtml, "affinity/magic.png")) dto.setAffinity(Affinity.MAGIC);
-        else if (containsIgnoreCase(fullHtml, "affinity/force.png")) dto.setAffinity(Affinity.FORCE);
-        else if (containsIgnoreCase(fullHtml, "affinity/spirit.png")) dto.setAffinity(Affinity.SPIRIT);
-        else if (containsIgnoreCase(fullHtml, "affinity/void.png")) dto.setAffinity(Affinity.VOID);
-        else {
-            if (fullPageText.contains("Magic Affinity")) dto.setAffinity(Affinity.MAGIC);
-            else if (fullPageText.contains("Force Affinity")) dto.setAffinity(Affinity.FORCE);
-            else if (fullPageText.contains("Spirit Affinity")) dto.setAffinity(Affinity.SPIRIT);
-            else if (fullPageText.contains("Void Affinity")) dto.setAffinity(Affinity.VOID);
-        }
-
-        // Type
-        if (fullInfo.contains("attack champion")) dto.setType(Type.ATTACK);
-        else if (fullInfo.contains("defense champion") || fullInfo.contains("defence champion")) dto.setType(Type.DEFENSE);
-        else if (fullInfo.contains("hp champion") || fullInfo.contains("health champion")) dto.setType(Type.HP);
-        else if (fullInfo.contains("support champion")) dto.setType(Type.SUPPORT);
-        else {
-            if (fullInfo.contains(" role: attack")) dto.setType(Type.ATTACK);
-            else if (fullInfo.contains(" role: defense")) dto.setType(Type.DEFENSE);
-            else if (fullInfo.contains(" role: hp")) dto.setType(Type.HP);
-            else if (fullInfo.contains(" role: support")) dto.setType(Type.SUPPORT);
-        }
-
-        // --- DATA CHAIN ---
-        String postId = extractPostId(doc);
-        if (postId != null) {
-            log.info("Found Post ID: {}", postId);
-            fetchRatingsAuraAndStats(postId, dto);
-        } else {
-            log.warn("Could not find Post ID (shortlink) for {}", name);
-        }
-
-        // Defaults
-        // If we found stats via API, these will be overwritten. If not, they remain 0 (safe default).
-        if (dto.getHp() == 0) {
-            dto.setHp(0); dto.setAttack(0); dto.setDefense(0); dto.setSpeed(0);
-            dto.setCriticalRate(0); dto.setCriticalDamage(0); dto.setResistance(0); dto.setAccuracy(0);
-        }
-
-        // --- IMAGE DOWNLOAD ---
-        String targetFilename = name.toLowerCase().replace(" ", "-") + ".png";
-        dto.setImagename(targetFilename);
-        dto.setCurrentImageName(targetFilename);
-
-        downloadImage(context.getImageUrl(), targetFilename);
-
-        championsService.saveNewChampion(dto, authentication, "Imported via HellHades Scraper");
+    private String getMetaContent(Document doc, String metaName) {
+        Element el = doc.select("meta[name='" + metaName + "'], meta[property='" + metaName + "']").first();
+        return el != null ? el.attr("content") : "";
     }
 
     private String extractPostId(Document doc) {
@@ -270,155 +218,143 @@ public class HellHadesScraperService {
         return null;
     }
 
-    private void fetchRatingsAuraAndStats(String postId, ChampionEntryDTO dto) {
-        // 1. Fetch Ratings -> Gets Arena Score AND Hero ID
-        String ratingsUrl = "https://hellhades.com/wp-json/hh-api/v3/raid/ratings/" + postId;
-
+    private void fetchRatingsAuraAndStats(String postId, ScrapedChampion dto) {
+        String url = "https://hellhades.com/wp-json/hh-api/v3/raid/ratings/" + postId;
         try {
-            List<HellHadesRatingJson> ratings = fetchJson(ratingsUrl, new TypeReference<List<HellHadesRatingJson>>() {});
-
+            List<HellHadesRatingJson> ratings = fetchJson(url, new TypeReference<>() {});
             if (!ratings.isEmpty()) {
-                HellHadesRatingJson ratingData = ratings.get(0);
-
-                // Arena Score
-                try {
-                    double score = Double.parseDouble(ratingData.getArena_rating());
-                    dto.setArenaScore(score / 2.0);
-                } catch (Exception e) {
-                    dto.setArenaScore(0.0);
-                }
-
-                // Get Hero ID to fetch Aura and Stats
-                String heroId = ratingData.getHeroid();
-                if (heroId != null && !heroId.isEmpty()) {
-                    fetchAuraFromApi(heroId, dto);
-                    fetchBaseStatsFromApi(heroId, dto);
+                HellHadesRatingJson r = ratings.get(0);
+                try { dto.setArenaScore(Double.parseDouble(r.getArena_rating()) / 2.0); } catch (Exception e) { dto.setArenaScore(0.0); }
+                if (r.getHeroid() != null) {
+                    fetchAuraFromApi(r.getHeroid(), dto);
+                    fetchBaseStatsFromApi(r.getHeroid(), dto);
                 }
             }
-
-        } catch (Exception e) {
-            log.warn("Failed to fetch Ratings API for Post ID: {}", postId, e);
-        }
+        } catch (Exception e) { /* ignore */ }
     }
 
-    private void fetchAuraFromApi(String heroId, ChampionEntryDTO dto) {
-        String auraApiUrl = "https://hellhades.com/wp-json/hh-api/v3/raid/auras/" + heroId + "?mode=hero";
-
+    private void fetchAuraFromApi(String heroId, ScrapedChampion dto) {
+        String url = "https://hellhades.com/wp-json/hh-api/v3/raid/auras/" + heroId + "?mode=hero";
         try {
-            List<HellHadesAuraJson> auras = fetchJson(auraApiUrl, new TypeReference<List<HellHadesAuraJson>>() {});
-
+            List<HellHadesAuraJson> auras = fetchJson(url, new TypeReference<>() {});
             if (!auras.isEmpty()) {
-                HellHadesAuraJson aura = auras.get(0);
+                HellHadesAuraJson json = auras.get(0);
+                Aura aura = new Aura();
+                try { aura.setAmount(Integer.parseInt(json.getStrength())); } catch (Exception e) { aura.setAmount(0); }
 
-                dto.setAuraExists(true);
-                dto.setAmount(Integer.parseInt(aura.getStrength()));
+                String loc = json.getLocation().toLowerCase();
+                if (loc.contains("all")) aura.setLocation(AuraLocation.ALL_BATTLES);
+                else if (loc.contains("arena")) aura.setLocation(AuraLocation.ARENA);
+                else if (loc.contains("dungeon")) aura.setLocation(AuraLocation.DUNGEONS);
+                else if (loc.contains("doom")) aura.setLocation(AuraLocation.DOOM_TOWER);
+                else if (loc.contains("faction")) aura.setLocation(AuraLocation.FACTION_WARS);
+                else aura.setLocation(AuraLocation.ALL_BATTLES);
 
-                // Map Location
-                String loc = aura.getLocation().toLowerCase();
-                if (loc.contains("all")) dto.setLocation(AuraLocation.ALL_BATTLES);
-                else if (loc.contains("arena")) dto.setLocation(AuraLocation.ARENA);
-                else if (loc.contains("dungeon")) dto.setLocation(AuraLocation.DUNGEONS);
-                else if (loc.contains("doom")) dto.setLocation(AuraLocation.DOOM_TOWER);
-                else if (loc.contains("faction")) dto.setLocation(AuraLocation.FACTION_WARS);
-                else dto.setLocation(AuraLocation.ALL_BATTLES);
-
-                // Map Stat
-                String type = aura.getType().toLowerCase();
-                dto.setPercentageAura(true);
-
-                if (type.contains("health") || type.contains("hp")) dto.setStat(AuraStat.ALLY_HP);
-                else if (type.contains("attack")) dto.setStat(AuraStat.ALLY_ATK);
-                else if (type.contains("defence") || type.contains("defense")) dto.setStat(AuraStat.ALLY_DEF);
-                else if (type.contains("speed")) dto.setStat(AuraStat.ALLY_SPD);
-                else if (type.contains("critical") || type.contains("rate")) dto.setStat(AuraStat.ALLY_CRATE);
-                else if (type.contains("resistance") || type.contains("resist")) {
-                    dto.setStat(AuraStat.ALLY_RES);
-                    dto.setPercentageAura(false);
-                }
-                else if (type.contains("accuracy")) {
-                    dto.setStat(AuraStat.ALLY_ACC);
-                    dto.setPercentageAura(false);
-                }
+                String type = json.getType().toLowerCase();
+                aura.setPercentage(true);
+                if (type.contains("health") || type.contains("hp")) aura.setStat(AuraStat.ALLY_HP);
+                else if (type.contains("attack")) aura.setStat(AuraStat.ALLY_ATK);
+                else if (type.contains("def")) aura.setStat(AuraStat.ALLY_DEF);
+                else if (type.contains("speed")) aura.setStat(AuraStat.ALLY_SPD);
+                else if (type.contains("crit")) aura.setStat(AuraStat.ALLY_CRATE);
+                else if (type.contains("resist")) { aura.setStat(AuraStat.ALLY_RES); aura.setPercentage(false); }
+                else if (type.contains("accuracy")) { aura.setStat(AuraStat.ALLY_ACC); aura.setPercentage(false); }
+                dto.setAura(aura);
             }
-        } catch (Exception e) {
-            log.warn("No Aura found via API for Hero ID: {}", heroId);
-            dto.setAuraExists(false);
-        }
+        } catch (Exception e) { /* ignore */ }
     }
 
-    private void fetchBaseStatsFromApi(String heroId, ChampionEntryDTO dto) {
-        // LOGIC: The API requires the "Base Form ID" (0 Ascension), but we have the "Max Ascended ID" (6 Ascension).
-        // Since all champions have 6 levels of ascension, the offset is always 6.
+    private void fetchBaseStatsFromApi(String heroId, ScrapedChampion dto) {
         long formId = Long.parseLong(heroId) - 6;
-
-        String statsApiUrl = "https://hellhades.com/wp-json/hh-api/v3/raid/forms/" + formId;
-        log.info("DEBUG: Calling Stats API: {}", statsApiUrl);
-
+        String url = "https://hellhades.com/wp-json/hh-api/v3/raid/forms/" + formId;
         try {
-            List<HellHadesStatJson> statsList = fetchJson(statsApiUrl, new TypeReference<List<HellHadesStatJson>>() {});
+            List<HellHadesStatJson> stats = fetchJson(url, new TypeReference<>() {});
+            HellHadesStatJson s = stats.stream().filter(st -> heroId.equals(st.getHeroid())).findFirst().orElse(null);
+            if (s != null) {
+                if (s.getRole() != null) {
+                    String r = s.getRole().toUpperCase();
+                    if (r.contains("DEF")) dto.setType(Type.DEFENSE);
+                    else if (r.contains("ATTACK")) dto.setType(Type.ATTACK);
+                    else if (r.contains("HP")) dto.setType(Type.HP);
+                    else if (r.contains("SUPPORT")) dto.setType(Type.SUPPORT);
+                }
+                if (s.getRarity() != null) dto.setRarity(parseRarity(s.getRarity()));
 
-            // Find the entry that matches our specific heroId (Fully Ascended)
-            // matching "8686" inside the list returned by "8680"
-            HellHadesStatJson stat = statsList.stream()
-                    .filter(s -> heroId.equals(s.getHeroid()))
-                    .findFirst()
-                    .orElse(null);
-
-            if (stat != null) {
-                // HP LOGIC: Truncate (Floor) the base scaling first, then multiply by 15
-                double rawHpBase = Double.parseDouble(stat.getHealth()) * LEVEL_60_MULTIPLIER;
-                dto.setHp((int) rawHpBase * 15);
-
-                // ATK/DEF LOGIC: Standard Rounding
-                dto.setAttack((int) Math.round(Double.parseDouble(stat.getAttack()) * LEVEL_60_MULTIPLIER));
-                dto.setDefense((int) Math.round(Double.parseDouble(stat.getDefense()) * LEVEL_60_MULTIPLIER));
-
-                // Direct parsing for the rest
-                dto.setSpeed(Integer.parseInt(stat.getSpeed()));
-                dto.setResistance(Integer.parseInt(stat.getResistance()));
-                dto.setAccuracy(Integer.parseInt(stat.getAccuracy()));
-
-                // Percentages (0.15 -> 15)
-                dto.setCriticalRate((int) (Double.parseDouble(stat.getCritrate()) * 100));
-                dto.setCriticalDamage((int) (Double.parseDouble(stat.getCritdamage()) * 100));
-
-                log.info("Calculated Stats: HP={} ATK={} DEF={}", dto.getHp(), dto.getAttack(), dto.getDefense());
-            } else {
-                log.warn("Stats API returned data, but could not find matching Hero ID: {}", heroId);
+                BaseStats bs = new BaseStats();
+                double rawHp = Double.parseDouble(s.getHealth()) * LEVEL_60_MULTIPLIER;
+                bs.setHp((int) (rawHp * 15));
+                bs.setAttack((int) Math.round(Double.parseDouble(s.getAttack()) * LEVEL_60_MULTIPLIER));
+                bs.setDefense((int) Math.round(Double.parseDouble(s.getDefense()) * LEVEL_60_MULTIPLIER));
+                bs.setSpeed(Integer.parseInt(s.getSpeed()));
+                bs.setResistance(Integer.parseInt(s.getResistance()));
+                bs.setAccuracy(Integer.parseInt(s.getAccuracy()));
+                bs.setCriticalRate((int) (Double.parseDouble(s.getCritrate()) * 100));
+                bs.setCriticalDamage((int) (Double.parseDouble(s.getCritdamage()) * 100));
+                dto.setBaseStats(bs);
             }
-
-        } catch (Exception e) {
-            log.warn("Failed to fetch/parse Stats for Form ID: {} (Hero ID: {})", formId, heroId, e);
-        }
+        } catch (Exception e) { /* ignore */ }
     }
 
     private boolean containsIgnoreCase(String source, String subItem) {
-        return source.toLowerCase().contains(subItem.toLowerCase());
+        return source != null && subItem != null && source.toLowerCase().contains(subItem.toLowerCase());
     }
 
     private void downloadImage(String imageUrl, String filename) {
         try {
-            Connection.Response resultImageResponse = Jsoup.connect(imageUrl)
-                    .userAgent("Mozilla/5.0")
-                    .ignoreContentType(true)
-                    .execute();
-
-            Path targetPath = Paths.get(IMAGE_SAVE_DIR + filename);
-            try (FileOutputStream out = new FileOutputStream(targetPath.toFile())) {
-                out.write(resultImageResponse.bodyAsBytes());
+            Connection.Response res = Jsoup.connect(imageUrl).userAgent("Mozilla/5.0").ignoreContentType(true).execute();
+            Path path = Paths.get(IMAGE_SAVE_DIR + filename);
+            try (FileOutputStream out = new FileOutputStream(path.toFile())) {
+                out.write(res.bodyAsBytes());
             }
         } catch (IOException e) {
-            log.error("Failed to download image for {}: {}", filename, imageUrl, e);
+            log.error("Image download failed for {}: {}", filename, e.getMessage());
         }
     }
 
-    // --- INNER CLASSES ---
+    public Map<Rarity, Integer> getOnlineCounts(Faction faction) {
+        Map<Rarity, Integer> counts = new HashMap<>();
+        for (Rarity r : Rarity.values()) counts.put(r, 0);
+        if (faction.getHellHadesUrl() == null) return counts;
+        try {
+            List<HellHadesChampionJson> champs = fetchJson(faction.getHellHadesUrl(), new TypeReference<>() {});
+            for (HellHadesChampionJson c : champs) {
+                Rarity r = parseRarity(c.getRarity());
+                if (r != null) counts.put(r, counts.get(r) + 1);
+            }
+        } catch (IOException e) { /* ignore */ }
+        return counts;
+    }
+
+    private Rarity parseRarity(String s) {
+        if (s == null) return null;
+        String l = s.toLowerCase();
+        if (l.contains("uncommon")) return Rarity.UNCOMMON;
+        if (l.contains("common")) return Rarity.COMMON;
+        if (l.contains("rare")) return Rarity.RARE;
+        if (l.contains("epic")) return Rarity.EPIC;
+        if (l.contains("legendary")) return Rarity.LEGENDARY;
+        if (l.contains("mythical")) return Rarity.MYTHICAL;
+        return null;
+    }
+
+    // --- INNER CLASSES (UPDATED) ---
 
     @Data
     @AllArgsConstructor
-    public static class ScrapeContext {
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class ScrapingContext {
+        private String name;
         private String detailUrl;
         private String imageUrl;
+        private ScrapedChampion scrapedData;
+        private String error;
+
+        // Constructor for discovery
+        public ScrapingContext(String name, String detailUrl, String imageUrl) {
+            this.name = name;
+            this.detailUrl = detailUrl;
+            this.imageUrl = imageUrl;
+        }
     }
 
     @Data
@@ -452,6 +388,8 @@ public class HellHadesScraperService {
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static class HellHadesStatJson {
         private String heroid;
+        private String role;
+        private String rarity;
         private String health;
         private String attack;
         private String defense;
