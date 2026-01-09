@@ -4,6 +4,8 @@ import com.rsl.clansite.model.ClanmemberViewData;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -13,6 +15,7 @@ import org.springframework.ui.Model;
 
 import java.time.Instant;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -69,5 +72,56 @@ class CommonsServiceTest {
         commonsService.fillModel(model, authentication);
 
         verify(model).addAttribute("clanmemberViewData", mockData);
+    }
+
+    @Test
+    @DisplayName("generateImageFilename - Standard Name - Should return slugified png")
+    void generateImageFilename_Standard() {
+        String result = commonsService.generateImageFilename("Kael");
+        assertEquals("kael.png", result);
+    }
+
+    @Test
+    @DisplayName("generateImageFilename - Name with Spaces - Should replace spaces with dashes")
+    void generateImageFilename_WithSpaces() {
+        String result = commonsService.generateImageFilename("Death Knight");
+        assertEquals("death-knight.png", result);
+    }
+
+    @Test
+    @DisplayName("generateImageFilename - Special Characters - Should remove them")
+    void generateImageFilename_SpecialChars() {
+        String result = commonsService.generateImageFilename("Xena: Warrior Princess");
+        assertEquals("xena-warrior-princess.png", result);
+    }
+
+    @Test
+    @DisplayName("generateImageFilename - Apostrophes - Should remove them")
+    void generateImageFilename_Apostrophes() {
+        String result = commonsService.generateImageFilename("Kael's Sword");
+        assertEquals("kaels-sword.png", result);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            ", placeholder.png",
+            "'', placeholder.png",
+            "'   ', placeholder.png"
+    })
+    @DisplayName("generateImageFilename - Invalid Inputs - Should return placeholder")
+    void generateImageFilename_Invalid(String input, String expected) {
+        String result = commonsService.generateImageFilename(input);
+
+        if (input == null || input.isEmpty()) {
+            assertEquals(expected, result);
+        }
+    }
+
+    @Test
+    @DisplayName("generateImageFilename - Tricky Characters - Should Clean Up")
+    void generateImageFilename_Tricky() {
+        String input = "Rotos the Lost Groom & Bride!";
+        String result = commonsService.generateImageFilename(input);
+        assertEquals("rotos-the-lost-groom-bride.png", result);
     }
 }

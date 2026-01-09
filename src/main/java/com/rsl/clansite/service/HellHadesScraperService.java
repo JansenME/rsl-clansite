@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rsl.clansite.model.Aura;
 import com.rsl.clansite.model.BaseStats;
 import com.rsl.clansite.model.dto.ScrapedChampion;
-import com.rsl.clansite.model.dto.ScrapingContext;
 import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.model.enums.Affinity;
 import com.rsl.clansite.model.enums.AuraLocation;
@@ -164,6 +163,9 @@ public class HellHadesScraperService {
 
         ScrapedChampion dto = new ScrapedChampion();
         dto.setUrl(url);
+
+        String name = doc.select("h1").text().trim();
+        dto.setName(name);
 
         String postId = extractPostId(doc);
         if (postId != null) {
@@ -359,7 +361,7 @@ public class HellHadesScraperService {
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private static class HellHadesChampionJson {
+    static class HellHadesChampionJson {
         private String id;
         private String name;
         private String rarity;
@@ -368,7 +370,7 @@ public class HellHadesScraperService {
     @Data
     @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private static class HellHadesRatingJson {
+    static class HellHadesRatingJson {
         private String id;
         private String heroid;
         private String arena_rating;
@@ -377,7 +379,7 @@ public class HellHadesScraperService {
     @Data
     @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private static class HellHadesAuraJson {
+    static class HellHadesAuraJson {
         private String strength;
         private String location;
         private String type;
@@ -386,7 +388,7 @@ public class HellHadesScraperService {
     @Data
     @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private static class HellHadesStatJson {
+    static class HellHadesStatJson {
         private String heroid;
         private String role;
         private String rarity;

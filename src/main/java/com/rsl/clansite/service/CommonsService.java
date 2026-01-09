@@ -27,12 +27,13 @@ public class CommonsService {
     }
 
     public String generateImageFilename(String championName) {
-        if (championName == null || championName.isEmpty()) {
+        if (championName == null || championName.trim().isEmpty()) {
             return "placeholder.png";
         }
 
-        String cleanName = championName.toLowerCase().replaceAll("[^a-z0-9 ]", "");
-        return cleanName.trim().replace(" ", "-") + ".png";
+        String cleanName = championName.toLowerCase().replaceAll("[^a-z0-9\\s]", ""); // Keep only alphanumeric + whitespace
+
+        return cleanName.replaceAll("\\s+", " ").trim().replace(" ", "-") + ".png";
     }
 
     public void fillModel(Model model, Authentication authentication) {

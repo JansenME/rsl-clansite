@@ -125,7 +125,7 @@ public class ScraperController {
             // 3. Import (Upsert logic in service handles updates vs inserts)
             scraperService.importChampions(contexts, faction, authentication);
 
-            String actionType = forceRefresh ? "Refreshed/Updated" : "Imported";
+            String actionType = forceRefresh ? "Refreshed/Updated" : "imported";
             redirectAttributes.addFlashAttribute("message", "Successfully " + actionType + " " + contexts.size() + " champions into " + faction.getName());
             redirectAttributes.addFlashAttribute("alertClass", "alert-success");
         }

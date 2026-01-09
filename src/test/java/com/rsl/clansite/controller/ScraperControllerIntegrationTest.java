@@ -73,22 +73,27 @@ class ScraperControllerIntegrationTest extends BaseControllerTest {
                 )));
     }
 
-    /*@Test
+    @Test
     @DisplayName("Action - Import Execute - Should call service and redirect")
     void executeScrape_ShouldImportAndRedirect() throws Exception {
-        HellHadesScraperService.ScrapeContext context = new HellHadesScraperService.ScrapeContext("url", "img");
-        when(scraperService.scanForNewChampions(Faction.BANNER_LORDS))
+        // 1. Fix Class Name and Constructor (Name, URL, Image)
+        HellHadesScraperService.ScrapingContext context =
+                new HellHadesScraperService.ScrapingContext("Test Champion", "http://test-url.com", "http://test-img.png");
+
+        // 2. Fix Method Name and Arguments (Faction, forceRefresh=false)
+        when(scraperService.scanForChampions(Faction.BANNER_LORDS, false))
                 .thenReturn(Collections.singletonList(context));
 
         mockMvc.perform(post("/admin/scraper/faction/Banner-Lords/execute")
                         .with(csrf())
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/scraper"))
+                .andExpect(redirectedUrl("/admin/scraper")) // Default redirect when no Referer
                 .andExpect(flash().attribute("message", containsString("Successfully imported")));
 
+        // 3. Verify the import call uses the correct list type
         verify(scraperService).importChampions(anyList(), eq(Faction.BANNER_LORDS), any());
-    }*/
+    }
 
     @Test
     @DisplayName("Security - Access Denied for Non-Owners")

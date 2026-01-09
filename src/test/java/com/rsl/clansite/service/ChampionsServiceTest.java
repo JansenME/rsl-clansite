@@ -43,6 +43,8 @@ class ChampionsServiceTest {
     @Mock
     private AuditLogService auditLogService;
     @Mock
+    private CommonsService commonsService;
+    @Mock
     private Authentication authentication;
 
     @InjectMocks
@@ -219,6 +221,7 @@ class ChampionsServiceTest {
         dto.setName("NewName");
         dto.setRarity(Rarity.LEGENDARY);
 
+        when(commonsService.generateImageFilename("NewName")).thenReturn("newname.png");
         when(championRepository.findById(any())).thenReturn(Optional.of(existingEntity));
         when(championRepository.findByNameIgnoreCase("NewName")).thenReturn(Optional.empty());
 
