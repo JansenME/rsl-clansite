@@ -18,7 +18,8 @@ public enum Faction {
     KNIGHTS_REVENANT("Knights Revenant", Alliance.THE_CORRUPTED, "https://hellhades.com/wp-json/hh-api/experimental/raid/index?config%5Bfaction%5D=knights-revenant"),
     DWARVES("Dwarves", Alliance.NYRESAN_UNION, "https://hellhades.com/wp-json/hh-api/experimental/raid/index?config%5Bfaction%5D=dwarves"),
     SHADOWKIN("Shadowkin", Alliance.NYRESAN_UNION, "https://hellhades.com/wp-json/hh-api/experimental/raid/index?config%5Bfaction%5D=shadowkin"),
-    SYLVAN_WATCHERS("Sylvan Watchers", Alliance.NYRESAN_UNION, "https://hellhades.com/wp-json/hh-api/experimental/raid/index?config%5Bfaction%5D=sylvan-watchers");
+    SYLVAN_WATCHERS("Sylvan Watchers", Alliance.NYRESAN_UNION, "https://hellhades.com/wp-json/hh-api/experimental/raid/index?config%5Bfaction%5D=sylvan-watchers"),
+    ARGONITES("Argonites", Alliance.NYRESAN_UNION, null);
 
     private final String name;
     private final Alliance alliance;
