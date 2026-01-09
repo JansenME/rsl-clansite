@@ -1,3 +1,7 @@
+let allFilteredCards = [];
+let visibleCount = 0;
+const BATCH_SIZE = 24;
+
 function setupStarListeners() {
     const ratingContainer = document.getElementById('arena-score-rating');
     const finalInput = document.getElementById('finalArenaScore');
@@ -196,26 +200,22 @@ function applyChampionFilters() {
         }
     });
 
-    const container = document.getElementById('champion-grid-container');
-    if (container) {
-        allPassedCards.forEach(card => {
-            container.appendChild(card);
-        });
-    }
-
     championCards.forEach(card => {
         card.style.display = 'none';
     });
 
-    allPassedCards.forEach((card) => {
-        card.style.display = '';
+    allFilteredCards = allPassedCards;
+    visibleCount = 0;
 
-        const score = card.getAttribute('data-score');
-        const placeholder = card.querySelector('.champion-rating-placeholder');
-        if (placeholder) {
-            placeholder.innerHTML = createStarHtml(score);
-        }
-    });
+    renderNextBatch();
+
+    allFilteredCards.forEach(card => {
+            const score = card.getAttribute('data-score');
+            const placeholder = card.querySelector('.champion-rating-placeholder');
+            if (placeholder && placeholder.innerHTML === '') {
+                 placeholder.innerHTML = createStarHtml(score);
+            }
+        });
 
     const endTime = performance.now();
     const duration = (endTime - startTime).toFixed(3);
@@ -316,6 +316,85 @@ function initChampionDetails() {
     }
 }
 
+function setupBackToTop() {
+    const backToTopBtn = document.getElementById("backToTopBtn");
+
+    if (!backToTopBtn) return; // Safety check if button is missing on other pages
+
+    // 1. Show/Hide logic based on scroll position
+    window.addEventListener('scroll', () => {
+        if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+            backToTopBtn.style.display = "block";
+        } else {
+            backToTopBtn.style.display = "none";
+        }
+    });
+
+    // 2. Scroll to top logic
+    backToTopBtn.addEventListener("click", () => {
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+    });
+}
+
+function setupImageFadeIn() {
+    const images = document.querySelectorAll('.champion-portrait');
+
+    images.forEach(img => {
+        const card = img.closest('.champion-card');
+
+        // Function to reveal card
+        const revealCard = () => {
+            card.classList.remove('card-hidden');
+        };
+
+        // 1. If image is already cached/loaded, reveal immediately
+        if (img.complete) {
+            revealCard();
+        } else {
+            // 2. Otherwise, wait for load event
+            img.onload = revealCard;
+
+            // 3. Safety: If image fails (404), reveal anyway (showing placeholder)
+            img.onerror = revealCard;
+        }
+    });
+}
+
+function renderNextBatch() {
+    const container = document.getElementById('champion-grid-container');
+    if (!container || allFilteredCards.length === 0) return;
+
+    // Calculate the slice of cards to show
+    const nextBatch = allFilteredCards.slice(visibleCount, visibleCount + BATCH_SIZE);
+
+    nextBatch.forEach(card => {
+        card.style.display = '';
+        container.appendChild(card);
+
+        // --- FIX STARTS HERE ---
+        // Manually trigger the fade check for this specific card's image
+        const img = card.querySelector('.champion-portrait');
+        if (img) {
+            if (img.complete) {
+                // If already loaded, reveal immediately
+                card.classList.remove('card-hidden');
+            } else {
+                // If not loaded yet, ensure the listener is there
+                // (It should be from setupImageFadeIn, but re-attaching is safe)
+                img.onload = () => card.classList.remove('card-hidden');
+            }
+        }
+    });
+
+    visibleCount += nextBatch.length;
+
+    // Debug log
+    console.log(`Shown ${visibleCount} / ${allFilteredCards.length} cards`);
+}
+
 window.checkAll = (shouldCheck) => {
     const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
 
@@ -335,11 +414,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    applyChampionFilters();
+    window.addEventListener('scroll', () => {
+        // Check if we are near the bottom of the page (within 200px)
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200) {
+            // Only load more if there are more to load
+            if (visibleCount < allFilteredCards.length) {
+                renderNextBatch();
+            }
+        }
+    });
+
     toggleAuraFields();
     setupStarListeners();
-
     initChampionDetails();
+    setupBackToTop();
+    setupImageFadeIn();
 
     window.checkAll(true);
 });

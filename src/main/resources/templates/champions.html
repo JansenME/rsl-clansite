@@ -148,7 +148,7 @@
 						</div>
 
 						<div id="champion-grid-container">
-							<div class="champion-card"
+							<div class="champion-card card-hidden"
 								 th:each="champion : ${champions}"
 								 th:data-rarity="${champion.rarity != null ? champion.rarity.getName() : ''}"
 								 th:data-type="${champion.type != null ? champion.type.getName() : ''}"
@@ -164,6 +164,8 @@
 										 style="width:140px;"
 										 class="champion-portrait"
 										 th:classappend="${champion.rarity != null} ? 'rarity-border-' + ${#strings.toLowerCase(champion.rarity)} : ''"
+										 loading="lazy"
+										 decoding="async"
 										 onerror="this.onerror=null; this.src='/images/champions/placeholder.png';" />
 								</a>
 								<div class="champion-rating-placeholder"></div>
@@ -177,5 +179,8 @@
 			<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
 			</div>
 		</div>
+		<button id="backToTopBtn" title="Go to top">
+			↑
+		</button>
 	</body>
 </html>

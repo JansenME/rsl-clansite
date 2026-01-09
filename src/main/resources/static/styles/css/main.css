@@ -513,11 +513,38 @@ tr.clickable-row:hover {
     /* Optional: Add a subtle background to the card itself */
     /* background-color: rgba(0,0,0,0.2); */
     border-radius: 8px;
+    transition: opacity 0.5s ease-in-out;
 }
 
 .champion-name {
-    margin-top: 8px;
     font-weight: bold;
-    color: #fff; /* Ensure text is readable */
-    text-shadow: 1px 1px 2px black; /* Improves readability on light/dark backgrounds */
+}
+
+.card-hidden {
+    opacity: 0;
+}
+
+/* --- Back to Top Button --- */
+#backToTopBtn {
+    display: none; /* Hidden by default */
+    position: fixed; /* Fixed position */
+    bottom: 20px;
+    right: 30px;
+    z-index: 99; /* Make sure it's on top */
+    border: none;
+    outline: none;
+    background-color: #333; /* Dark background */
+    color: white;
+    cursor: pointer;
+    padding: 15px;
+    border-radius: 50%; /* Circle shape */
+    font-size: 18px;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    transition: background-color 0.3s, transform 0.3s;
+}
+
+#backToTopBtn:hover {
+    background-color: #555; /* Lighter on hover */
+    transform: scale(1.1); /* Slight grow effect */
 }
