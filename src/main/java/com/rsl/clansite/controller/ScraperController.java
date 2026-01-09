@@ -2,11 +2,14 @@ package com.rsl.clansite.controller;
 
 import com.rsl.clansite.model.DashboardRow;
 import com.rsl.clansite.model.entity.ChampionEntity;
+import com.rsl.clansite.model.enums.Alliance;
 import com.rsl.clansite.model.enums.Faction;
 import com.rsl.clansite.model.enums.Rarity;
 import com.rsl.clansite.repository.ChampionRepository;
 import com.rsl.clansite.service.HellHadesScraperService;
 import com.rsl.clansite.service.TargetService;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -39,41 +42,54 @@ public class ScraperController {
     @GetMapping("")
     @PreAuthorize("hasRole('OWNER')")
     public String scraperDashboard(Model model) {
-        List<DashboardRow> dashboardRows = new ArrayList<>();
-
-        // 1. Fetch all champions once to minimize DB calls
+        // 1. Fetch all champions once
         List<ChampionEntity> allChampions = championRepository.findAll();
 
-        for (Faction faction : Faction.values()) {
-            // A. My Targets (Json)
-            Map<Rarity, Integer> targets = new HashMap<>();
-            int myTotal = targetService.getMyTotalForFaction(faction);
+        // 2. Create a list to hold our Groups
+        List<AllianceGroup> allianceGroups = new ArrayList<>();
 
-            // B. Database Counts (Mongo)
-            Map<Rarity, Integer> database = new HashMap<>();
+        // 3. Iterate over Alliances (Telerian, Gaellen, etc.)
+        for (Alliance alliance : Alliance.values()) {
+            List<DashboardRow> allianceRows = new ArrayList<>();
+            int allianceTotalDb = 0; // Counter for the header
 
-            // Filter champions for this faction
-            List<ChampionEntity> factionChampions = allChampions.stream()
-                    .filter(c -> c.getFaction() == faction)
-                    .toList();
+            // Find factions that belong to this alliance
+            for (Faction faction : Faction.values()) {
+                if (faction.getAlliance() == alliance) {
 
-            for (Rarity r : Rarity.values()) {
-                targets.put(r, targetService.getTargetCount(faction, r));
+                    // --- EXISTING LOGIC FOR ROW CREATION ---
+                    Map<Rarity, Integer> targets = new HashMap<>();
+                    int myTotal = targetService.getMyTotalForFaction(faction);
+                    Map<Rarity, Integer> database = new HashMap<>();
 
-                // Count how many we have in DB for this Rarity
-                int count = (int) factionChampions.stream()
-                        .filter(c -> c.getRarity() == r)
-                        .count();
-                database.put(r, count);
+                    List<ChampionEntity> factionChampions = allChampions.stream()
+                            .filter(c -> c.getFaction() == faction)
+                            .toList();
+
+                    for (Rarity r : Rarity.values()) {
+                        targets.put(r, targetService.getTargetCount(faction, r));
+                        int count = (int) factionChampions.stream().filter(c -> c.getRarity() == r).count();
+                        database.put(r, count);
+                    }
+
+                    Map<Rarity, Integer> online = scraperService.getOnlineCounts(faction);
+                    DashboardRow row = new DashboardRow(faction, targets, database, online, myTotal);
+                    // ---------------------------------------
+
+                    allianceRows.add(row);
+
+                    // Sum up for the Alliance Header
+                    allianceTotalDb += row.getDatabase().values().stream().mapToInt(Integer::intValue).sum();
+                }
             }
 
-            // C. HellHades Data (Online Live Scan) - Needed for button logic
-            Map<Rarity, Integer> online = scraperService.getOnlineCounts(faction);
-
-            dashboardRows.add(new DashboardRow(faction, targets, database, online, myTotal));
+            // Only add the group if it has factions (which they all do)
+            if (!allianceRows.isEmpty()) {
+                allianceGroups.add(new AllianceGroup(alliance, allianceRows, allianceTotalDb));
+            }
         }
 
-        model.addAttribute("dashboardRows", dashboardRows);
+        model.addAttribute("allianceGroups", allianceGroups); // Send groups, not raw rows
         model.addAttribute("rarities", Rarity.values());
 
         return "scraper-dashboard";
@@ -102,5 +118,13 @@ public class ScraperController {
         }
 
         return "redirect:/admin/scraper";
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class AllianceGroup {
+        private Alliance alliance;
+        private List<DashboardRow> rows;
+        private int totalChampions;
     }
 }

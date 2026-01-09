@@ -1,6 +1,7 @@
 package com.rsl.clansite.controller;
 
 import com.rsl.clansite.model.entity.ChampionEntity;
+import com.rsl.clansite.model.enums.Alliance;
 import com.rsl.clansite.model.enums.Faction;
 import com.rsl.clansite.model.enums.Rarity;
 import com.rsl.clansite.service.HellHadesScraperService;
@@ -37,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ScraperControllerIntegrationTest extends BaseControllerTest {
 
     @Test
-    @DisplayName("Dashboard - Should prepare DashboardRows correctly")
+    @DisplayName("Dashboard - Should prepare AllianceGroups correctly")
     void showDashboard_ShouldPrepareRows() throws Exception {
         ChampionEntity existingChamp = new ChampionEntity();
         existingChamp.setFaction(Faction.BANNER_LORDS);
@@ -54,12 +55,20 @@ class ScraperControllerIntegrationTest extends BaseControllerTest {
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
                 .andExpect(status().isOk())
                 .andExpect(view().name("scraper-dashboard"))
-                .andExpect(model().attributeExists("dashboardRows"))
-                .andExpect(model().attribute("dashboardRows", hasSize(Faction.values().length)))
-                .andExpect(model().attribute("dashboardRows", hasItem(
+
+                .andExpect(model().attributeExists("allianceGroups"))
+
+                .andExpect(model().attribute("allianceGroups", hasSize(4)))
+
+                .andExpect(model().attribute("allianceGroups", hasItem(
                         allOf(
-                                hasProperty("faction", is(Faction.BANNER_LORDS)),
-                                hasProperty("myTotal", is(2))
+                                hasProperty("alliance", is(Alliance.TELERIAN_LEAGUE)),
+                                hasProperty("rows", hasItem(
+                                        allOf(
+                                                hasProperty("faction", is(Faction.BANNER_LORDS)),
+                                                hasProperty("myTotal", is(2))
+                                        )
+                                ))
                         )
                 )));
     }

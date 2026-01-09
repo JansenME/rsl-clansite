@@ -53,11 +53,9 @@
                         <thead>
                         <tr>
                             <th rowspan="2">Faction</th>
-
                             <th th:each="rarity : ${rarities}" colspan="3" class="border-left-thick" th:text="${rarity.name}">
                                 RARITY
                             </th>
-
                             <th rowspan="2" class="border-left-thick">Action</th>
                         </tr>
                         <tr>
@@ -68,45 +66,47 @@
                             </th:block>
                         </tr>
                         </thead>
-                        <tbody>
-                        <tr th:each="row : ${dashboardRows}">
-                            <td class="text-left" style="font-weight: bold;" th:text="${row.faction.name}">
-                                Faction Name
-                            </td>
 
-                            <th:block th:each="rarity : ${rarities}">
-                                <td class="border-left-thick" th:text="${row.targets.get(rarity)}">0</td>
-
-                                <td th:text="${row.database.get(rarity)}">0</td>
-
-                                <td th:with="diff=${row.getDiff(rarity)}"
-                                    th:text="${diff}"
-                                    th:classappend="${diff > 0} ? 'diff-error' : 'diff-ok'">
-                                    0
+                        <th:block th:each="group : ${allianceGroups}">
+                            <tbody>
+                            <tr style="background-color: #e0e0e0; border-top: 2px solid #999;">
+                                <td colspan="100%" style="text-align: center; padding-left: 15px; font-weight: bold; color: #333;">
+                                    <span th:text="${group.alliance.name}">Alliance Name</span>
+                                    <span style="font-weight: normal; margin-left: 10px; font-size: 0.9em;">
+                                            (<span th:text="${group.totalChampions}">0</span> champions)
+                                        </span>
                                 </td>
-                            </th:block>
+                            </tr>
 
-                            <td class="border-left-thick">
-                                    <span th:if="${row.isComplete()}" class="diff-ok" title="Complete">
-                                        <i class="fas fa-check"></i>
-                                    </span>
+                            <tr th:each="row : ${group.rows}">
+                                <td class="text-left" style="font-weight: bold; padding-left: 2em;" th:text="${row.faction.name}">
+                                    Faction Name
+                                </td>
 
-                                <form th:if="${!row.isComplete() and row.isUpdateAvailable()}"
-                                      method="post"
-                                      th:action="@{/admin/scraper/faction/{name}/execute(name=${#strings.replace(row.faction.name, ' ', '-')})}">
-                                    <button type="submit" class="button primary small fit">
-                                        Check
-                                    </button>
-                                </form>
+                                <th:block th:each="rarity : ${rarities}">
+                                    <td class="border-left-thick" th:text="${row.targets.get(rarity)}">0</td>
+                                    <td th:text="${row.database.get(rarity)}">0</td>
+                                    <td th:with="diff=${row.getDiff(rarity)}"
+                                        th:text="${diff}"
+                                        th:classappend="${diff > 0} ? 'diff-error' : 'diff-ok'">
+                                        0
+                                    </td>
+                                </th:block>
 
-                                <span th:if="${!row.isComplete() and !row.isUpdateAvailable()}"
-                                      class="diff-error"
-                                      title="Missing champions not found on HellHades. Manual fix required.">
-                                        <i class="fas fa-times"></i>
-                                    </span>
-                            </td>
-                        </tr>
-                        </tbody>
+                                <td class="border-left-thick">
+                                    <span th:if="${row.isComplete()}" class="diff-ok"><i class="fas fa-check"></i></span>
+
+                                    <form th:if="${!row.isComplete() and row.isUpdateAvailable()}"
+                                          method="post"
+                                          th:action="@{/admin/scraper/faction/{name}/execute(name=${#strings.replace(row.faction.name, ' ', '-')})}">
+                                        <button type="submit" class="button primary small fit">Check</button>
+                                    </form>
+
+                                    <span th:if="${!row.isComplete() and !row.isUpdateAvailable()}" class="diff-error"><i class="fas fa-times"></i></span>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </th:block>
                     </table>
                 </div>
 
