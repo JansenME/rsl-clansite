@@ -162,10 +162,12 @@
 								 th:data-score="${champion.arenaScore}">
 
 								<a th:href="@{/champions/{id}(id=${champion.id})}" style="text-decoration: none; border-bottom: none;">
-									<img th:src="@{/images/champions/{imagename}(imagename=${champion.imagename})}"
+									<img th:src="${champion.imagename != null and !#strings.isEmpty(champion.imagename)} ? @{'/images/champions/' + ${champion.imagename}} : @{/images/champions/placeholder.png}"
+										 alt="Champion Image"
 										 style="width:140px; transition: transform 0.2s;"
 										 onmouseover="this.style.transform='scale(1.05)'"
-										 onmouseout="this.style.transform='scale(1.0)'" />
+										 onmouseout="this.style.transform='scale(1.0)'"
+										 onerror="this.onerror=null; this.src='/images/champions/placeholder.png';" />
 								</a>
 								<div class="champion-rating-placeholder"></div>
 								<p class="champion-name" th:text="${champion.name}"></p>
