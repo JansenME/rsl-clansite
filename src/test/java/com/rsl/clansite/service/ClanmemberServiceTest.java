@@ -1022,4 +1022,51 @@ class ClanmemberServiceTest {
         verify(clanmemberRepository).save(member);
         assertEquals("new_hash", member.getAvatarHash());
     }
+
+    @Test
+    @DisplayName("updateLastSeen - Should update timestamp if last login was null")
+    void updateLastSeen_NullTimestamp_ShouldUpdate() {
+        String discordId = "active_user";
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setDiscordId(discordId);
+        member.setLastLogin(null); // Never logged in before
+
+        when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of(member));
+
+        clanmemberService.updateLastSeen(discordId);
+
+        verify(clanmemberRepository).save(member);
+        assertNotNull(member.getLastLogin());
+    }
+
+    @Test
+    @DisplayName("updateLastSeen - Should update timestamp if older than 1 minute")
+    void updateLastSeen_OldTimestamp_ShouldUpdate() {
+        String discordId = "active_user";
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setDiscordId(discordId);
+        member.setLastLogin(LocalDateTime.now().minusMinutes(2)); // 2 minutes ago
+
+        when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of(member));
+
+        clanmemberService.updateLastSeen(discordId);
+
+        verify(clanmemberRepository).save(member);
+    }
+
+    @Test
+    @DisplayName("updateLastSeen - Should IGNORE update if less than 1 minute ago (Throttling)")
+    void updateLastSeen_RecentTimestamp_ShouldSkip() {
+        String discordId = "spammer_user";
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setDiscordId(discordId);
+        member.setLastLogin(LocalDateTime.now()); // Just happened
+
+        when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of(member));
+
+        clanmemberService.updateLastSeen(discordId);
+
+        // Verify save was NEVER called
+        verify(clanmemberRepository, never()).save(any());
+    }
 }

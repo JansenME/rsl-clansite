@@ -414,6 +414,38 @@ public class ClanmemberService {
         }
     }
 
+    @Transactional
+    public void updateLastSeen(String discordId) {
+        if (!StringUtils.hasText(discordId)) return;
+
+        // 1. Try to find Linked Members
+        List<ClanmemberEntity> members = clanmemberRepository.findAllByDiscordId(discordId);
+        if (!members.isEmpty()) {
+            for (ClanmemberEntity member : members) {
+                if (shouldUpdateTimestamp(member.getLastLogin())) {
+                    member.setLastLogin(LocalDateTime.now());
+                    clanmemberRepository.save(member);
+                }
+            }
+            return; // If found as member, we are done (don't check visitor log)
+        }
+
+        // 2. If not a member, check Visitor Log
+        Optional<VisitorLogEntity> visitorOpt = visitorLogRepository.findByDiscordId(discordId);
+        if (visitorOpt.isPresent()) {
+            VisitorLogEntity visitor = visitorOpt.get();
+            if (shouldUpdateTimestamp(visitor.getLastLogin())) {
+                visitor.updateLogin(); // Reuse existing method which sets Now()
+                visitorLogRepository.save(visitor);
+            }
+        }
+    }
+
+    private boolean shouldUpdateTimestamp(LocalDateTime lastDate) {
+        if (lastDate == null) return true;
+        return lastDate.isBefore(LocalDateTime.now().minusMinutes(1));
+    }
+
     private int getSortScore(com.rsl.clansite.model.dto.SyncStatusDTO dto) {
         boolean hasId = StringUtils.hasText(dto.getDiscordId());
 

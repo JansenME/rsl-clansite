@@ -34,7 +34,7 @@
 									<th style="padding: 12px; text-align: left;">Identity</th>
 									<th style="padding: 12px; text-align: left;">In-Game Name</th>
 									<th style="padding: 12px; text-align: left;">Rank</th>
-									<th style="padding: 12px; text-align: left;">Last Login</th>
+									<th style="padding: 12px; text-align: left;">Last Online</th>
 									<th style="padding: 12px; text-align: left;">Status</th>
 								</tr>
 								</thead>
@@ -56,15 +56,25 @@
 									</td>
 									<td th:text="${member.ingameName}" style="padding: 10px;">IGN</td>
 									<td style="padding: 10px;">
-                            <span th:text="${member.clanRank}"
-								  style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; background-color: #e9ecef;">Rank</span>
+                            			<span th:text="${member.clanRank}" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; background-color: #e9ecef;">Rank</span>
 									</td>
 									<td th:text="${#temporals.format(member.lastLogin, 'dd-MM-yyyy HH:mm')}" style="padding: 10px;">Date</td>
 									<td style="padding: 10px;">
-                             <span th:if="${member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusDays(7))}"
-								   style="color: green; font-weight: bold;">● Active</span>
-										<span th:unless="${member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusDays(7))}"
-											  style="color: #999;">● Inactive</span>
+										 <span th:if="${member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusMinutes(5))}"
+											   style="color: #27ae60; font-weight: bold;">
+											   ● Online Now
+										 </span>
+
+																			<span th:if="${!member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusMinutes(5))
+													 and member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusDays(7))}"
+																				  style="color: #e67e22; font-weight: bold;">
+											   ● Recent
+										 </span>
+
+																			<span th:if="${!member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusDays(7))}"
+																				  style="color: #999;">
+											   ● Inactive
+										 </span>
 									</td>
 								</tr>
 								</tbody>
