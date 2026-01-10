@@ -450,6 +450,69 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(status().is3xxRedirection());
     }
 
+    @Test
+    @DisplayName("GET /admin/data-health - ADMIN should access dashboard (200 OK)")
+    void viewDataHealth_AsAdmin_ShouldSucceed() throws Exception {
+        // Mock the service returning a dummy list
+        com.rsl.clansite.model.dto.SyncStatusDTO status = new com.rsl.clansite.model.dto.SyncStatusDTO();
+        status.setIngameName("TestMember");
+        when(clanmemberService.getMemberSyncStatus()).thenReturn(List.of(status));
+
+        mockMvc.perform(get("/clanmembers/admin/data-health")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("discord-data-health")) // Ensure this matches your return string
+                .andExpect(model().attributeExists("statusList"))
+                .andExpect(content().string(containsString("TestMember")));
+    }
+
+    @Test
+    @DisplayName("GET /admin/data-health - MEMBER should be denied (Redirect to Error)")
+    void viewDataHealth_AsMember_ShouldFail() throws Exception {
+        mockMvc.perform(get("/clanmembers/admin/data-health")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("POST /admin/sync/{id} - ADMIN should sync and redirect to Dashboard")
+    void syncMemberData_AsAdmin_ShouldSucceed() throws Exception {
+        String memberId = "12345";
+
+        mockMvc.perform(post("/clanmembers/admin/sync/" + memberId)
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/clanmembers/admin/data-health")); // Verify URL redirect
+
+        verify(clanmemberService).syncSingleMember(eq(memberId), any());
+    }
+
+    @Test
+    @DisplayName("POST /admin/sync/{id} - Service Exception should show Error Flash Message")
+    void syncMemberData_Exception_ShouldShowError() throws Exception {
+        String memberId = "bad_id";
+        doThrow(new RuntimeException("API Down")).when(clanmemberService).syncSingleMember(eq(memberId), any());
+
+        mockMvc.perform(post("/clanmembers/admin/sync/" + memberId)
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/clanmembers/admin/data-health"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash().attributeExists("errorMessage"));
+    }
+
+    @Test
+    @DisplayName("POST /admin/sync/{id} - MEMBER should be denied")
+    void syncMemberData_AsMember_ShouldFail() throws Exception {
+        mockMvc.perform(post("/clanmembers/admin/sync/123")
+                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER")))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/error/403"));
+    }
+
     private OAuth2User createMockUser(String discordId, String username, String role) {
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("id", discordId);

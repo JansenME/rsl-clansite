@@ -212,6 +212,29 @@ public class ClanmemberController {
         return "redirect:/clanmembers";
     }
 
+    @GetMapping("/admin/data-health")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String viewDataHealth(Model model, Authentication authentication) {
+        commonsService.fillModel(model, authentication);
+
+        List<com.rsl.clansite.model.dto.SyncStatusDTO> statusList = clanmemberService.getMemberSyncStatus();
+        model.addAttribute("statusList", statusList);
+
+        return "discord-data-health";
+    }
+
+    @PostMapping("/admin/sync/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String syncMemberData(@PathVariable String id, Authentication authentication, RedirectAttributes redirectAttributes) {
+        try {
+            clanmemberService.syncSingleMember(id, authentication);
+            redirectAttributes.addFlashAttribute("successMessage", "Member data synced successfully with Discord.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Sync failed: " + e.getMessage());
+        }
+        return "redirect:/clanmembers/admin/data-health";
+    }
+
     private String reloadFormWithError(Model model, NewClanmemberDTO dto, String errorMessage) {
         model.addAttribute("clanRanks", ClanRank.values());
         model.addAttribute("clanmemberRosterDto", dto);

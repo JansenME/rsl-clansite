@@ -549,3 +549,30 @@ tr.clickable-row:hover {
     background-color: #555; /* Lighter on hover */
     transform: scale(1.1); /* Slight grow effect */
 }
+
+/* --- Data Health Dashboard Styles --- */
+
+.status-ok {
+    color: #27ae60; /* Strong Green */
+    font-weight: bold;
+}
+
+.status-bad {
+    color: #c0392b; /* Strong Red */
+    font-weight: bold;
+}
+
+.sync-btn {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background-color 0.2s;
+}
+
+.sync-btn:hover {
+    background-color: #2980b9;
+}

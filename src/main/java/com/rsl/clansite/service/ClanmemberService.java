@@ -5,6 +5,7 @@ import com.rsl.clansite.exceptions.UnlinkedAccountException;
 import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
+import com.rsl.clansite.model.dto.SyncStatusDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.entity.VisitorLogEntity;
 import com.rsl.clansite.model.enums.AuditAction;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -317,6 +319,115 @@ public class ClanmemberService {
                 member.getIngameName(),
                 "Updated details for: " + member.getIngameName()
         );
+    }
+
+    public List<SyncStatusDTO> getMemberSyncStatus() {
+        List<ClanmemberEntity> members = clanmemberRepository.findAll();
+        List<SyncStatusDTO> statusList = new ArrayList<>();
+
+        for (ClanmemberEntity member : members) {
+            SyncStatusDTO status = new SyncStatusDTO();
+            status.setMemberId(member.getId().toHexString());
+            status.setDiscordId(member.getDiscordId());
+            status.setIngameName(member.getIngameName());
+
+            if (!StringUtils.hasText(member.getDiscordId())) {
+                status.setStatusMessage("No Discord ID linked");
+                status.setNicknameSynced(false);
+                status.setRolesSynced(false);
+                status.setAvatarSynced(false);
+                statusList.add(status);
+                continue;
+            }
+
+            try {
+                Optional<NewClanmemberDTO> apiResult = discordApiClient.getDiscordMember(member.getDiscordId());
+
+                if (apiResult.isEmpty()) {
+                    status.setStatusMessage("User not found in Discord Server");
+                    status.setNicknameSynced(false);
+                    status.setRolesSynced(false);
+                    status.setAvatarSynced(false);
+                    status.setDiscordNickname("NOT FOUND");
+                } else {
+                    NewClanmemberDTO liveData = apiResult.get();
+
+                    String liveNick = liveData.getPlayerNickname();
+                    String displayNick = (liveNick != null) ? liveNick : liveData.getDiscordName();
+                    status.setDiscordNickname(displayNick);
+
+                    boolean avatarMatch = java.util.Objects.equals(member.getAvatarHash(), liveData.getAvatarHash());
+                    status.setAvatarSynced(avatarMatch);
+
+                    List<String> liveRoles = discordRoleService.sortRoles(liveData.getDiscordRoles());
+                    List<String> dbRoles = discordRoleService.sortRoles(member.getDiscordRoles());
+                    status.setRolesSynced(liveRoles.equals(dbRoles));
+
+                    String dbNick = member.getPlayerNickname();
+                    status.setNicknameSynced(java.util.Objects.equals(dbNick, liveNick));
+                }
+
+            } catch (Exception e) {
+                status.setStatusMessage("API Error: " + e.getMessage());
+                status.setDiscordNickname("ERROR");
+                status.setNicknameSynced(false);
+                status.setRolesSynced(false);
+                status.setAvatarSynced(false);
+            }
+
+            statusList.add(status);
+        }
+
+        statusList.sort((a, b) -> {
+            int scoreA = getSortScore(a);
+            int scoreB = getSortScore(b);
+
+            if (scoreA != scoreB) {
+                return Integer.compare(scoreA, scoreB);
+            }
+            return a.getIngameName().compareToIgnoreCase(b.getIngameName());
+        });
+
+        return statusList;
+    }
+
+    @Transactional
+    public void syncSingleMember(String id, Authentication authentication) {
+        ClanmemberEntity member = getMemberById(id);
+
+        if (!StringUtils.hasText(member.getDiscordId())) {
+            throw new IllegalArgumentException("Cannot sync: This member is not linked to a Discord ID.");
+        }
+
+        List<ClanmemberEntity> allLinked = clanmemberRepository.findAllByDiscordId(member.getDiscordId());
+        boolean isMultiAccount = allLinked.size() > 1;
+
+        boolean updated = tryUpdateMemberRoles(member, isMultiAccount);
+
+        if (updated) {
+            auditLogService.logAction(
+                    authentication,
+                    AuditAction.MEMBER_UPDATE,
+                    member.getIngameName(),
+                    "Manual Data Sync: Updated Discord Roles/Avatar/Nickname."
+            );
+        }
+    }
+
+    private int getSortScore(com.rsl.clansite.model.dto.SyncStatusDTO dto) {
+        boolean hasId = StringUtils.hasText(dto.getDiscordId());
+
+        if (!hasId) {
+            return 3;
+        }
+
+        boolean fullySynced = dto.isAvatarSynced() && dto.isRolesSynced() && dto.isNicknameSynced();
+
+        if (!fullySynced) {
+            return 1;
+        }
+
+        return 2;
     }
 
     private void updateVisitorLog(String discordId, String username, String avatarHash) {

@@ -1,0 +1,110 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Data Health Dashboard</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+    <script th:src="@{/styles/js/main.js}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container"></div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <section>
+               <h2>Data Health & Sync Dashboard</h2>
+               <a th:href="@{/clanmembers}" class="btn-primary" style="text-decoration: none; padding: 8px 16px;">Back to Roster</a>
+
+
+                <div th:if="${successMessage}" style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
+                    <span th:text="${successMessage}"></span>
+                </div>
+                <div th:if="${errorMessage}" style="background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
+                    <span th:text="${errorMessage}"></span>
+                </div>
+
+                <div class="card">
+                    <h3 style="background-color: #2c3e50; color: white; padding: 10px 15px; margin: 0; border-radius: 5px 5px 0 0;">
+                        Discord Consistency Check
+                    </h3>
+                    <div style="padding: 0;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                            <tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; color: #666">
+                                <th style="padding: 12px; text-align: left;">Member (DB)</th>
+                                <th style="padding: 12px; text-align: center;">Avatar</th>
+                                <th style="padding: 12px; text-align: center;">Roles</th>
+                                <th style="padding: 12px; text-align: left;">Nickname Sync</th>
+                                <th style="padding: 12px; text-align: right;">Action</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="row : ${statusList}" style="border-bottom: 1px solid #eee;">
+
+                                <td style="padding: 10px;">
+                                    <span th:text="${row.ingameName}" style="font-weight: bold;">Name</span>
+                                    <div style="font-size: 0.75rem; color: #888;" th:text="${row.discordId}">ID</div>
+                                    <div th:if="${row.statusMessage}" style="color: red; font-size: 0.75rem;" th:text="${row.statusMessage}">Error</div>
+                                </td>
+
+                                <td style="padding: 10px; text-align: center;">
+                                    <span th:if="${row.avatarSynced}" class="status-ok">✓</span>
+                                    <span th:unless="${row.avatarSynced}" class="status-bad">✗</span>
+                                </td>
+
+                                <td style="padding: 10px; text-align: center;">
+                                    <span th:if="${row.rolesSynced}" class="status-ok">✓</span>
+                                    <span th:unless="${row.rolesSynced}" class="status-bad">✗</span>
+                                </td>
+
+                                <td style="padding: 10px;">
+                                    <div th:if="${row.nicknameSynced}" class="status-ok">
+                                        ✓ Synced
+                                    </div>
+                                    <div th:unless="${row.nicknameSynced}">
+                                        <span class="status-bad">✗ Mismatch</span><br/>
+                                        <span style="font-size: 0.8rem; color: #666;">
+                                              Discord: <strong th:text="${row.discordNickname}"></strong>
+                                         </span>
+                                    </div>
+                                </td>
+
+                                <td style="padding: 10px; text-align: right;">
+
+                                    <div th:if="${#strings.isEmpty(row.discordId)}">
+                                        <span style="color: #999; font-size: 0.8rem; font-style: italic;">No Discord ID</span>
+                                    </div>
+
+                                    <div th:if="${!#strings.isEmpty(row.discordId) and (!row.avatarSynced or !row.rolesSynced or !row.nicknameSynced)}">
+                                        <form th:action="@{/clanmembers/admin/sync/{id}(id=${row.memberId})}" method="post">
+                                            <button type="submit" class="sync-btn" title="Force update from Discord">
+                                                ⟳ Sync
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    <div th:if="${!#strings.isEmpty(row.discordId) and row.avatarSynced and row.rolesSynced and row.nicknameSynced}">
+                                         <span class="status-ok" title="Data matches Discord perfectly">
+                                            <i class="fas fa-check-circle"></i> Synced
+                                         </span>
+                                    </div>
+
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright"></div>
+</div>
+</body>
+</html>

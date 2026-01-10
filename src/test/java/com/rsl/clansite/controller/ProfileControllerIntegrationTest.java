@@ -27,6 +27,7 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
     private static final String LINK_ADD_CHAMPION = "href=\"/champions/new\"";
     private static final String LINK_AUDIT_LOG = "href=\"/audit-log\"";
     private static final String LINK_LOGIN_HISTORY = "href=\"/clanmembers/admin/login-history\"";
+    private static final String LINK_DATA_HEALTH = "href=\"/clanmembers/admin/data-health\"";
     private static final String LOGOUT_BUTTON = "Logout";
 
     @Test
@@ -77,7 +78,7 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
     }
 
     @Test
-    @DisplayName("GET /profile/{id} - OWNER should see Quick Links, Login History, and ALL buttons")
+    @DisplayName("GET /profile/{id} - OWNER should see Quick Links, Data Health, Login History, and ALL buttons")
     void viewProfile_AsOwner_ShouldSeeAll() throws Exception {
         String myId = "676000000000000000000001";
         setupMockForOwnProfile(myId);
@@ -90,12 +91,13 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(content().string(containsString(LINK_ADD_CLANMEMBER)))
                 .andExpect(content().string(containsString(LINK_AUDIT_LOG)))
                 .andExpect(content().string(containsString(LINK_ADD_CHAMPION)))
-                .andExpect(content().string(containsString(LINK_LOGIN_HISTORY))) // <--- Added: Visible
+                .andExpect(content().string(containsString(LINK_LOGIN_HISTORY)))
+                .andExpect(content().string(containsString(LINK_DATA_HEALTH))) // <--- ASSERT VISIBLE
                 .andExpect(content().string(containsString(LOGOUT_BUTTON)));
     }
 
     @Test
-    @DisplayName("GET /profile/{id} - ADMIN should see Quick Links, Login History, but NOT Champion button")
+    @DisplayName("GET /profile/{id} - ADMIN should see Quick Links, Data Health, Login History, but NOT Champion button")
     void viewProfile_AsAdmin_ShouldSeeAdminLinksOnly() throws Exception {
         String myId = "676000000000000000000001";
         setupMockForOwnProfile(myId);
@@ -106,13 +108,14 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(content().string(containsString(QUICK_LINKS_HEADER)))
                 .andExpect(content().string(containsString(LINK_ADD_CLANMEMBER)))
                 .andExpect(content().string(containsString(LINK_AUDIT_LOG)))
-                .andExpect(content().string(containsString(LINK_LOGIN_HISTORY))) // <--- Added: Visible
+                .andExpect(content().string(containsString(LINK_LOGIN_HISTORY)))
+                .andExpect(content().string(containsString(LINK_DATA_HEALTH))) // <--- ASSERT VISIBLE
                 .andExpect(content().string(not(containsString(LINK_ADD_CHAMPION))))
                 .andExpect(content().string(containsString(LOGOUT_BUTTON)));
     }
 
     @Test
-    @DisplayName("GET /profile/{id} - COORDINATOR should NOT see Login History")
+    @DisplayName("GET /profile/{id} - COORDINATOR should NOT see Data Health")
     void viewProfile_AsCoordinator_ShouldSeeLogoutOnly() throws Exception {
         String myId = "676000000000000000000001";
         setupMockForOwnProfile(myId);
@@ -124,12 +127,13 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(content().string(not(containsString(LINK_ADD_CLANMEMBER))))
                 .andExpect(content().string(not(containsString(LINK_AUDIT_LOG))))
                 .andExpect(content().string(not(containsString(LINK_ADD_CHAMPION))))
-                .andExpect(content().string(not(containsString(LINK_LOGIN_HISTORY)))) // <--- Added: Hidden
+                .andExpect(content().string(not(containsString(LINK_LOGIN_HISTORY))))
+                .andExpect(content().string(not(containsString(LINK_DATA_HEALTH)))) // <--- ASSERT HIDDEN
                 .andExpect(content().string(containsString(LOGOUT_BUTTON)));
     }
 
     @Test
-    @DisplayName("GET /profile/{id} - MEMBER should NOT see Login History")
+    @DisplayName("GET /profile/{id} - MEMBER should NOT see Data Health")
     void viewProfile_AsMember_ShouldSeeLogoutOnly() throws Exception {
         String myId = "676000000000000000000001";
         setupMockForOwnProfile(myId);
@@ -142,7 +146,8 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(content().string(not(containsString(LINK_ADD_CLANMEMBER))))
                 .andExpect(content().string(not(containsString(LINK_AUDIT_LOG))))
                 .andExpect(content().string(not(containsString(LINK_ADD_CHAMPION))))
-                .andExpect(content().string(not(containsString(LINK_LOGIN_HISTORY)))); // <--- Added: Hidden
+                .andExpect(content().string(not(containsString(LINK_LOGIN_HISTORY))))
+                .andExpect(content().string(not(containsString(LINK_DATA_HEALTH)))); // <--- ASSERT HIDDEN
 
         verify(commonsService).fillModel(any(), any());
     }

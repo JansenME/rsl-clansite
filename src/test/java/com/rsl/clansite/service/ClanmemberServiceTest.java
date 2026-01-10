@@ -920,4 +920,106 @@ class ClanmemberServiceTest {
 
         verify(visitorLogRepository).delete(existingVisitor);
     }
+
+    @Test
+    @DisplayName("getMemberSyncStatus - Should sort by Priority: Mismatched > Synced > Unlinked")
+    void getMemberSyncStatus_ShouldSortByPriority() {
+        // 1. Unlinked Member (Should be last)
+        ClanmemberEntity unlinked = new ClanmemberEntity();
+        unlinked.setId(new ObjectId());
+        unlinked.setIngameName("Z_Unlinked"); // 'Z' to prove priority beats alphabet
+        unlinked.setDiscordId(null);
+
+        // 2. Synced Member (Should be middle)
+        ClanmemberEntity synced = new ClanmemberEntity();
+        synced.setId(new ObjectId());
+        synced.setIngameName("A_Synced");
+        synced.setDiscordId("synced_id");
+        synced.setAvatarHash("hash");
+        synced.setPlayerNickname("Nick");
+
+        // 3. Mismatched Member (Should be first)
+        ClanmemberEntity mismatched = new ClanmemberEntity();
+        mismatched.setId(new ObjectId());
+        mismatched.setIngameName("M_Mismatched");
+        mismatched.setDiscordId("mismatch_id");
+        mismatched.setAvatarHash("old_hash"); // Mismatch!
+
+        when(clanmemberRepository.findAll()).thenReturn(java.util.List.of(unlinked, synced, mismatched));
+
+        // Mock API for Synced User
+        NewClanmemberDTO syncedDto = new NewClanmemberDTO();
+        syncedDto.setAvatarHash("hash");
+        syncedDto.setPlayerNickname("Nick");
+        syncedDto.setDiscordRoles(java.util.List.of());
+        when(discordApiClient.getDiscordMember("synced_id")).thenReturn(Optional.of(syncedDto));
+
+        // Mock API for Mismatched User
+        NewClanmemberDTO mismatchDto = new NewClanmemberDTO();
+        mismatchDto.setAvatarHash("new_hash"); // Differs from DB
+        when(discordApiClient.getDiscordMember("mismatch_id")).thenReturn(Optional.of(mismatchDto));
+
+        // Mock Roles helper
+        when(discordRoleService.sortRoles(any())).thenReturn(java.util.List.of());
+
+        // Act
+        java.util.List<com.rsl.clansite.model.dto.SyncStatusDTO> result = clanmemberService.getMemberSyncStatus();
+
+        // Assert Order
+        assertEquals(3, result.size());
+
+        // Index 0: Mismatched (Priority 1)
+        assertEquals("M_Mismatched", result.get(0).getIngameName());
+        assertFalse(result.get(0).isAvatarSynced());
+
+        // Index 1: Synced (Priority 2)
+        assertEquals("A_Synced", result.get(1).getIngameName());
+        assertTrue(result.get(1).isAvatarSynced());
+
+        // Index 2: Unlinked (Priority 3)
+        assertEquals("Z_Unlinked", result.get(2).getIngameName());
+        assertEquals("No Discord ID linked", result.get(2).getStatusMessage());
+    }
+
+    @Test
+    @DisplayName("syncSingleMember - Should throw exception if member has no Discord ID")
+    void syncSingleMember_NoDiscordId_ShouldThrow() {
+        String id = new ObjectId().toHexString();
+        ClanmemberEntity unlinked = new ClanmemberEntity();
+        unlinked.setDiscordId(null);
+
+        when(clanmemberRepository.findById(any())).thenReturn(Optional.of(unlinked));
+
+        assertThrows(IllegalArgumentException.class, () ->
+                clanmemberService.syncSingleMember(id, authentication)
+        );
+
+        verify(clanmemberRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("syncSingleMember - Should call save if update is required")
+    void syncSingleMember_ValidUpdate_ShouldSave() {
+        String id = new ObjectId().toHexString();
+        String discordId = "123";
+
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setId(new ObjectId(id));
+        member.setDiscordId(discordId);
+        member.setAvatarHash("old_hash"); // Needs update
+
+        when(clanmemberRepository.findById(new ObjectId(id))).thenReturn(Optional.of(member));
+        when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(java.util.List.of(member)); // Single account
+
+        // Mock API returning new data
+        NewClanmemberDTO apiData = new NewClanmemberDTO();
+        apiData.setAvatarHash("new_hash");
+        when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(apiData));
+
+        clanmemberService.syncSingleMember(id, authentication);
+
+        // Verify save was called via the private tryUpdateMemberRoles logic
+        verify(clanmemberRepository).save(member);
+        assertEquals("new_hash", member.getAvatarHash());
+    }
 }
