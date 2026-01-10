@@ -6,10 +6,12 @@ import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.entity.VisitorLogEntity;
 import com.rsl.clansite.model.enums.AuditAction;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.ClanRank;
 import com.rsl.clansite.repository.ClanmemberRepository;
+import com.rsl.clansite.repository.VisitorLogRepository;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,6 +33,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ClanmemberService {
     private final ClanmemberRepository clanmemberRepository;
+    private final VisitorLogRepository visitorLogRepository;
     private final DiscordRoleService discordRoleService;
     private final AuditLogService auditLogService;
     private final DiscordApiClient discordApiClient;
@@ -37,11 +41,13 @@ public class ClanmemberService {
 
     @Autowired
     public ClanmemberService(final ClanmemberRepository clanmemberRepository,
+                             final VisitorLogRepository visitorLogRepository,
                              final DiscordRoleService discordRoleService,
                              final AuditLogService auditLogService,
                              final DiscordApiClient discordApiClient,
                              final SiteAssetService siteAssetService) {
         this.clanmemberRepository = clanmemberRepository;
+        this.visitorLogRepository = visitorLogRepository;
         this.discordRoleService = discordRoleService;
         this.auditLogService = auditLogService;
         this.discordApiClient = discordApiClient;
@@ -137,6 +143,7 @@ public class ClanmemberService {
         List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordId(discordId);
 
         if (linkedMembers.isEmpty()) {
+            updateVisitorLog(discordId, globalName, avatarHash);
             return;
         }
 
@@ -144,6 +151,7 @@ public class ClanmemberService {
         ClanGroup detectedGroup = resolveClanGroup(currentDiscordRoles);
 
         for (ClanmemberEntity member : linkedMembers) {
+            member.setLastLogin(LocalDateTime.now());
             updateSingleLinkedMember(member, globalName, avatarHash, sortedRoles, detectedGroup);
         }
     }
@@ -189,6 +197,15 @@ public class ClanmemberService {
         newMember.setAvatarHash(dto.getAvatarHash());
         newMember.setDiscordRoles(dto.getDiscordRoles() != null ? dto.getDiscordRoles() : List.of());
         newMember.setChampions(List.of());
+
+        if (dto.getDiscordId() != null) {
+            Optional<VisitorLogEntity> visitorOpt = visitorLogRepository.findByDiscordId(dto.getDiscordId());
+            if (visitorOpt.isPresent()) {
+                newMember.setLastLogin(visitorOpt.get().getLastLogin());
+                visitorLogRepository.delete(visitorOpt.get());
+                log.info("Migrated Visitor Log to new Member profile for: {}", dto.getIngameName());
+            }
+        }
 
         clanmemberRepository.save(newMember);
 
@@ -300,6 +317,19 @@ public class ClanmemberService {
                 member.getIngameName(),
                 "Updated details for: " + member.getIngameName()
         );
+    }
+
+    private void updateVisitorLog(String discordId, String username, String avatarHash) {
+        VisitorLogEntity visitor = visitorLogRepository.findByDiscordId(discordId)
+                .orElse(new VisitorLogEntity(discordId, username, avatarHash));
+
+        if (visitor.getId() != null) {
+            visitor.setUsername(username);
+            visitor.setAvatarHash(avatarHash);
+            visitor.updateLogin();
+        }
+
+        visitorLogRepository.save(visitor);
     }
 
     private boolean tryUpdateMemberRoles(ClanmemberEntity member, boolean isMultiAccount) {

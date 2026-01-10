@@ -2,6 +2,8 @@ package com.rsl.clansite.controller;
 
 import com.rsl.clansite.client.DiscordApiClient;
 import com.rsl.clansite.repository.ChampionRepository;
+import com.rsl.clansite.repository.ClanmemberRepository;
+import com.rsl.clansite.repository.VisitorLogRepository;
 import com.rsl.clansite.security.CustomAuthenticationFailureHandler;
 import com.rsl.clansite.security.CustomOAuth2UserService;
 import com.rsl.clansite.security.SecurityConfig;
@@ -11,6 +13,7 @@ import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
 import com.rsl.clansite.service.HellHadesScraperService;
 import com.rsl.clansite.service.TargetService;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -71,6 +74,12 @@ public abstract class BaseControllerTest {
 
     @MockitoBean
     protected ChampionRepository championRepository;
+
+    @MockitoBean
+    protected ClanmemberRepository clanmemberRepository;
+
+    @MockitoBean
+    protected VisitorLogRepository visitorLogRepository;
 
     @MockitoBean
     protected DiscordApiClient discordApiClient;

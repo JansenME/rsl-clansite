@@ -70,6 +70,10 @@
 								<a th:href="@{/audit-log}" class="button small fit" style="display: block; width: 100%; text-align: center;">Audit Log</a>
 							</li>
 
+							<li sec:authorize="hasRole('ADMIN')" style="margin-bottom: 10px;">
+								<a th:href="@{/clanmembers/admin/login-history}" class="button small fit" style="display: block; width: 100%; text-align: center;">Login History</a>
+							</li>
+
 							<li style="margin-bottom: 10px;">
 								<form th:action="@{/perform_logout}" method="post" style="margin: 0;">
 									<button type="submit" class="button small fit" style="display: block; width: 100%; text-align: center;">Logout</button>

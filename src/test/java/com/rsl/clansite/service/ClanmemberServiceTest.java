@@ -6,10 +6,12 @@ import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.entity.VisitorLogEntity;
 import com.rsl.clansite.model.enums.AuditAction;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.ClanRank;
 import com.rsl.clansite.repository.ClanmemberRepository;
+import com.rsl.clansite.repository.VisitorLogRepository;
 import jakarta.servlet.http.HttpSession;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -47,6 +50,8 @@ import static org.mockito.Mockito.when;
 class ClanmemberServiceTest {
     @Mock
     private ClanmemberRepository clanmemberRepository;
+    @Mock
+    private VisitorLogRepository visitorLogRepository;
     @Mock
     private DiscordRoleService discordRoleService;
     @Mock
@@ -819,5 +824,100 @@ class ClanmemberServiceTest {
         assertEquals(ClanGroup.T2, alt.getClanGroup());
 
         verify(clanmemberRepository, org.mockito.Mockito.times(2)).save(any());
+    }
+
+    @Test
+    @DisplayName("linkClanmember - Existing Member -> Should update lastLogin timestamp")
+    void linkClanmember_ExistingMember_ShouldUpdateTimestamp() {
+        String discordId = "timestamp_test_user";
+        ClanmemberEntity existingMember = new ClanmemberEntity();
+        existingMember.setDiscordId(discordId);
+        existingMember.setLastLogin(null); // Ensure it starts null
+
+        when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of(existingMember));
+        when(discordRoleService.sortRoles(any())).thenReturn(List.of("Role1"));
+
+        clanmemberService.linkClanmember(discordId, "User", "Hash", List.of("Role1"));
+
+        ArgumentCaptor<ClanmemberEntity> captor = ArgumentCaptor.forClass(ClanmemberEntity.class);
+        verify(clanmemberRepository).save(captor.capture());
+
+        ClanmemberEntity savedMember = captor.getValue();
+        assertNotNull(savedMember.getLastLogin(), "LastLogin timestamp should not be null");
+
+        verify(visitorLogRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("linkClanmember - Unknown User -> Should create NEW Visitor Log")
+    void linkClanmember_UnknownUser_ShouldCreateVisitorLog() {
+        String discordId = "visitor_user";
+        String username = "VisitorName";
+        String hash = "hash123";
+
+        when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of());
+
+        when(visitorLogRepository.findByDiscordId(discordId)).thenReturn(Optional.empty());
+
+        clanmemberService.linkClanmember(discordId, username, hash, List.of());
+
+        ArgumentCaptor<VisitorLogEntity> captor = ArgumentCaptor.forClass(VisitorLogEntity.class);
+        verify(visitorLogRepository).save(captor.capture());
+
+        VisitorLogEntity savedVisitor = captor.getValue();
+        assertEquals(discordId, savedVisitor.getDiscordId());
+        assertEquals(username, savedVisitor.getUsername());
+        assertEquals(1, savedVisitor.getVisitCount());
+        assertNotNull(savedVisitor.getLastLogin());
+
+        verify(clanmemberRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("linkClanmember - Returning Visitor -> Should increment Visit Count")
+    void linkClanmember_ReturningVisitor_ShouldIncrementCount() {
+        String discordId = "returning_visitor";
+
+        when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of());
+
+        VisitorLogEntity existingVisitor = new VisitorLogEntity(discordId, "OldName", "OldHash");
+        existingVisitor.setId(new ObjectId());
+
+        when(visitorLogRepository.findByDiscordId(discordId)).thenReturn(Optional.of(existingVisitor));
+
+        clanmemberService.linkClanmember(discordId, "NewName", "NewHash", List.of());
+
+        ArgumentCaptor<VisitorLogEntity> captor = ArgumentCaptor.forClass(VisitorLogEntity.class);
+        verify(visitorLogRepository).save(captor.capture());
+
+        VisitorLogEntity updatedVisitor = captor.getValue();
+        assertEquals(2, updatedVisitor.getVisitCount());
+        assertEquals("NewName", updatedVisitor.getUsername());
+    }
+
+    @Test
+    @DisplayName("saveNewClanmember - Should migrate Visitor Date and Delete Log if exists")
+    void saveNewClanmember_ShouldMigrateVisitorData() {
+        String discordId = "promoted_user";
+        LocalDateTime priorLogin = LocalDateTime.now().minusDays(2);
+
+        NewClanmemberDTO dto = new NewClanmemberDTO();
+        dto.setDiscordId(discordId);
+        dto.setIngameName("PromotedPlayer");
+        dto.setClanRank(ClanRank.SOLDIER);
+
+        VisitorLogEntity existingVisitor = new VisitorLogEntity();
+        existingVisitor.setDiscordId(discordId);
+        existingVisitor.setLastLogin(priorLogin);
+
+        when(visitorLogRepository.findByDiscordId(discordId)).thenReturn(Optional.of(existingVisitor));
+
+        clanmemberService.saveNewClanmember(dto, authentication);
+
+        ArgumentCaptor<ClanmemberEntity> memberCaptor = ArgumentCaptor.forClass(ClanmemberEntity.class);
+        verify(clanmemberRepository).save(memberCaptor.capture());
+        assertEquals(priorLogin, memberCaptor.getValue().getLastLogin(), "Should copy the timestamp from visitor log");
+
+        verify(visitorLogRepository).delete(existingVisitor);
     }
 }

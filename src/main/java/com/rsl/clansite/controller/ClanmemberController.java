@@ -3,12 +3,13 @@ package com.rsl.clansite.controller;
 import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.entity.VisitorLogEntity;
 import com.rsl.clansite.model.enums.ClanRank;
+import com.rsl.clansite.repository.VisitorLogRepository;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
 import com.rsl.clansite.validation.OnCreate;
 import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
 import jakarta.validation.groups.Default;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -25,15 +26,21 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+
 @Controller
 @RequestMapping("/clanmembers")
 public class ClanmemberController {
     private final CommonsService commonsService;
     private final ClanmemberService clanmemberService;
+    private final VisitorLogRepository visitorLogRepository;
 
-    public ClanmemberController(final CommonsService commonsService, final ClanmemberService clanmemberService) {
+    public ClanmemberController(final CommonsService commonsService,
+                                final ClanmemberService clanmemberService,
+                                final VisitorLogRepository visitorLogRepository) {
         this.commonsService = commonsService;
         this.clanmemberService = clanmemberService;
+        this.visitorLogRepository = visitorLogRepository;
     }
 
     @GetMapping(value={"", "/"})
@@ -47,6 +54,26 @@ public class ClanmemberController {
         model.addAttribute("clanmembers", clanmemberService.findAllClanmemberEntities());
 
         return "clanmembers";
+    }
+
+    @GetMapping("/admin/login-history")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String viewLoginHistory(Model model, Authentication authentication) {
+        commonsService.fillModel(model, authentication);
+
+        List<ClanmemberEntity> members = clanmemberService.findAllClanmemberEntities().stream()
+                .filter(m -> m.getLastLogin() != null)
+                .sorted((m1, m2) -> m2.getLastLogin().compareTo(m1.getLastLogin()))
+                .toList();
+
+        List<VisitorLogEntity> visitors = visitorLogRepository.findAll().stream()
+                .sorted((v1, v2) -> v2.getLastLogin().compareTo(v1.getLastLogin()))
+                .toList();
+
+        model.addAttribute("memberHistory", members);
+        model.addAttribute("visitorHistory", visitors);
+
+        return "login-history";
     }
 
     @PostMapping("/switch")
@@ -188,7 +215,7 @@ public class ClanmemberController {
     private String reloadFormWithError(Model model, NewClanmemberDTO dto, String errorMessage) {
         model.addAttribute("clanRanks", ClanRank.values());
         model.addAttribute("clanmemberRosterDto", dto);
-        model.addAttribute("lookupSuccess", true); // Keep form visible
+        model.addAttribute("lookupSuccess", true);
         if (errorMessage != null) {
             model.addAttribute("lookupError", errorMessage);
         }

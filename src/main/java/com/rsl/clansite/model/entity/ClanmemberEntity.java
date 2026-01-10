@@ -9,6 +9,7 @@ import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Document(collection = "clanmembers")
@@ -28,4 +29,6 @@ public class ClanmemberEntity {
     private String ingameName;
     private String clanRank;
     private List<Champion> champions;
+
+    private LocalDateTime lastLogin;
 }

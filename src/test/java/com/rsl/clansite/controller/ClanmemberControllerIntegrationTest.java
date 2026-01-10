@@ -3,18 +3,29 @@ package com.rsl.clansite.controller;
 import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.entity.VisitorLogEntity;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.repository.ClanmemberRepository;
 import com.rsl.clansite.service.DiscordRoleService;
 import jakarta.servlet.http.HttpSession;
 import org.bson.types.ObjectId;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasProperty;
@@ -38,8 +49,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 class ClanmemberControllerIntegrationTest extends BaseControllerTest {
-    @MockitoBean
-    private ClanmemberRepository clanmemberRepository;
+    @BeforeEach
+    void setup() {
+        visitorLogRepository.deleteAll();
+        clanmemberRepository.deleteAll();
+    }
 
     @Test
     @DisplayName("GET /clanmembers - GUEST should access list but NOT see Add Button")
@@ -366,5 +380,87 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
         mockMvc.perform(get("/clanmembers/edit/12345")
                         .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
                 .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    @DisplayName("Access as ADMIN - Should return 200 and show MEMBER history (but NOT Visitor audit)")
+    void getLoginHistory_AsAdmin_ShouldSucceed() throws Exception {
+        // 1. Prepare Data
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setDiscordId("mem1");
+        member.setDiscordName("MemName");
+        member.setIngameName("ActiveMember");
+        member.setLastLogin(LocalDateTime.now());
+
+        // FIX: Stub the Service. The Controller calls the Service, not the DB.
+        when(clanmemberService.findAllClanmemberEntities()).thenReturn(List.of(member));
+
+        // 2. Prepare Visitor Data (To prove Admin CANNOT see it)
+        VisitorLogEntity visitor = new VisitorLogEntity("v1", "VisitorOne", "hash");
+        visitor.setLastLogin(LocalDateTime.now());
+
+        // FIX: Stub the Repository. The Controller calls this directly.
+        when(visitorLogRepository.findAll()).thenReturn(List.of(visitor));
+
+        OAuth2User adminUser = createMockUser("admin_id", "AdminUser", "ROLE_ADMIN");
+
+        mockMvc.perform(get("/clanmembers/admin/login-history")
+                        .with(oauth2Login().oauth2User(adminUser)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("login-history"))
+                .andExpect(content().string(containsString("Login History")))
+                .andExpect(content().string(containsString("ActiveMember"))) // Should find this
+                .andExpect(content().string(not(containsString("VisitorOne")))); // Should NOT find this
+    }
+
+    @Test
+    @DisplayName("Access as OWNER - Should show 'Security Audit' and Visitor Data")
+    void getLoginHistory_AsOwner_ShouldShowAuditTitle() throws Exception {
+        // Prepare Visitor Data
+        VisitorLogEntity visitor = new VisitorLogEntity("v1", "VisitorOne", "hash");
+        visitor.setLastLogin(LocalDateTime.now());
+
+        // FIX: Stub the Repository so the Controller gets data
+        when(visitorLogRepository.findAll()).thenReturn(List.of(visitor));
+
+        OAuth2User ownerUser = createMockUser("owner_id", "OwnerUser", "ROLE_OWNER");
+
+        mockMvc.perform(get("/clanmembers/admin/login-history")
+                        .with(oauth2Login().oauth2User(ownerUser)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Security Audit")))
+                .andExpect(content().string(containsString("VisitorOne"))); // Owner should see this
+    }
+
+    @Test
+    @DisplayName("Access as MEMBER - Should Redirect to Error Page (Not 403)")
+    void getLoginHistory_AsMember_ShouldRedirectToError() throws Exception {
+        OAuth2User memberUser = createMockUser("member_id", "MemberUser", "ROLE_MEMBER");
+
+        mockMvc.perform(get("/clanmembers/admin/login-history")
+                        .with(oauth2Login().oauth2User(memberUser)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/error/403"));
+    }
+
+    @Test
+    @DisplayName("Access as ANONYMOUS - Should Redirect to Login")
+    void getLoginHistory_Anonymous_ShouldRedirect() throws Exception {
+        mockMvc.perform(get("/clanmembers/admin/login-history"))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    private OAuth2User createMockUser(String discordId, String username, String role) {
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put("id", discordId);
+        attributes.put("global_name", username);
+
+        Set<GrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority(role));
+
+        return new DefaultOAuth2User(
+                authorities,
+                attributes,
+                "id" // <--- The magic key your app expects
+        );
     }
 }
