@@ -1,6 +1,7 @@
 package com.rsl.clansite.service;
 
 import com.rsl.clansite.model.ClanmemberViewData;
+import com.rsl.clansite.model.enums.QuickLink;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,13 +12,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.ui.Model;
 
 import java.time.Instant;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -123,5 +129,59 @@ class CommonsServiceTest {
         String input = "Rotos the Lost Groom & Bride!";
         String result = commonsService.generateImageFilename(input);
         assertEquals("rotos-the-lost-groom-bride.png", result);
+    }
+
+    @Test
+    @DisplayName("OWNER should see ALL links (Admin + Owner specific)")
+    void getVisibleQuickLinks_Owner_ShouldSeeAll() {
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(true);
+        // Owner has ROLE_OWNER (and usually implicitly functions as Admin)
+        when(auth.getAuthorities()).thenReturn((List) List.of(new SimpleGrantedAuthority("ROLE_OWNER")));
+
+        List<QuickLink> links = commonsService.getVisibleQuickLinks(auth);
+
+        assertTrue(links.contains(QuickLink.ADD_CHAMPION), "Owner should see Add Champion");
+        assertTrue(links.contains(QuickLink.ADD_CLANMEMBER), "Owner should see Add Clanmember");
+        assertTrue(links.contains(QuickLink.DATA_HEALTH), "Owner should see Data Health");
+    }
+
+    @Test
+    @DisplayName("ADMIN should see Admin links but NOT Owner links")
+    void getVisibleQuickLinks_Admin_ShouldSeeAdminOnly() {
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(true);
+        when(auth.getAuthorities()).thenReturn((List) List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+
+        List<QuickLink> links = commonsService.getVisibleQuickLinks(auth);
+
+        assertTrue(links.contains(QuickLink.ADD_CLANMEMBER));
+        assertTrue(links.contains(QuickLink.AUDIT_LOG));
+
+        assertFalse(links.contains(QuickLink.ADD_CHAMPION), "Admin should NOT see Add Champion");
+    }
+
+    @Test
+    @DisplayName("MEMBER should see NO quick links (Empty List)")
+    void getVisibleQuickLinks_Member_ShouldSeeNone() {
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(true);
+        when(auth.getAuthorities()).thenReturn((List) List.of(new SimpleGrantedAuthority("ROLE_MEMBER")));
+
+        List<QuickLink> links = commonsService.getVisibleQuickLinks(auth);
+
+        assertTrue(links.isEmpty(), "Member should have 0 quick links");
+    }
+
+    @Test
+    @DisplayName("Anonymous/Null user should return empty list")
+    void getVisibleQuickLinks_Anonymous_ShouldReturnEmpty() {
+        List<QuickLink> linksNull = commonsService.getVisibleQuickLinks(null);
+        assertTrue(linksNull.isEmpty());
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(false);
+        List<QuickLink> linksAnon = commonsService.getVisibleQuickLinks(auth);
+        assertTrue(linksAnon.isEmpty());
     }
 }

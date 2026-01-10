@@ -58,24 +58,13 @@
 						<h2 style="font-size: 1.4em;">Quick Links</h2>
 						<ul style="list-style: none; padding: 0; margin: 0;">
 
-							<li sec:authorize="hasRole('ADMIN')" style="margin-bottom: 10px;">
-								<a th:href="@{/clanmembers/add}" class="button small fit" style="display: block; width: 100%; text-align: center;">Add Clanmember</a>
-							</li>
-
-							<li sec:authorize="hasRole('OWNER')" style="margin-bottom: 10px;">
-								<a th:href="@{/champions/new}" class="button small fit" style="display: block; width: 100%; text-align: center;">Add Champion</a>
-							</li>
-
-							<li sec:authorize="hasRole('ADMIN')" style="margin-bottom: 10px;">
-								<a th:href="@{/audit-log}" class="button small fit" style="display: block; width: 100%; text-align: center;">Audit Log</a>
-							</li>
-
-							<li sec:authorize="hasRole('ADMIN')" style="margin-bottom: 10px;">
-								<a th:href="@{/clanmembers/admin/login-history}" class="button small fit" style="display: block; width: 100%; text-align: center;">Login History</a>
-							</li>
-
-							<li sec:authorize="hasRole('ADMIN')" style="margin-bottom: 10px;">
-								<a th:href="@{/clanmembers/admin/data-health}" class="button small fit" style="display: block; width: 100%; text-align: center;">Discord Data Health</a>
+							<li th:each="link : ${quickLinks}" style="margin-bottom: 10px;">
+								<a th:href="@{${link.url}}"
+								   th:text="${link.label}"
+								   class="button small fit"
+								   style="display: block; width: 100%; text-align: center;">
+									Link Name
+								</a>
 							</li>
 
 							<li style="margin-bottom: 10px;">

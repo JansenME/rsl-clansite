@@ -2,16 +2,22 @@ package com.rsl.clansite.controller;
 
 import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.enums.QuickLink;
+import com.rsl.clansite.service.CommonsService;
 import org.bson.types.ObjectId;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.ui.Model;
 
 import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
@@ -29,6 +35,30 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
     private static final String LINK_LOGIN_HISTORY = "href=\"/clanmembers/admin/login-history\"";
     private static final String LINK_DATA_HEALTH = "href=\"/clanmembers/admin/data-health\"";
     private static final String LOGOUT_BUTTON = "Logout";
+
+    @BeforeEach
+    void setup() {
+        // --- FIX: Teach the Mock CommonsService to actually populate the model ---
+        doAnswer(invocation -> {
+            Model model = invocation.getArgument(0);
+            Authentication auth = invocation.getArgument(1);
+
+            if (auth != null && auth.isAuthenticated()) {
+                // 1. Populate the View Data (using the existing Mock ClanmemberService)
+                model.addAttribute("clanmemberViewData", clanmemberService.getUserViewData(auth));
+                model.addAttribute("isLoggedIn", true);
+
+                // 2. Populate the Quick Links (using real logic via a temporary instance)
+                // We pass 'null' for the dependency because 'getVisibleQuickLinks' doesn't use it.
+                CommonsService tempService = new CommonsService(null, null);
+                List<QuickLink> links = tempService.getVisibleQuickLinks(auth);
+                model.addAttribute("quickLinks", links);
+            } else {
+                model.addAttribute("isLoggedIn", false);
+            }
+            return null;
+        }).when(commonsService).fillModel(any(), any());
+    }
 
     @Test
     @DisplayName("GET /profile - Should redirect to /profile/{id} if session user is linked")

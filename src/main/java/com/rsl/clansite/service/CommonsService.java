@@ -1,16 +1,21 @@
 package com.rsl.clansite.service;
 
 import com.rsl.clansite.model.ClanmemberViewData;
+import com.rsl.clansite.model.enums.QuickLink;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
 
 import java.time.Year;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -44,7 +49,48 @@ public class CommonsService {
         if (authentication != null && authentication.isAuthenticated()) {
             ClanmemberViewData viewData = clanmemberService.getUserViewData(authentication);
             model.addAttribute("clanmemberViewData", viewData);
+
+            model.addAttribute("isLoggedIn", true);
+            model.addAttribute("quickLinks", getVisibleQuickLinks(authentication));
+        } else {
+            model.addAttribute("isLoggedIn", false);
         }
+    }
+
+    public List<QuickLink> getVisibleQuickLinks(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return List.of();
+        }
+
+        List<QuickLink> visibleLinks = new ArrayList<>();
+
+        // Get user roles as a list of strings (e.g., ["ROLE_ADMIN", "ROLE_MEMBER"])
+        List<String> userRoles = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
+        // Check if user is OWNER (assuming Owner has access to Admin links via Hierarchy or explicit check)
+        boolean isOwner = userRoles.contains("ROLE_OWNER");
+        boolean isAdmin = userRoles.contains("ROLE_ADMIN") || isOwner;
+
+        for (QuickLink link : QuickLink.values()) {
+            boolean hasAccess = false;
+
+            // Simple Role Check Logic
+            if ("ROLE_OWNER".equals(link.getRequiredRole())) {
+                hasAccess = isOwner;
+            } else if ("ROLE_ADMIN".equals(link.getRequiredRole())) {
+                hasAccess = isAdmin;
+            } else {
+                // If we add public links later
+                hasAccess = true;
+            }
+
+            if (hasAccess) {
+                visibleLinks.add(link);
+            }
+        }
+        return visibleLinks;
     }
 
     private String getAppVersion() {
