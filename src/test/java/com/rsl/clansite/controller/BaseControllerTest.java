@@ -11,6 +11,7 @@ import com.rsl.clansite.service.AuditLogService;
 import com.rsl.clansite.service.ChampionsService;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
+import com.rsl.clansite.service.DiscordRoleService;
 import com.rsl.clansite.service.HellHadesScraperService;
 import com.rsl.clansite.service.TargetService;
 import org.junit.jupiter.api.Test;
@@ -71,6 +72,9 @@ public abstract class BaseControllerTest {
 
     @MockitoBean
     protected TargetService targetService;
+
+    @MockitoBean
+    protected DiscordRoleService discordRoleService;
 
     @MockitoBean
     protected ChampionRepository championRepository;

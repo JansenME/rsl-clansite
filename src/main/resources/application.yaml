@@ -3,6 +3,13 @@ app:
 discord:
   bot-token: ${DISCORD_BOT_TOKEN}
   clan-server-id: "1062302225701015552"
+  kloep-id: "270588526267990017"
+  roles:
+    clan-leader-id: "1298810713309057067"
+    deputy-id: "1298810856804454461"
+    siege-coordinator-id: "1428676592791453778"
+    t1-id: "1298811143699169350"
+    t2-id: "1374237716149174453"
 spring:
   data:
     mongodb:

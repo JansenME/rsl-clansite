@@ -5,6 +5,7 @@ import com.rsl.clansite.model.dto.DiscordRoleDTO;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -17,11 +18,25 @@ import java.util.Map;
 @Slf4j
 @Service
 public class DiscordRoleService {
-    public static final String CLAN_LEADER_ROLE_ID = "1298810713309057067";
-    public static final String DEPUTY_ROLE_ID = "1298810856804454461";
-    public static final String SIEGE_COORDINATOR_ROLE_ID = "1428676592791453778";
-    public static final String T1_ROLE_ID = "1298811143699169350";
-    public static final String T2_ROLE_ID = "1374237716149174453";
+    @Value("${discord.roles.clan-leader-id}")
+    @Getter
+    private String clanLeaderRoleId;
+
+    @Value("${discord.roles.deputy-id}")
+    @Getter
+    private String deputyRoleId;
+
+    @Value("${discord.roles.siege-coordinator-id}")
+    @Getter
+    private String siegeCoordinatorRoleId;
+
+    @Value("${discord.roles.t1-id}")
+    @Getter
+    private String t1RoleId;
+
+    @Value("${discord.roles.t2-id}")
+    @Getter
+    private String t2RoleId;
 
     private final DiscordApiClient discordApiClient;
 

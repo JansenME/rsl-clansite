@@ -96,8 +96,8 @@ public class ClanmemberService {
 
             List<String> roles = dto.getDiscordRoles();
             if (roles != null &&
-                    roles.contains(DiscordRoleService.T1_ROLE_ID) &&
-                    roles.contains(DiscordRoleService.T2_ROLE_ID)) {
+                    roles.contains(discordRoleService.getT1RoleId()) &&
+                    roles.contains(discordRoleService.getT2RoleId())) {
                 warningMsg.append("Notice: This user has both T1 and T2 roles in Discord. Please manually select the correct Clan Group below. ");
             }
 
@@ -540,8 +540,8 @@ public class ClanmemberService {
     private ClanGroup resolveClanGroup(List<String> roles) {
         if (roles == null) return null;
 
-        boolean hasT1 = roles.contains(DiscordRoleService.T1_ROLE_ID);
-        boolean hasT2 = roles.contains(DiscordRoleService.T2_ROLE_ID);
+        boolean hasT1 = roles.contains(discordRoleService.getT1RoleId());
+        boolean hasT2 = roles.contains(discordRoleService.getT2RoleId());
 
         if (hasT1 && !hasT2) return ClanGroup.T1;
         if (hasT2 && !hasT1) return ClanGroup.T2;

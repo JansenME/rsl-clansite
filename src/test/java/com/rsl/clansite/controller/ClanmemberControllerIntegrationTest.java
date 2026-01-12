@@ -162,9 +162,12 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
     void addForm_WithDualRoles_ShouldShowWarning() throws Exception {
         String discordId = "dualRoleUser";
 
+        when(discordRoleService.getT1RoleId()).thenReturn("test-t1-id");
+        when(discordRoleService.getT2RoleId()).thenReturn("test-t2-id");
+
         NewClanmemberDTO mockDto = new NewClanmemberDTO();
         mockDto.setDiscordId(discordId);
-        mockDto.setDiscordRoles(List.of(DiscordRoleService.T1_ROLE_ID, DiscordRoleService.T2_ROLE_ID));
+        mockDto.setDiscordRoles(List.of(discordRoleService.getT1RoleId(), discordRoleService.getT2RoleId()));
         mockDto.setClanGroup(null);
 
         MemberLookupResult result = MemberLookupResult.success(

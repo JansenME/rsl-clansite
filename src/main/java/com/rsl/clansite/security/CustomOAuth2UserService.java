@@ -5,6 +5,7 @@ import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.DiscordRoleService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -23,28 +24,19 @@ import java.util.Set;
 @Slf4j
 @Service
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
-    private static final String OWNER_DISCORD_ID = "270588526267990017";
+    @Value("${discord.kloep-id}")
+    private String kloepDiscordId;
 
     private final ClanmemberService clanmemberService;
     private final DiscordApiClient discordApiClient;
+    private final DiscordRoleService discordRoleService;
 
-    private static final Set<String> ADMIN_ROLE_IDS = Set.of(
-            DiscordRoleService.CLAN_LEADER_ROLE_ID,
-            DiscordRoleService.DEPUTY_ROLE_ID
-    );
-
-    private static final Set<String> COORDINATOR_ROLE_IDS = Set.of(
-            DiscordRoleService.SIEGE_COORDINATOR_ROLE_ID
-    );
-
-    private static final Set<String> MEMBER_ROLE_IDS = Set.of(
-            DiscordRoleService.T1_ROLE_ID,
-            DiscordRoleService.T2_ROLE_ID
-    );
-
-    public CustomOAuth2UserService(ClanmemberService clanmemberService, DiscordApiClient discordApiClient) {
+    public CustomOAuth2UserService(ClanmemberService clanmemberService,
+                                   DiscordApiClient discordApiClient,
+                                   DiscordRoleService discordRoleService) {
         this.clanmemberService = clanmemberService;
         this.discordApiClient = discordApiClient;
+        this.discordRoleService = discordRoleService;
     }
 
     @Override
@@ -72,7 +64,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         Set<SimpleGrantedAuthority> authorities = mapRolesToAuthorities(userDiscordRoles);
 
-        if (OWNER_DISCORD_ID.equals(userId)) {
+        if (kloepDiscordId.equals(userId)) {
             log.info("Granting ROLE_OWNER to Discord ID: {}", userId);
             authorities.add(new SimpleGrantedAuthority("ROLE_OWNER"));
         }
@@ -96,15 +88,17 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private Set<SimpleGrantedAuthority> mapRolesToAuthorities(Set<String> userDiscordRoles) {
         Set<SimpleGrantedAuthority> authorities = new HashSet<>();
 
-        if (userDiscordRoles.stream().anyMatch(ADMIN_ROLE_IDS::contains)) {
+        if (userDiscordRoles.contains(discordRoleService.getClanLeaderRoleId()) ||
+                userDiscordRoles.contains(discordRoleService.getDeputyRoleId())) {
             authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
         }
 
-        if (userDiscordRoles.stream().anyMatch(COORDINATOR_ROLE_IDS::contains)) {
+        if (userDiscordRoles.contains(discordRoleService.getSiegeCoordinatorRoleId())) {
             authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
         }
 
-        if (userDiscordRoles.stream().anyMatch(MEMBER_ROLE_IDS::contains)) {
+        if (userDiscordRoles.contains(discordRoleService.getT1RoleId()) ||
+                userDiscordRoles.contains(discordRoleService.getT2RoleId())) {
             authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
         }
 

@@ -41,6 +41,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -86,6 +87,12 @@ class ClanmemberServiceTest {
         soldier.setId(ObjectId.get());
         soldier.setIngameName("SoldierUser");
         soldier.setClanRank(ClanRank.SOLDIER.name());
+
+        lenient().when(discordRoleService.getT1RoleId()).thenReturn("test-t1-id");
+        lenient().when(discordRoleService.getT2RoleId()).thenReturn("test-t2-id");
+        lenient().when(discordRoleService.getClanLeaderRoleId()).thenReturn("test-leader-id");
+        lenient().when(discordRoleService.getDeputyRoleId()).thenReturn("test-deputy-id");
+        lenient().when(discordRoleService.getSiegeCoordinatorRoleId()).thenReturn("test-coordinator-id");
     }
 
     @Test
@@ -197,7 +204,7 @@ class ClanmemberServiceTest {
         String discordId = "12345";
         String globalName = "NewGlobalName";
         String avatar = "hash123";
-        List<String> roles = List.of(DiscordRoleService.T1_ROLE_ID);
+        List<String> roles = List.of(discordRoleService.getT1RoleId());
 
         ClanmemberEntity existingMember = new ClanmemberEntity();
         existingMember.setDiscordId(discordId);
@@ -266,7 +273,7 @@ class ClanmemberServiceTest {
         String discordId = "555";
         NewClanmemberDTO mockDto = new NewClanmemberDTO();
         mockDto.setDiscordId(discordId);
-        mockDto.setDiscordRoles(List.of(DiscordRoleService.T1_ROLE_ID));
+        mockDto.setDiscordRoles(List.of(discordRoleService.getT1RoleId()));
 
         when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(mockDto));
 
@@ -368,7 +375,7 @@ class ClanmemberServiceTest {
 
         when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of(member));
 
-        List<String> t2Roles = List.of(DiscordRoleService.T2_ROLE_ID);
+        List<String> t2Roles = List.of(discordRoleService.getT2RoleId());
         when(discordRoleService.sortRoles(t2Roles)).thenReturn(t2Roles);
 
         clanmemberService.linkClanmember(discordId, "Global", "hash", t2Roles);
@@ -413,7 +420,7 @@ class ClanmemberServiceTest {
     @DisplayName("lookupDiscordUser should correct assign T2 or Null group")
     void lookupDiscordUser_ShouldAssignCorrectGroups() {
         NewClanmemberDTO t2Dto = new NewClanmemberDTO();
-        t2Dto.setDiscordRoles(List.of(DiscordRoleService.T2_ROLE_ID));
+        t2Dto.setDiscordRoles(List.of(discordRoleService.getT2RoleId()));
         when(discordApiClient.getDiscordMember("t2_id")).thenReturn(Optional.of(t2Dto));
 
         assertEquals(ClanGroup.T2, clanmemberService.lookupDiscordUser("t2_id").getClanGroup());
@@ -470,7 +477,7 @@ class ClanmemberServiceTest {
 
         NewClanmemberDTO mockDto = new NewClanmemberDTO();
         mockDto.setDiscordId(discordId);
-        mockDto.setDiscordRoles(List.of(DiscordRoleService.T1_ROLE_ID, DiscordRoleService.T2_ROLE_ID));
+        mockDto.setDiscordRoles(List.of(discordRoleService.getT1RoleId(), discordRoleService.getT2RoleId()));
         when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(mockDto));
 
         MemberLookupResult result = clanmemberService.performMemberLookup(discordId);
@@ -786,7 +793,7 @@ class ClanmemberServiceTest {
 
         when(discordRoleService.sortRoles(any())).thenReturn(java.util.List.of("T2_ROLE_ID"));
 
-        String T2_ID = DiscordRoleService.T2_ROLE_ID;
+        String T2_ID = discordRoleService.getT2RoleId();
         discordData.setDiscordRoles(java.util.List.of(T2_ID));
         when(discordRoleService.sortRoles(any())).thenReturn(java.util.List.of(T2_ID));
 
@@ -811,7 +818,7 @@ class ClanmemberServiceTest {
 
         when(clanmemberRepository.findAllByDiscordIdIsNotNull()).thenReturn(java.util.List.of(main, alt));
 
-        String T1_ID = DiscordRoleService.T1_ROLE_ID;
+        String T1_ID = discordRoleService.getT1RoleId();
         NewClanmemberDTO discordData = new NewClanmemberDTO();
         discordData.setDiscordRoles(java.util.List.of(T1_ID));
         discordData.setAvatarHash("newHash");

@@ -1,0 +1,16 @@
+discord:
+  clan-server-id: "728792086438084608"
+  roles:
+    clan-leader-id: "1460335321962119219"
+    deputy-id: "1460335365570171024"
+    siege-coordinator-id: "1460335391981699235"
+    t1-id: "1460335417726468209"
+    t2-id: "1460335437833965743"
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017
+      database: test-database-rsl
+logging:
+  level:
+    com.rsl.clansite: DEBUG

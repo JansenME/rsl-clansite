@@ -4,6 +4,7 @@ import com.rsl.clansite.client.DiscordApiClient;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.DiscordRoleService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +17,7 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +33,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,11 +47,25 @@ class CustomOAuth2UserServiceTest {
     private DiscordApiClient discordApiClient;
 
     @Mock
+    private DiscordRoleService discordRoleService;
+
+    @Mock
     private OAuth2UserRequest userRequest;
 
     @Spy
     @InjectMocks
-    private CustomOAuth2UserService userService;
+    private CustomOAuth2UserService customOAuth2UserService;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(discordRoleService.getT1RoleId()).thenReturn("test-t1-id");
+        lenient().when(discordRoleService.getT2RoleId()).thenReturn("test-t2-id");
+        lenient().when(discordRoleService.getClanLeaderRoleId()).thenReturn("test-leader-id");
+        lenient().when(discordRoleService.getDeputyRoleId()).thenReturn("test-deputy-id");
+        lenient().when(discordRoleService.getSiegeCoordinatorRoleId()).thenReturn("test-coordinator-id");
+
+        ReflectionTestUtils.setField(customOAuth2UserService, "kloepDiscordId", "270588526267990017");
+    }
 
     @Test
     @DisplayName("loadUser should link account and grant roles when user is in guild")
@@ -61,13 +78,13 @@ class CustomOAuth2UserServiceTest {
                 Map.of("id", discordId, "global_name", globalName, "avatar", "hash"),
                 "id"
         );
-        doReturn(mockOAuthUser).when(userService).fetchUserInfo(any());
+        doReturn(mockOAuthUser).when(customOAuth2UserService).fetchUserInfo(any());
 
         NewClanmemberDTO memberDto = new NewClanmemberDTO();
-        memberDto.setDiscordRoles(List.of(DiscordRoleService.CLAN_LEADER_ROLE_ID));
+        memberDto.setDiscordRoles(List.of(discordRoleService.getClanLeaderRoleId()));
         when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(memberDto));
 
-        OAuth2User result = userService.loadUser(userRequest);
+        OAuth2User result = customOAuth2UserService.loadUser(userRequest);
 
         verify(clanmemberService).linkClanmember(eq(discordId), eq(globalName), any(), anyList());
 
@@ -86,12 +103,12 @@ class CustomOAuth2UserServiceTest {
         OAuth2User mockOAuthUser = new DefaultOAuth2User(
                 Set.of(), Map.of("id", discordId, "global_name", "Stranger"), "id"
         );
-        doReturn(mockOAuthUser).when(userService).fetchUserInfo(any());
+        doReturn(mockOAuthUser).when(customOAuth2UserService).fetchUserInfo(any());
 
         when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.empty());
 
         OAuth2AuthenticationException ex = assertThrows(OAuth2AuthenticationException.class,
-                () -> userService.loadUser(userRequest));
+                () -> customOAuth2UserService.loadUser(userRequest));
 
         assertEquals("not_in_guild", ex.getError().getErrorCode());
         verify(clanmemberService, never()).linkClanmember(any(), any(), any(), any());
@@ -105,7 +122,7 @@ class CustomOAuth2UserServiceTest {
         OAuth2User mockOAuthUser = new DefaultOAuth2User(
                 Set.of(), Map.of("id", discordId, "global_name", "UnlinkedUser"), "id"
         );
-        doReturn(mockOAuthUser).when(userService).fetchUserInfo(any());
+        doReturn(mockOAuthUser).when(customOAuth2UserService).fetchUserInfo(any());
 
         NewClanmemberDTO memberDto = new NewClanmemberDTO();
         memberDto.setDiscordRoles(List.of());
@@ -115,7 +132,7 @@ class CustomOAuth2UserServiceTest {
                 .linkClanmember(any(), any(), any(), any());
 
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> userService.loadUser(userRequest));
+                () -> customOAuth2UserService.loadUser(userRequest));
 
         assertEquals("Database Down", ex.getMessage());
     }
@@ -128,13 +145,13 @@ class CustomOAuth2UserServiceTest {
         OAuth2User mockOAuthUser = new DefaultOAuth2User(
                 Set.of(), Map.of("id", ownerId, "global_name", "TheOwner"), "id"
         );
-        doReturn(mockOAuthUser).when(userService).fetchUserInfo(any());
+        doReturn(mockOAuthUser).when(customOAuth2UserService).fetchUserInfo(any());
 
         NewClanmemberDTO memberDto = new NewClanmemberDTO();
         memberDto.setDiscordRoles(List.of());
         when(discordApiClient.getDiscordMember(ownerId)).thenReturn(Optional.of(memberDto));
 
-        OAuth2User result = userService.loadUser(userRequest);
+        OAuth2User result = customOAuth2UserService.loadUser(userRequest);
 
         Set<String> authorities = result.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -151,13 +168,13 @@ class CustomOAuth2UserServiceTest {
         OAuth2User mockOAuthUser = new DefaultOAuth2User(
                 Set.of(), Map.of("id", discordId, "global_name", "SiegeMaster"), "id"
         );
-        doReturn(mockOAuthUser).when(userService).fetchUserInfo(any());
+        doReturn(mockOAuthUser).when(customOAuth2UserService).fetchUserInfo(any());
 
         NewClanmemberDTO memberDto = new NewClanmemberDTO();
-        memberDto.setDiscordRoles(List.of(DiscordRoleService.SIEGE_COORDINATOR_ROLE_ID));
+        memberDto.setDiscordRoles(List.of(discordRoleService.getSiegeCoordinatorRoleId()));
         when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(memberDto));
 
-        OAuth2User result = userService.loadUser(userRequest);
+        OAuth2User result = customOAuth2UserService.loadUser(userRequest);
 
         Set<String> authorities = result.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -174,13 +191,13 @@ class CustomOAuth2UserServiceTest {
         OAuth2User mockOAuthUser = new DefaultOAuth2User(
                 Set.of(), Map.of("id", discordId, "global_name", "RegularJoe", "avatar", "hash"), "id"
         );
-        doReturn(mockOAuthUser).when(userService).fetchUserInfo(any());
+        doReturn(mockOAuthUser).when(customOAuth2UserService).fetchUserInfo(any());
 
         NewClanmemberDTO memberDto = new NewClanmemberDTO();
-        memberDto.setDiscordRoles(List.of(DiscordRoleService.T1_ROLE_ID));
+        memberDto.setDiscordRoles(List.of(discordRoleService.getT1RoleId()));
         when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(memberDto));
 
-        OAuth2User result = userService.loadUser(userRequest);
+        OAuth2User result = customOAuth2UserService.loadUser(userRequest);
 
         assertTrue(result.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_MEMBER")));
@@ -206,13 +223,13 @@ class CustomOAuth2UserServiceTest {
         OAuth2User mockOAuthUser = new DefaultOAuth2User(
                 Set.of(), Map.of("id", discordId, "global_name", "RandomGuy", "avatar", "hash"), "id"
         );
-        doReturn(mockOAuthUser).when(userService).fetchUserInfo(any());
+        doReturn(mockOAuthUser).when(customOAuth2UserService).fetchUserInfo(any());
 
         NewClanmemberDTO memberDto = new NewClanmemberDTO();
         memberDto.setDiscordRoles(List.of("999999"));
         when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(memberDto));
 
-        OAuth2User result = userService.loadUser(userRequest);
+        OAuth2User result = customOAuth2UserService.loadUser(userRequest);
 
         assertTrue(result.getAuthorities().isEmpty(),
                 "Security Alert: User with random role got access! Authorities: " + result.getAuthorities());
@@ -225,13 +242,13 @@ class CustomOAuth2UserServiceTest {
         OAuth2User mockOAuthUser = new DefaultOAuth2User(
                 Set.of(), Map.of("id", discordId, "global_name", "T1Soldier", "avatar", "hash"), "id"
         );
-        doReturn(mockOAuthUser).when(userService).fetchUserInfo(any());
+        doReturn(mockOAuthUser).when(customOAuth2UserService).fetchUserInfo(any());
 
         NewClanmemberDTO memberDto = new NewClanmemberDTO();
-        memberDto.setDiscordRoles(List.of("1298811143699169350"));
+        memberDto.setDiscordRoles(List.of(discordRoleService.getT1RoleId()));
         when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(memberDto));
 
-        OAuth2User result = userService.loadUser(userRequest);
+        OAuth2User result = customOAuth2UserService.loadUser(userRequest);
 
         assertTrue(result.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_MEMBER")));
