@@ -11,15 +11,20 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Document(collection = "champions")
 public class ChampionEntity {
     @Id
     private ObjectId id;
 
+    @Indexed(unique = true)
     private String name;
+
     private Rarity rarity;
     private Type type;
     private Affinity affinity;

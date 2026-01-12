@@ -12,5 +12,4 @@ import java.util.Optional;
 @Repository
 public interface ChampionRepository extends MongoRepository<ChampionEntity, ObjectId> {
     Optional<ChampionEntity> findByNameIgnoreCase(String name);
-    List<ChampionEntity> findByFaction(Faction faction);
 }

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -22,11 +23,17 @@ public class ClanmemberEntity {
 
     private ClanGroup clanGroup;
     private String discordName;
+
+    @Indexed
     private String discordId;
+
     private String avatarHash;
     private List<String> discordRoles;
     private String playerNickname;
+
+    @Indexed(unique = true)
     private String ingameName;
+
     private String clanRank;
     private List<Champion> champions;
 
