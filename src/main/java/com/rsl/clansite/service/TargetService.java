@@ -47,4 +47,11 @@ public class TargetService {
         Map<String, Integer> factionTargets = targets.getOrDefault(faction.getName(), Collections.emptyMap());
         return factionTargets.values().stream().mapToInt(Integer::intValue).sum();
     }
+
+    public int getTotalChampionCount() {
+        return targets.values().stream()
+                .flatMap(rarityMap -> rarityMap.values().stream())
+                .mapToInt(Integer::intValue)
+                .sum();
+    }
 }

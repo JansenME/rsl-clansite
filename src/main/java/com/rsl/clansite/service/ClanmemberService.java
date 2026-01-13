@@ -227,7 +227,7 @@ public class ClanmemberService {
         newMember.setClanGroup(dto.getClanGroup());
         newMember.setAvatarHash(dto.getAvatarHash());
         newMember.setDiscordRoles(dto.getDiscordRoles() != null ? dto.getDiscordRoles() : List.of());
-        newMember.setChampions(List.of());
+        newMember.setRosterChampionIds(new ArrayList<>());
 
         if (dto.getDiscordId() != null) {
             Optional<VisitorLogEntity> visitorOpt = visitorLogRepository.findByDiscordId(dto.getDiscordId());

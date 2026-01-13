@@ -1,204 +1,371 @@
 <!DOCTYPE HTML>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-	<head>
-		<title>Raid Shadow Legends Fan Site</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
-		<script th:src="@{/styles/js/main.js}"></script>
-	</head>
-	<body>
-		<div id="page-wrapper">
-			<section id="header">
-				<div th:insert="~{inserts/nav :: nav}" class="container">
-				</div>
-			</section>
+<head>
+	<title>Raid Shadow Legends Fan Site</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+	<script th:src="@{/styles/js/main.js}"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 
-			<section id="content">
-				<div class="container">
-					<section>
+	<style>
+		/* --- ROSTER EDIT MODE STYLES --- */
+
+        /* When editing, the whole card becomes a button */
+        body.roster-editing .champion-card {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Disable links while editing so we don't go to details page */
+        body.roster-editing .champion-card a {
+            pointer-events: none;
+        }
+
+        /* Unselected State (While Editing): Dimmed & Grayscale */
+        body.roster-editing .champion-card:not(.selected) {
+            opacity: 0.4;
+            filter: grayscale(100%);
+            transform: scale(0.95);
+        }
+
+        /* Selected State (While Editing): Full Color & Pop */
+        body.roster-editing .champion-card.selected {
+            opacity: 1;
+            filter: none;
+            transform: scale(1.05);
+            z-index: 10;
+            box-shadow: 0 0 20px rgba(39, 174, 96, 0.6); /* Green Glow behind card */
+            border-radius: 8px; /* Smooth corners for the glow */
+        }
+
+        /* Add a checkmark icon overlay on selected cards */
+        body.roster-editing .champion-card.selected::after {
+            content: '\f00c'; /* FontAwesome Check */
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #27ae60;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            z-index: 11;
+        }
+
+        /* Sticky Save Bar */
+        #save-roster-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: flex; /* Flex is toggled via JS */
+            justify-content: center;
+            gap: 20px;
+            align-items: center;
+            transform: translateY(100%); /* Hidden by default */
+            transition: transform 0.3s ease-in-out;
+        }
+
+        #save-roster-bar.visible {
+            transform: translateY(0); /* Slide up */
+        }
+
+        /* High Contrast Cancel Button */
+        .button.cancel-btn {
+            background: transparent !important;
+            border: 1px solid #fff !important;
+            color: #fff !important;
+            box-shadow: none !important;
+        }
+        .button.cancel-btn:hover {
+            background: rgba(255,255,255,0.1) !important;
+        }
+
+        /* Shared Button Style for Uniformity */
+        .button-blue {
+            background: #0c2ccc !important;
+            color: white !important;
+            border: none;
+            box-shadow: none;
+        }
+        .button-blue:hover {
+            background-color: #0a25b0 !important;
+        }
+	</style>
+</head>
+<body>
+<div id="page-wrapper">
+	<section id="header">
+		<div th:insert="~{inserts/nav :: nav}" class="container">
+		</div>
+	</section>
+
+	<section id="content">
+		<div class="container">
+			<section>
+				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+					<div>
 						<p>Amount of champions in database is <span style="font-weight:bold;" th:text="${champions.size()}"></span> out of a total of <span style="font-weight:bold;" th:text="${amountOfChampions}"></span>. Only <span style="font-weight:bold;" th:text="${championsToGo}"></span> to go!</p>
+					</div>
+				</div>
 
-						<div style="margin-bottom: 20px; text-align: center;">
-							<button type="button" onclick="toggleFilter()"
-									style="background: #0c2ccc; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold; display: inline-flex; align-items: center; gap: 10px;">
-								<span id="filter-text">Show Filters & Sorting</span>
-								<span id="filter-arrow">▼</span>
-							</button>
-						</div>
+				<div style="margin-bottom: 20px; text-align: center;">
+					<button type="button" onclick="toggleFilter()"
+							class="button-blue"
+							style="padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold; display: inline-flex; align-items: center; gap: 10px;">
+						<span id="filter-text">Show Filters & Sorting</span>
+						<span id="filter-arrow">▼</span>
+					</button>
+				</div>
 
-						<div id="filter-wrapper"
-							 style="max-height: 0; opacity: 0; overflow: hidden; transition: all 0.5s ease-in-out; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px solid transparent; margin-bottom: 0; padding: 0 20px;">
-							<form action="#"
-								  th:action="@{/champions}"
-								  th:object="${filtersWrapper}"
-								  method="POST"
-								  onsubmit="event.preventDefault(); return false;">
+				<div id="filter-wrapper"
+					 style="max-height: 0; opacity: 0; overflow: hidden; transition: all 0.5s ease-in-out; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px solid transparent; margin-bottom: 0; padding: 0 20px;">
+					<form action="#"
+						  th:action="@{/champions}"
+						  th:object="${filtersWrapper}"
+						  method="POST"
+						  onsubmit="event.preventDefault(); return false;">
 
-								<input type="button" onclick="checkAll(true)" value="Check all">
-								<input type="button" onclick="checkAll(false)" value="Clear all">
+						<input type="button" onclick="checkAll(true)" value="Check all">
+						<input type="button" onclick="checkAll(false)" value="Clear all">
 
-								<label for="champion-sort">Sort by:</label>
-								<select id="champion-sort" onchange="applyChampionFilters();">
-									<option value="name_asc">Name (A-Z)</option>
-									<option value="name_desc">Name (Z-A)</option>
-									<option value="score_desc">Arena Score (High to Low)</option>
-									<option value="score_asc">Arena Score (Low to High)</option>
-								</select>
+						<label for="champion-sort">Sort by:</label>
+						<select id="champion-sort" onchange="applyChampionFilters();">
+							<option value="name_asc">Name (A-Z)</option>
+							<option value="name_desc">Name (Z-A)</option>
+							<option value="score_desc">Arena Score (High to Low)</option>
+							<option value="score_asc">Arena Score (Low to High)</option>
+						</select>
 
-								<label for="champion-search" style="margin-left: 20px;">Search Name:</label>
-								<input type="text"
-									   id="champion-search"
-									   placeholder="Search by Champion name..."
-									   oninput="applyChampionFilters();"
-									   style="width: 250px; padding: 4px;"
-								/>
+						<label for="champion-search" style="margin-left: 20px;">Search Name:</label>
+						<input type="text"
+							   id="champion-search"
+							   placeholder="Search by Champion name..."
+							   oninput="applyChampionFilters();"
+							   style="width: 250px; padding: 4px;"
+						/>
 
-								<table>
-									<thead>
-										<tr>
-											<th>Rarity</th>
-											<th>Type</th>
-											<th>Affinity</th>
-											<th>Faction</th>
-											<th>Alliance</th>
-										</tr>
-									</thead>
-
-									<tbody>
-									<tr>
-										<td style="vertical-align: text-top; padding-top:10px;">
+						<table>
+							<thead>
+							<tr>
+								<th>Rarity</th>
+								<th>Type</th>
+								<th>Affinity</th>
+								<th>Faction</th>
+								<th>Alliance</th>
+							</tr>
+							</thead>
+							<tbody>
+							<tr>
+								<td style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{rarities}">
-                                        <input type="checkbox"
-											   class="filter-checkbox filter-rarity"
-											   onchange="applyChampionFilters()"
-											   th:data-filter-name="${item.getName()}"
-											   th:field="*{rarities[__${stat.index}__].value}" />
+                                        <input type="checkbox" class="filter-checkbox filter-rarity" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{rarities[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
                                         <input type="hidden" th:field="*{rarities[__${stat.index}__].name}" />
                                      </span>
-										</td>
-
-										<td style="vertical-align: text-top; padding-top:10px;">
+								</td>
+								<td style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{types}">
-                                        <input type="checkbox"
-											   class="filter-checkbox filter-type"
-											   onchange="applyChampionFilters()"
-											   th:data-filter-name="${item.getName()}"
-											   th:field="*{types[__${stat.index}__].value}" />
+                                        <input type="checkbox" class="filter-checkbox filter-type" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{types[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
                                         <input type="hidden" th:field="*{types[__${stat.index}__].name}" />
                                      </span>
-										</td>
-
-										<td style="vertical-align: text-top; padding-top:10px;">
+								</td>
+								<td style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{affinities}">
-                                        <input type="checkbox"
-											   class="filter-checkbox filter-affinity"
-											   onchange="applyChampionFilters()"
-											   th:data-filter-name="${item.getName()}"
-											   th:field="*{affinities[__${stat.index}__].value}" />
+                                        <input type="checkbox" class="filter-checkbox filter-affinity" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{affinities[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
                                         <input type="hidden" th:field="*{affinities[__${stat.index}__].name}" />
                                      </span>
-										</td>
-
-										<td style="vertical-align: text-top; padding-top:10px;">
+								</td>
+								<td style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{factions}">
-                                        <input type="checkbox"
-											   class="filter-checkbox filter-faction"
-											   onchange="applyChampionFilters()"
-											   th:data-filter-name="${item.getName()}"
-											   th:field="*{factions[__${stat.index}__].value}" />
+                                        <input type="checkbox" class="filter-checkbox filter-faction" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{factions[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
                                         <input type="hidden" th:field="*{factions[__${stat.index}__].name}" />
                                      </span>
-										</td>
-
-										<td style="vertical-align: text-top; padding-top:10px;">
+								</td>
+								<td style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{alliances}">
-                                        <input type="checkbox"
-											   class="filter-checkbox filter-alliance"
-											   onchange="applyChampionFilters()"
-											   th:data-filter-name="${item.getName()}"
-											   th:field="*{alliances[__${stat.index}__].value}" />
+                                        <input type="checkbox" class="filter-checkbox filter-alliance" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{alliances[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
                                         <input type="hidden" th:field="*{alliances[__${stat.index}__].name}" />
                                      </span>
-										</td>
-									</tr>
-									</tbody>
-								</table>
-							</form>
-						</div>
-					</section>
-
-					<section>
-						<div sec:authorize="hasRole('OWNER')"
-							 style="text-align: left; margin-bottom: 20px;">
-							<a th:href="@{/champions/new}"
-							   style="display: inline-block; background: #0c2ccc; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-								+ Add new Champion
-							</a>
-
-							<a th:href="@{/admin/scraper}"
-							   style="display: inline-block; background: #0c2ccc; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;"
-							   onclick="showLoading('Loading Dashboard...')">
-								Scrape Factions
-							</a>
-						</div>
-
-						<div id="champion-grid-container">
-							<div class="champion-card card-hidden"
-								 th:each="champion : ${champions}"
-								 th:data-rarity="${champion.rarity != null ? champion.rarity.getName() : ''}"
-								 th:data-type="${champion.type != null ? champion.type.getName() : ''}"
-								 th:data-affinity="${champion.affinity != null ? champion.affinity.getName() : ''}"
-								 th:data-faction="${champion.faction != null ? champion.faction.getName() : ''}"
-								 th:data-alliance="${champion.faction != null and champion.faction.alliance != null ? champion.faction.alliance.getName() : ''}"
-								 th:data-name="${champion.name}"
-								 th:data-score="${champion.arenaScore}">
-
-								<a th:href="@{/champions/{id}(id=${champion.id})}" style="text-decoration: none; border-bottom: none;">
-									<img th:src="${champion.imagename != null and !#strings.isEmpty(champion.imagename)} ? @{/images/champion-cards/{name}(name=${champion.imagename})} : @{/images/champion-cards/placeholder.png}"
-										 alt="Champion Image"
-										 style="width:140px;"
-										 class="champion-portrait"
-										 th:classappend="${champion.rarity != null} ? 'rarity-border-' + ${#strings.toLowerCase(champion.rarity)} : ''"
-										 loading="lazy"
-										 decoding="async" />
-								</a>
-								<div class="champion-rating-placeholder"></div>
-								<p class="champion-name" th:text="${champion.name}"></p>
-							</div>
-						</div>
-					</section>
+								</td>
+							</tr>
+							</tbody>
+						</table>
+					</form>
 				</div>
 			</section>
 
-			<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
-			</div>
+			<section>
+				<div style="text-align: left; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+
+					<div sec:authorize="isAuthenticated()">
+						<button type="button"
+								id="roster-toggle-btn"
+								class="button small button-blue"
+								style="display: inline-block; background: #0c2ccc; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;"
+								onclick="toggleRosterMode()">
+							<i class="fas fa-edit"></i> Edit Personal Roster
+						</button>
+					</div>
+
+					<th:block sec:authorize="hasRole('OWNER')">
+						<a th:href="@{/champions/new}"
+						   class="button small button-blue"
+						   style="display: inline-block; background: #0c2ccc; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+							+ Add new Champion
+						</a>
+
+						<a th:href="@{/admin/scraper}"
+						   class="button small button-blue"
+						   style="display: inline-block; background: #0c2ccc; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;"
+						   onclick="showLoading('Loading Dashboard...')">
+							Scrape Factions
+						</a>
+					</th:block>
+				</div>
+
+				<div id="champion-grid-container">
+					<div class="champion-card card-hidden"
+						 th:each="champion : ${champions}"
+						 th:id="'card-' + ${champion.id}"
+						 th:classappend="${ownedChampionIds != null and #lists.contains(ownedChampionIds, champion.id)} ? 'selected' : ''"
+						 th:data-id="${champion.id}"
+						 th:data-rarity="${champion.rarity != null ? champion.rarity.getName() : ''}"
+						 th:data-type="${champion.type != null ? champion.type.getName() : ''}"
+						 th:data-affinity="${champion.affinity != null ? champion.affinity.getName() : ''}"
+						 th:data-faction="${champion.faction != null ? champion.faction.getName() : ''}"
+						 th:data-alliance="${champion.faction != null and champion.faction.alliance != null ? champion.faction.alliance.getName() : ''}"
+						 th:data-name="${champion.name}"
+						 th:data-score="${champion.arenaScore}"
+						 onclick="handleCardClick(this.getAttribute('data-id'))">
+
+						<a th:href="@{/champions/{id}(id=${champion.id})}" style="text-decoration: none; border-bottom: none;">
+							<img th:src="${champion.imagename != null and !#strings.isEmpty(champion.imagename)} ? @{/images/champion-cards/{name}(name=${champion.imagename})} : @{/images/champion-cards/placeholder.png}"
+								 alt="Champion Image"
+								 style="width:140px;"
+								 class="champion-portrait"
+								 th:classappend="${champion.rarity != null} ? 'rarity-border-' + ${#strings.toLowerCase(champion.rarity)} : ''"
+								 loading="lazy"
+								 decoding="async" />
+						</a>
+						<div class="champion-rating-placeholder"></div>
+						<p class="champion-name" th:text="${champion.name}"></p>
+					</div>
+				</div>
+			</section>
 		</div>
-		<button id="backToTopBtn" title="Go to top">
-			↑
-		</button>
+	</section>
 
-		<script>
-			document.addEventListener("DOMContentLoaded", function() {
-                const images = document.querySelectorAll("img.champion-portrait");
-                const placeholder = "/images/champion-cards/placeholder.png";
+	<div id="save-roster-bar" th:if="${isLoggedIn}">
+		<div style="margin-right: 20px;">
+			Editing Roster for:
+			<strong th:text="${activeMember != null ? activeMember.ingameName : 'Unknown'}" style="color: #2ecc71;">User</strong>
+			(<span id="selected-count" th:text="${ownedChampionIds != null ? ownedChampionIds.size() : 0}">0</span> selected)
+		</div>
 
-                images.forEach(function(img) {
-                    img.onerror = function() {
-                        this.onerror = null;
-                        this.src = placeholder;
-                    };
+		<form id="roster-form" method="POST" th:action="@{/champions/roster-save}" onsubmit="prepareRosterSubmission()">
+			<input type="hidden" name="targetMemberId" th:value="${activeMember != null ? activeMember.id.toHexString() : ''}" />
+			<input type="hidden" name="championIds" id="final-champion-ids" />
 
-                    if (img.complete && img.naturalWidth === 0) {
-                        img.src = placeholder;
-                    }
-                });
-            });
-		</script>
-	</body>
+			<button type="button" class="button small cancel-btn" onclick="toggleRosterMode()" style="margin-right: 10px;">Cancel</button>
+			<button type="submit" class="button small button-blue">Save Changes</button>
+		</form>
+	</div>
+
+	<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+	</div>
+</div>
+<button id="backToTopBtn" title="Go to top">
+	↑
+</button>
+
+<script th:inline="javascript">
+	/*[+
+       const initialOwned = [[${ownedChampionIds}]];
+    +]*/
+
+    const selectedChampionIds = new Set(initialOwned || []);
+    let isEditingRoster = false;
+
+    function toggleRosterMode() {
+        isEditingRoster = !isEditingRoster;
+        const body = document.body;
+        const saveBar = document.getElementById('save-roster-bar');
+        const toggleBtn = document.getElementById('roster-toggle-btn');
+
+        if (isEditingRoster) {
+            body.classList.add('roster-editing');
+            saveBar.classList.add('visible');
+            toggleBtn.style.display = 'none';
+        } else {
+            body.classList.remove('roster-editing');
+            saveBar.classList.remove('visible');
+            toggleBtn.style.display = 'inline-block';
+        }
+    }
+
+    function handleCardClick(champId) {
+        if (!isEditingRoster) return;
+
+        console.log("Toggling Selection for:", champId);
+        const card = document.getElementById('card-' + champId);
+
+        if (selectedChampionIds.has(champId)) {
+            selectedChampionIds.delete(champId);
+            card.classList.remove('selected');
+        } else {
+            selectedChampionIds.add(champId);
+            card.classList.add('selected');
+        }
+
+        updateCountDisplay();
+    }
+
+    function updateCountDisplay() {
+        const countSpan = document.getElementById('selected-count');
+        if (countSpan) {
+            countSpan.innerText = selectedChampionIds.size;
+        }
+    }
+
+    function prepareRosterSubmission() {
+        showLoading('Saving Roster...');
+        const input = document.getElementById('final-champion-ids');
+        input.value = Array.from(selectedChampionIds).join(',');
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const images = document.querySelectorAll("img.champion-portrait");
+        const placeholder = "/images/champion-cards/placeholder.png";
+
+        images.forEach(function(img) {
+            img.onerror = function() {
+                this.onerror = null;
+                this.src = placeholder;
+            };
+
+            if (img.complete && img.naturalWidth === 0) {
+                img.src = placeholder;
+            }
+        });
+    });
+</script>
+</body>
 </html>
