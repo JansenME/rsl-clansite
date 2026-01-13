@@ -8,7 +8,12 @@
 </head>
 <body>
     <div th:fragment="copyright">
-        &copy; 2024-<span th:text="${currentYear}"></span> Martijn Jansen. All rights reserved. Version <span th:text="${versionNumber}"></span> (<span th:text="${applicationDate}"></span>)
+        &copy; 2025-<span th:text="${currentYear}"></span> Martijn Jansen. All rights reserved. Version <span th:text="${versionNumber}"></span> (<span th:text="${applicationDate}"></span>)
+
+        <div id="loading-overlay">
+            <div class="spinner"></div>
+            <div id="loading-text">Processing...</div>
+        </div>
     </div>
 </body>
 </html>

@@ -98,7 +98,9 @@
 
                                     <form th:if="${!row.isComplete() and row.isUpdateAvailable()}"
                                           method="post"
-                                          th:action="@{/admin/scraper/faction/{name}/execute(name=${#strings.replace(row.faction.name, ' ', '-')})}">
+                                          th:action="@{/admin/scraper/faction/{name}/execute(name=${#strings.replace(row.faction.name, ' ', '-')})}"
+                                          th:data-faction="${row.faction.name}"
+                                          onsubmit="showLoading('Importing ' + this.getAttribute('data-faction') + '...')">
                                         <button type="submit" class="button primary small fit">Check</button>
                                     </form>
 

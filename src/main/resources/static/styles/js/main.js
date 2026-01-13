@@ -395,6 +395,27 @@ function renderNextBatch() {
     console.log(`Shown ${visibleCount} / ${allFilteredCards.length} cards`);
 }
 
+function showLoading(message) {
+    const overlay = document.getElementById('loading-overlay');
+    const text = document.getElementById('loading-text');
+
+    if (overlay) {
+        if (message) {
+            text.innerText = message;
+        } else {
+            text.innerText = "Processing..."; // Default text
+        }
+        overlay.style.display = 'flex'; // Show it
+    }
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.style.display = 'none'; // Hide it
+    }
+}
+
 window.checkAll = (shouldCheck) => {
     const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
 
@@ -404,6 +425,10 @@ window.checkAll = (shouldCheck) => {
 
     applyChampionFilters();
 };
+
+window.addEventListener('pageshow', function(event) {
+    hideLoading();
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
