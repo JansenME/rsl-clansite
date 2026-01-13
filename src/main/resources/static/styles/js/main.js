@@ -225,6 +225,12 @@ function applyChampionFilters() {
     });
 
     allFilteredCards = allPassedCards;
+
+    const countElement = document.getElementById('visible-champion-count');
+        if (countElement) {
+            countElement.innerText = allFilteredCards.length;
+        }
+
     visibleCount = 0;
 
     renderNextBatch();

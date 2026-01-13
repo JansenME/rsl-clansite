@@ -116,16 +116,14 @@
 	<section id="content">
 		<div class="container">
 			<section>
-				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-					<div>
-						<p>Amount of champions in database is <span style="font-weight:bold;" th:text="${champions.size()}"></span> out of a total of <span style="font-weight:bold;" th:text="${amountOfChampions}"></span>. Only <span style="font-weight:bold;" th:text="${championsToGo}"></span> to go!</p>
+				<div style="text-align: center; margin-bottom: 20px;">
+					<div style="font-size: 1.1em; margin-bottom: 15px;">
+						Showing <strong id="visible-champion-count" th:text="${champions.size()}">0</strong> / <strong th:text="${champions.size()}">0</strong> Champions
 					</div>
-				</div>
 
-				<div style="margin-bottom: 20px; text-align: center;">
 					<button type="button" onclick="toggleFilter()"
 							class="button-blue"
-							style="padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold; display: inline-flex; align-items: center; gap: 10px;">
+							style="display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold;">
 						<span id="filter-text">Show Filters & Sorting</span>
 						<span id="filter-arrow">▼</span>
 					</button>
