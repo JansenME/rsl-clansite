@@ -34,7 +34,8 @@
 							<th style="padding: 12px; text-align: left;">Identity</th>
 							<th style="padding: 12px; text-align: left;">In-Game Name</th>
 							<th style="padding: 12px; text-align: left;">Rank</th>
-							<th style="padding: 12px; text-align: left;">Clan</th> <th style="padding: 12px; text-align: left;">Last Online</th>
+							<th style="padding: 12px; text-align: left;">Clan</th>
+							<th style="padding: 12px; text-align: left;">Last Online</th>
 							<th style="padding: 12px; text-align: left;">Status</th>
 						</tr>
 						</thead>
@@ -64,7 +65,13 @@
                                      Clan
                                </span>
 							</td>
-							<td th:text="${#temporals.format(member.lastLogin, 'dd-MM-yyyy HH:mm')}" style="padding: 10px;">Date</td>
+							<td style="padding: 10px;">
+                               <span class="local-time"
+									 th:data-time="${member.lastLogin}"
+									 th:text="${#temporals.format(member.lastLogin, 'dd-MM-yyyy HH:mm')}">
+                                     Date Placeholder
+                               </span>
+							</td>
 							<td style="padding: 10px;">
                                 <span th:if="${member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusMinutes(5))}"
 									  style="color: #27ae60; font-weight: bold;">
@@ -118,7 +125,15 @@
 								</div>
 							</td>
 							<td th:text="${visitor.discordId}" style="padding: 10px; font-family: monospace;">ID</td>
-							<td th:text="${#temporals.format(visitor.lastLogin, 'dd-MM-yyyy HH:mm')}" style="padding: 10px;">Date</td>
+
+							<td style="padding: 10px;">
+                               <span class="local-time"
+									 th:data-time="${visitor.lastLogin}"
+									 th:text="${#temporals.format(visitor.lastLogin, 'dd-MM-yyyy HH:mm')}">
+                                     Date Placeholder
+                               </span>
+							</td>
+
 							<td th:text="${visitor.visitCount}" style="padding: 10px; font-weight: bold;">1</td>
 							<td style="padding: 10px; text-align: center;">
 								<a th:href="@{/clanmembers/add(discordId=${visitor.discordId})}"
@@ -141,5 +156,26 @@
 <button id="backToTopBtn" title="Go to top">
 	↑
 </button>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function() {
+        const timeElements = document.querySelectorAll('.local-time');
+
+        timeElements.forEach(function(el) {
+            const rawTime = el.getAttribute('data-time');
+            if (rawTime) {
+                const date = new Date(rawTime + 'Z');
+
+                el.textContent = date.toLocaleString(undefined, {
+                       year: 'numeric',
+                       month: 'numeric',
+                       day: 'numeric',
+                       hour: '2-digit',
+                       minute: '2-digit'
+                   });
+            }
+        });
+    });
+</script>
 </body>
 </html>
