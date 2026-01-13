@@ -126,36 +126,6 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
     }
 
     @Test
-    @DisplayName("POST /switch - AUTHENTICATED user should switch if they own the account")
-    void switchAccount_AsOwner_ShouldSucceed() throws Exception {
-        String discordId = "user1";
-        ObjectId realId = new ObjectId();
-        String targetMemberId = realId.toHexString();
-
-        // FIX: Mock authorities so filter passes
-        when(clanmemberService.getFreshAuthorities(eq(discordId)))
-                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
-
-        mockMvc.perform(post("/clanmembers/switch")
-                        .with(oauth2User("ROLE_OWNER", discordId))
-                        .with(csrf())
-                        .param("memberId", targetMemberId))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/clanmembers"));
-
-        verify(clanmemberService).switchActiveMember(any(HttpSession.class), any(Authentication.class), eq(targetMemberId));
-    }
-
-    @Test
-    @DisplayName("POST /switch - GUEST should be redirected to Login (302)")
-    void switchAccount_AsGuest_ShouldRedirect() throws Exception {
-        mockMvc.perform(post("/clanmembers/switch")
-                        .with(csrf())
-                        .param("memberId", "anyId"))
-                .andExpect(status().is3xxRedirection());
-    }
-
-    @Test
     @DisplayName("GET /add - ADMIN should access form (200 OK)")
     void addForm_AsAdmin_ShouldSucceed() throws Exception {
         String adminId = "admin-1";

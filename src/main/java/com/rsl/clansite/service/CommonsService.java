@@ -1,7 +1,9 @@
 package com.rsl.clansite.service;
 
 import com.rsl.clansite.model.ClanmemberViewData;
+import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.enums.QuickLink;
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.info.BuildProperties;
@@ -42,6 +44,10 @@ public class CommonsService {
     }
 
     public void fillModel(Model model, Authentication authentication) {
+        fillModel(model, authentication, null);
+    }
+
+    public void fillModel(Model model, Authentication authentication, HttpSession session) {
         model.addAttribute("versionNumber", getAppVersion());
         model.addAttribute("currentYear", String.valueOf(Year.now().getValue()));
         model.addAttribute("applicationDate", getAppBuildDate());
@@ -49,6 +55,11 @@ public class CommonsService {
         if (authentication != null && authentication.isAuthenticated()) {
             ClanmemberViewData viewData = clanmemberService.getUserViewData(authentication);
             model.addAttribute("clanmemberViewData", viewData);
+
+            if (session != null) {
+                ClanmemberEntity activeMember = clanmemberService.getActiveClanmember(session, authentication);
+                model.addAttribute("activeMember", activeMember);
+            }
 
             model.addAttribute("isLoggedIn", true);
             model.addAttribute("quickLinks", getVisibleQuickLinks(authentication));

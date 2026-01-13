@@ -4,6 +4,7 @@ import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.enums.QuickLink;
 import com.rsl.clansite.service.CommonsService;
+import jakarta.servlet.http.HttpSession;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,7 +26,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -42,18 +45,14 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
 
     @BeforeEach
     void setup() {
-        // --- FIX: Teach the Mock CommonsService to actually populate the model ---
         doAnswer(invocation -> {
             Model model = invocation.getArgument(0);
             Authentication auth = invocation.getArgument(1);
 
             if (auth != null && auth.isAuthenticated()) {
-                // 1. Populate the View Data (using the existing Mock ClanmemberService)
                 model.addAttribute("clanmemberViewData", clanmemberService.getUserViewData(auth));
                 model.addAttribute("isLoggedIn", true);
 
-                // 2. Populate the Quick Links (using real logic via a temporary instance)
-                // We pass 'null' for the dependency because 'getVisibleQuickLinks' doesn't use it.
                 CommonsService tempService = new CommonsService(null, null);
                 List<QuickLink> links = tempService.getVisibleQuickLinks(auth);
                 model.addAttribute("quickLinks", links);
@@ -61,7 +60,7 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
                 model.addAttribute("isLoggedIn", false);
             }
             return null;
-        }).when(commonsService).fillModel(any(), any());
+        }).when(commonsService).fillModel(any(), any(), any());
     }
 
     @Test
@@ -71,7 +70,6 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
 
         when(clanmemberService.manageActiveMemberSession(any(), any())).thenReturn(myId);
 
-        // FIX: Return Optional.of(...)
         when(clanmemberService.getFreshAuthorities(eq(myId)))
                 .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
 
@@ -93,7 +91,6 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
 
         String viewerId = "999999";
 
-        // FIX: Return Optional.of(...)
         when(clanmemberService.getFreshAuthorities(eq(viewerId)))
                 .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
 
@@ -116,7 +113,6 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
 
         String guestId = "guest-123";
 
-        // FIX: Return Optional.of(...)
         when(clanmemberService.getFreshAuthorities(eq(guestId)))
                 .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_USER"))));
 
@@ -198,7 +194,26 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(content().string(not(containsString(LINK_LOGIN_HISTORY))))
                 .andExpect(content().string(not(containsString(LINK_DATA_HEALTH))));
 
-        verify(commonsService).fillModel(any(), any());
+        verify(commonsService).fillModel(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("POST /profile/switch - Should call service and redirect to profile root")
+    void switchAccount_ShouldCallServiceAndRedirect() throws Exception {
+        String discordId = "user-switcher";
+        String targetMemberId = "target-member-id";
+
+        when(clanmemberService.getFreshAuthorities(eq(discordId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
+        mockMvc.perform(post("/profile/switch")
+                        .with(oauth2User("ROLE_MEMBER", discordId))
+                        .with(csrf())
+                        .param("memberId", targetMemberId))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/profile"));
+
+        verify(clanmemberService).switchActiveMember(any(HttpSession.class), any(Authentication.class), eq(targetMemberId));
     }
 
     private void setupMockForOwnProfile(String id, String... roles) {
@@ -212,7 +227,6 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toSet());
 
-        // FIX: Return Optional.of(...)
         when(clanmemberService.getFreshAuthorities(eq(id))).thenReturn(Optional.of(authorities));
     }
 }

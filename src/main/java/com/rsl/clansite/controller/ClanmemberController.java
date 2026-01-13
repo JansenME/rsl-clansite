@@ -76,18 +76,6 @@ public class ClanmemberController {
         return "login-history";
     }
 
-    @PostMapping("/switch")
-    @PreAuthorize("isAuthenticated()")
-    public String switchAccount(
-            @RequestParam("memberId") String newActiveMemberId,
-            Authentication authentication,
-            HttpSession session) {
-
-        clanmemberService.switchActiveMember(session, authentication, newActiveMemberId);
-
-        return "redirect:/clanmembers";
-    }
-
     @GetMapping("/add")
     @PreAuthorize("hasRole('ADMIN')")
     public String addClanmemberForm(

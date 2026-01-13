@@ -59,6 +59,32 @@ public class ClanmemberService {
         this.siteAssetService = siteAssetService;
     }
 
+    public ClanmemberEntity getActiveClanmember(HttpSession session, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+
+        String discordId = ((OAuth2User) authentication.getPrincipal()).getAttribute("id");
+        if (discordId == null) return null;
+
+        List<ClanmemberEntity> linkedMembers = getLinkedClanmembers(discordId);
+        if (linkedMembers.isEmpty()) return null;
+
+        String activeId = (String) session.getAttribute("ACTIVE_MEMBER_ID");
+
+        if (activeId != null) {
+            Optional<ClanmemberEntity> activeEntity = linkedMembers.stream()
+                    .filter(m -> m.getId().toHexString().equals(activeId))
+                    .findFirst();
+
+            if (activeEntity.isPresent()) {
+                return activeEntity.get();
+            }
+        }
+
+        return linkedMembers.get(0);
+    }
+
     public String manageActiveMemberSession(HttpSession session, Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
             return null;

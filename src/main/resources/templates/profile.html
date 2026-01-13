@@ -6,6 +6,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
 	<script th:src="@{/styles/js/main.js}"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 </head>
 <body>
 <div id="page-wrapper">
@@ -26,15 +27,15 @@
 						</h2>
 
 						<div sec:authorize="isAuthenticated()">
-							<div style="display: flex; align-items: flex-start; margin-bottom: 0px;">
+							<div style="display: flex; align-items: flex-start; margin-bottom: 20px;">
 
 								<div th:if="${clanmemberViewData != null and clanmemberViewData.discordAvatarUrl != null}" style="margin-right: 15px;">
 									<img th:src="${clanmemberViewData.discordAvatarUrl}"
 										 alt="Discord Avatar"
 										 style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
 								</div>
-								<div style="margin-left: 0; padding-left: 0;"><p style="margin: 0 0 20px 0; padding-left: 0;"><span th:text="${isOwnProfile ? 'Logged in as:' : 'Member:'}">User:</span><br /><strong th:text="${clanmemberViewData != null ? clanmemberViewData.discordUserName : 'User'}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong>
-								</p>
+								<div style="margin-left: 0; padding-left: 0;"><p style="margin: 0 0 10px 0; padding-left: 0;"><span th:text="${isOwnProfile ? 'Logged in as:' : 'Member:'}">User:</span><br /><strong th:text="${clanmemberViewData != null ? clanmemberViewData.discordUserName : 'User'}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong>
+									</p>
 
 									<p style="font-weight: bold; margin-bottom: 5px; margin-left: 0; padding-left: 0;">Roles:</p>
 
@@ -44,6 +45,55 @@
 											<span th:text="${discordUserRole}">Role Name</span>
 										</li>
 									</ul>
+								</div>
+							</div>
+
+							<div th:if="${isOwnProfile and linkedMembers != null and #lists.size(linkedMembers) > 1}"
+								 style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+
+								<h3>Linked Game Accounts</h3><p style="font-size: 0.9em; color: #666; margin-bottom: 1em;">Currently acting as: <strong style="color: #27ae60;" th:text="${activeMember != null ? activeMember.ingameName : 'Unknown'}">Name</strong>
+								</p>
+
+								<div class="table-wrapper">
+									<table class="alt">
+										<thead>
+										<tr>
+											<th>In-Game Name</th>
+											<th>Clan</th>
+											<th>Rank</th>
+											<th style="text-align: center;">Status</th>
+										</tr>
+										</thead>
+										<tbody>
+										<tr th:each="linked : ${linkedMembers}">
+											<td th:text="${linked.ingameName}" style="font-weight: bold;">Name</td>
+											<td>
+                                              <span th:if="${linked.clanGroup != null}"
+													th:text="${linked.clanGroup}"
+													style="background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">T1</span>
+												<span th:if="${linked.clanGroup == null}">-</span>
+											</td>
+											<td th:text="${linked.clanRank}">Soldier</td>
+
+											<td style="text-align: center;">
+												<div th:if="${activeMember != null and linked.id == activeMember.id}">
+                                                  <span style="color: #27ae60; font-weight: bold; font-size: 0.9em;">
+                                                      <i class="fas fa-check-circle"></i> Active
+                                                  </span>
+												</div>
+
+												<div th:if="${activeMember == null or linked.id != activeMember.id}">
+													<form th:action="@{/profile/switch}" method="post" style="margin: 0;">
+														<input type="hidden" name="memberId" th:value="${linked.id}" />
+														<button type="submit" class="button small" style="padding: 0 10px; height: 30px; line-height: 30px;">
+															Switch
+														</button>
+													</form>
+												</div>
+											</td>
+										</tr>
+										</tbody>
+									</table>
 								</div>
 							</div>
 						</div>

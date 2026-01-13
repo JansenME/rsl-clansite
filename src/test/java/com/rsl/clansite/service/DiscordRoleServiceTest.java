@@ -186,25 +186,28 @@ class DiscordRoleServiceTest {
 
         assertHasAuthority("ROLE_COORDINATOR", result);
         assertHasAuthority("ROLE_MEMBER", result);
-        assertEquals(2, result.size());
+        assertHasAuthority("ROLE_USER", result);
+        assertEquals(3, result.size());
     }
 
     @Test
-    @DisplayName("Unknown Roles should return Empty Set")
-    void getAuthorities_UnknownRoles_ShouldBeEmpty() {
+    @DisplayName("Unknown Roles should return ROLE_USER only")
+    void getAuthorities_UnknownRoles_ShouldReturnDefault() {
         List<String> roles = List.of("unknown-1", "unknown-2");
 
         Set<SimpleGrantedAuthority> result = discordRoleService.getAuthoritiesForRoles(roles, "random-user");
 
-        assertTrue(result.isEmpty(), "Should return empty set for unknown roles");
+        assertHasAuthority("ROLE_USER", result);
+        assertEquals(1, result.size());
     }
 
     @Test
-    @DisplayName("Null Role List should return Empty Set (No NPE)")
-    void getAuthorities_NullList_ShouldBeEmpty() {
+    @DisplayName("Null Role List should return ROLE_USER only (No NPE)")
+    void getAuthorities_NullList_ShouldReturnDefault() {
         Set<SimpleGrantedAuthority> result = discordRoleService.getAuthoritiesForRoles(null, "random-user");
 
-        assertTrue(result.isEmpty());
+        assertHasAuthority("ROLE_USER", result);
+        assertEquals(1, result.size());
     }
 
     private void assertHasAuthority(String expectedAuth, Set<SimpleGrantedAuthority> authorities) {
