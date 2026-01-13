@@ -6,14 +6,18 @@ import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -37,6 +41,9 @@ public class DiscordRoleService {
     @Value("${discord.roles.t2-id}")
     @Getter
     private String t2RoleId;
+
+    @Value("${discord.kloep-id}")
+    private String kloepDiscordId;
 
     private final DiscordApiClient discordApiClient;
 
@@ -97,5 +104,38 @@ public class DiscordRoleService {
         });
 
         return sortedList;
+    }
+
+    public Set<SimpleGrantedAuthority> getAuthoritiesForRoles(Collection<String> userDiscordRoles, String userId) {
+        Set<SimpleGrantedAuthority> authorities = new HashSet<>();
+
+        authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+
+        if (userDiscordRoles == null) return authorities;
+
+        if (userDiscordRoles.contains(getClanLeaderRoleId()) ||
+                userDiscordRoles.contains(getDeputyRoleId())) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        }
+
+        if (userDiscordRoles.contains(getSiegeCoordinatorRoleId())) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
+        }
+
+        if (userDiscordRoles.contains(getT1RoleId()) ||
+                userDiscordRoles.contains(getT2RoleId())) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
+        }
+
+        if (kloepDiscordId.equals(userId)) {
+            log.info("Granting ROLE_OWNER to Discord ID: {}", userId);
+            authorities.add(new SimpleGrantedAuthority("ROLE_OWNER"));
+        }
+
+        //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
+        //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
+
+        return authorities;
     }
 }

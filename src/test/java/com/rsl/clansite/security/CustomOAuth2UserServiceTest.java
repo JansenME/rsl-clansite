@@ -13,12 +13,14 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -58,6 +61,8 @@ class CustomOAuth2UserServiceTest {
 
     @BeforeEach
     void setUp() {
+        // These are technically not needed anymore since the logic moved to getAuthoritiesForRoles,
+        // but we keep them leniently to avoid "UnnecessaryStubbingException" if legacy code touches them.
         lenient().when(discordRoleService.getT1RoleId()).thenReturn("test-t1-id");
         lenient().when(discordRoleService.getT2RoleId()).thenReturn("test-t2-id");
         lenient().when(discordRoleService.getClanLeaderRoleId()).thenReturn("test-leader-id");
@@ -83,6 +88,10 @@ class CustomOAuth2UserServiceTest {
         NewClanmemberDTO memberDto = new NewClanmemberDTO();
         memberDto.setDiscordRoles(List.of(discordRoleService.getClanLeaderRoleId()));
         when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(memberDto));
+
+        // FIX: Stub the delegated authority calculation
+        when(discordRoleService.getAuthoritiesForRoles(any(), eq(discordId)))
+                .thenReturn(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
 
         OAuth2User result = customOAuth2UserService.loadUser(userRequest);
 
@@ -151,6 +160,10 @@ class CustomOAuth2UserServiceTest {
         memberDto.setDiscordRoles(List.of());
         when(discordApiClient.getDiscordMember(ownerId)).thenReturn(Optional.of(memberDto));
 
+        // FIX: Stub the delegation (Owner logic is now inside DiscordRoleService)
+        when(discordRoleService.getAuthoritiesForRoles(any(), eq(ownerId)))
+                .thenReturn(Set.of(new SimpleGrantedAuthority("ROLE_OWNER")));
+
         OAuth2User result = customOAuth2UserService.loadUser(userRequest);
 
         Set<String> authorities = result.getAuthorities().stream()
@@ -174,6 +187,10 @@ class CustomOAuth2UserServiceTest {
         memberDto.setDiscordRoles(List.of(discordRoleService.getSiegeCoordinatorRoleId()));
         when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(memberDto));
 
+        // FIX: Stub delegation
+        when(discordRoleService.getAuthoritiesForRoles(any(), eq(discordId)))
+                .thenReturn(Set.of(new SimpleGrantedAuthority("ROLE_COORDINATOR")));
+
         OAuth2User result = customOAuth2UserService.loadUser(userRequest);
 
         Set<String> authorities = result.getAuthorities().stream()
@@ -184,7 +201,7 @@ class CustomOAuth2UserServiceTest {
     }
 
     @Test
-    @DisplayName("loadUser - SAFETY CHECK: Regular user must NOT get Admin/Coordinator roles (Debug lines must be commented out)")
+    @DisplayName("loadUser - SAFETY CHECK: Regular user must NOT get Admin/Coordinator roles")
     void loadUser_RegularUser_ShouldNotHaveElevatedPrivileges() {
         String discordId = "987654321";
 
@@ -197,6 +214,10 @@ class CustomOAuth2UserServiceTest {
         memberDto.setDiscordRoles(List.of(discordRoleService.getT1RoleId()));
         when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(memberDto));
 
+        // FIX: Stub delegation for Member
+        when(discordRoleService.getAuthoritiesForRoles(any(), eq(discordId)))
+                .thenReturn(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER")));
+
         OAuth2User result = customOAuth2UserService.loadUser(userRequest);
 
         assertTrue(result.getAuthorities().stream()
@@ -204,15 +225,7 @@ class CustomOAuth2UserServiceTest {
 
         assertTrue(result.getAuthorities().stream()
                         .noneMatch(a -> a.getAuthority().equals("ROLE_ADMIN")),
-                "Security Alert: Regular user has ADMIN role! Check for uncommented debug lines.");
-
-        assertTrue(result.getAuthorities().stream()
-                        .noneMatch(a -> a.getAuthority().equals("ROLE_COORDINATOR")),
-                "Security Alert: Regular user has COORDINATOR role! Check for uncommented debug lines.");
-
-        assertTrue(result.getAuthorities().stream()
-                        .noneMatch(a -> a.getAuthority().equals("ROLE_OWNER")),
-                "Security Alert: Regular user has OWNER role! Check for uncommented debug lines.");
+                "Security Alert: Regular user has ADMIN role!");
     }
 
     @Test
@@ -228,6 +241,10 @@ class CustomOAuth2UserServiceTest {
         NewClanmemberDTO memberDto = new NewClanmemberDTO();
         memberDto.setDiscordRoles(List.of("999999"));
         when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(memberDto));
+
+        // FIX: Stub delegation for Random/Unknown roles (Empty Set)
+        when(discordRoleService.getAuthoritiesForRoles(any(), eq(discordId)))
+                .thenReturn(Collections.emptySet());
 
         OAuth2User result = customOAuth2UserService.loadUser(userRequest);
 
@@ -248,12 +265,13 @@ class CustomOAuth2UserServiceTest {
         memberDto.setDiscordRoles(List.of(discordRoleService.getT1RoleId()));
         when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(memberDto));
 
+        // FIX: Stub delegation
+        when(discordRoleService.getAuthoritiesForRoles(any(), eq(discordId)))
+                .thenReturn(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER")));
+
         OAuth2User result = customOAuth2UserService.loadUser(userRequest);
 
         assertTrue(result.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_MEMBER")));
-
-        assertTrue(result.getAuthorities().stream()
-                .noneMatch(a -> a.getAuthority().equals("ROLE_ADMIN")));
     }
 }

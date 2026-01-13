@@ -12,15 +12,19 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.ui.Model;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -64,27 +68,37 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
     @DisplayName("GET /profile - Should redirect to /profile/{id} if session user is linked")
     void profile_RedirectsToId() throws Exception {
         String myId = "676000000000000000000001";
+
         when(clanmemberService.manageActiveMemberSession(any(), any())).thenReturn(myId);
 
+        // FIX: Return Optional.of(...)
+        when(clanmemberService.getFreshAuthorities(eq(myId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
         mockMvc.perform(get("/profile")
-                        .with(oauth2Login()))
+                        .with(oauth2User("ROLE_MEMBER", myId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/profile/" + myId));
     }
 
     @Test
-    @DisplayName("GET /profile/{id} - Viewing OTHER profile allowed for MEMBER, but hides Quick Links")
+    @DisplayName("GET /profile/{id} - Viewing OTHER profile allowed for MEMBER")
     void viewProfile_Other_AsMember_Allowed() throws Exception {
-        String otherId = "676000000000000000000002";
-        ClanmemberEntity other = new ClanmemberEntity();
-        other.setId(new ObjectId(otherId));
+        String targetId = "676000000000000000000002";
+        ClanmemberEntity target = new ClanmemberEntity();
+        target.setId(new ObjectId(targetId));
 
-        when(clanmemberService.getMemberById(otherId)).thenReturn(other);
-        when(clanmemberService.getLinkedClanmembers(any())).thenReturn(List.of());
-        when(clanmemberService.getViewDataForMember(other)).thenReturn(new ClanmemberViewData("Other", List.of(), null));
+        when(clanmemberService.getMemberById(targetId)).thenReturn(target);
+        when(clanmemberService.getViewDataForMember(target)).thenReturn(new ClanmemberViewData("Other", List.of(), null));
 
-        mockMvc.perform(get("/profile/" + otherId)
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+        String viewerId = "999999";
+
+        // FIX: Return Optional.of(...)
+        when(clanmemberService.getFreshAuthorities(eq(viewerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
+        mockMvc.perform(get("/profile/" + targetId)
+                        .with(oauth2User("ROLE_MEMBER", viewerId)))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("isOwnProfile", false))
                 .andExpect(content().string(not(containsString(QUICK_LINKS_HEADER))))
@@ -94,15 +108,20 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /profile/{id} - Viewing OTHER profile DENIED for non-members (Redirects to 403)")
     void viewProfile_Other_AsGuest_Denied() throws Exception {
-        String otherId = "676000000000000000000002";
-        ClanmemberEntity other = new ClanmemberEntity();
-        other.setId(new ObjectId(otherId));
+        String targetId = "676000000000000000000002";
+        ClanmemberEntity target = new ClanmemberEntity();
+        target.setId(new ObjectId(targetId));
 
-        when(clanmemberService.getMemberById(otherId)).thenReturn(other);
-        when(clanmemberService.getLinkedClanmembers(any())).thenReturn(List.of());
+        when(clanmemberService.getMemberById(targetId)).thenReturn(target);
 
-        mockMvc.perform(get("/profile/" + otherId)
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+        String guestId = "guest-123";
+
+        // FIX: Return Optional.of(...)
+        when(clanmemberService.getFreshAuthorities(eq(guestId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_USER"))));
+
+        mockMvc.perform(get("/profile/" + targetId)
+                        .with(oauth2User("ROLE_USER", guestId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
@@ -111,10 +130,10 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
     @DisplayName("GET /profile/{id} - OWNER should see Quick Links, Data Health, Login History, and ALL buttons")
     void viewProfile_AsOwner_ShouldSeeAll() throws Exception {
         String myId = "676000000000000000000001";
-        setupMockForOwnProfile(myId);
+        setupMockForOwnProfile(myId, "ROLE_OWNER");
 
         mockMvc.perform(get("/profile/" + myId)
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
+                        .with(oauth2User("ROLE_OWNER", myId)))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("isOwnProfile", true))
                 .andExpect(content().string(containsString(QUICK_LINKS_HEADER)))
@@ -122,7 +141,7 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(content().string(containsString(LINK_AUDIT_LOG)))
                 .andExpect(content().string(containsString(LINK_ADD_CHAMPION)))
                 .andExpect(content().string(containsString(LINK_LOGIN_HISTORY)))
-                .andExpect(content().string(containsString(LINK_DATA_HEALTH))) // <--- ASSERT VISIBLE
+                .andExpect(content().string(containsString(LINK_DATA_HEALTH)))
                 .andExpect(content().string(containsString(LOGOUT_BUTTON)));
     }
 
@@ -130,16 +149,16 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
     @DisplayName("GET /profile/{id} - ADMIN should see Quick Links, Data Health, Login History, but NOT Champion button")
     void viewProfile_AsAdmin_ShouldSeeAdminLinksOnly() throws Exception {
         String myId = "676000000000000000000001";
-        setupMockForOwnProfile(myId);
+        setupMockForOwnProfile(myId, "ROLE_ADMIN");
 
         mockMvc.perform(get("/profile/" + myId)
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                        .with(oauth2User("ROLE_ADMIN", myId)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(QUICK_LINKS_HEADER)))
                 .andExpect(content().string(containsString(LINK_ADD_CLANMEMBER)))
                 .andExpect(content().string(containsString(LINK_AUDIT_LOG)))
                 .andExpect(content().string(containsString(LINK_LOGIN_HISTORY)))
-                .andExpect(content().string(containsString(LINK_DATA_HEALTH))) // <--- ASSERT VISIBLE
+                .andExpect(content().string(containsString(LINK_DATA_HEALTH)))
                 .andExpect(content().string(not(containsString(LINK_ADD_CHAMPION))))
                 .andExpect(content().string(containsString(LOGOUT_BUTTON)));
     }
@@ -148,17 +167,17 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
     @DisplayName("GET /profile/{id} - COORDINATOR should NOT see Data Health")
     void viewProfile_AsCoordinator_ShouldSeeLogoutOnly() throws Exception {
         String myId = "676000000000000000000001";
-        setupMockForOwnProfile(myId);
+        setupMockForOwnProfile(myId, "ROLE_COORDINATOR");
 
         mockMvc.perform(get("/profile/" + myId)
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_COORDINATOR"))))
+                        .with(oauth2User("ROLE_COORDINATOR", myId)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(QUICK_LINKS_HEADER)))
                 .andExpect(content().string(not(containsString(LINK_ADD_CLANMEMBER))))
                 .andExpect(content().string(not(containsString(LINK_AUDIT_LOG))))
                 .andExpect(content().string(not(containsString(LINK_ADD_CHAMPION))))
                 .andExpect(content().string(not(containsString(LINK_LOGIN_HISTORY))))
-                .andExpect(content().string(not(containsString(LINK_DATA_HEALTH)))) // <--- ASSERT HIDDEN
+                .andExpect(content().string(not(containsString(LINK_DATA_HEALTH))))
                 .andExpect(content().string(containsString(LOGOUT_BUTTON)));
     }
 
@@ -166,10 +185,10 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
     @DisplayName("GET /profile/{id} - MEMBER should NOT see Data Health")
     void viewProfile_AsMember_ShouldSeeLogoutOnly() throws Exception {
         String myId = "676000000000000000000001";
-        setupMockForOwnProfile(myId);
+        setupMockForOwnProfile(myId, "ROLE_MEMBER");
 
         mockMvc.perform(get("/profile/" + myId)
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                        .with(oauth2User("ROLE_MEMBER", myId)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(QUICK_LINKS_HEADER)))
                 .andExpect(content().string(containsString(LOGOUT_BUTTON)))
@@ -177,16 +196,23 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(content().string(not(containsString(LINK_AUDIT_LOG))))
                 .andExpect(content().string(not(containsString(LINK_ADD_CHAMPION))))
                 .andExpect(content().string(not(containsString(LINK_LOGIN_HISTORY))))
-                .andExpect(content().string(not(containsString(LINK_DATA_HEALTH)))); // <--- ASSERT HIDDEN
+                .andExpect(content().string(not(containsString(LINK_DATA_HEALTH))));
 
         verify(commonsService).fillModel(any(), any());
     }
 
-    private void setupMockForOwnProfile(String id) {
+    private void setupMockForOwnProfile(String id, String... roles) {
         ClanmemberEntity me = new ClanmemberEntity();
         me.setId(new ObjectId(id));
         when(clanmemberService.getMemberById(id)).thenReturn(me);
         when(clanmemberService.getLinkedClanmembers(any())).thenReturn(List.of(me));
         when(clanmemberService.getViewDataForMember(me)).thenReturn(new ClanmemberViewData("Me", List.of(), null));
+
+        Set<SimpleGrantedAuthority> authorities = Arrays.stream(roles)
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toSet());
+
+        // FIX: Return Optional.of(...)
+        when(clanmemberService.getFreshAuthorities(eq(id))).thenReturn(Optional.of(authorities));
     }
 }

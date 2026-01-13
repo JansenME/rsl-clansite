@@ -12,6 +12,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
@@ -26,7 +28,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
@@ -40,6 +41,8 @@ class ScraperControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("Dashboard - Should prepare AllianceGroups correctly")
     void showDashboard_ShouldPrepareRows() throws Exception {
+        String ownerId = "owner-dashboard";
+
         ChampionEntity existingChamp = new ChampionEntity();
         existingChamp.setFaction(Faction.BANNER_LORDS);
         existingChamp.setRarity(Rarity.LEGENDARY);
@@ -51,15 +54,17 @@ class ScraperControllerIntegrationTest extends BaseControllerTest {
         when(scraperService.getOnlineCounts(Faction.BANNER_LORDS))
                 .thenReturn(Map.of(Rarity.LEGENDARY, 2));
 
+        // FIX: Mock authorities for Filter
+        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
+
         mockMvc.perform(get("/admin/scraper")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
+                        .with(oauth2User("ROLE_OWNER", ownerId))) // Use Helper
                 .andExpect(status().isOk())
                 .andExpect(view().name("scraper-dashboard"))
 
                 .andExpect(model().attributeExists("allianceGroups"))
-
                 .andExpect(model().attribute("allianceGroups", hasSize(4)))
-
                 .andExpect(model().attribute("allianceGroups", hasItem(
                         allOf(
                                 hasProperty("alliance", is(Alliance.TELERIAN_LEAGUE)),
@@ -76,30 +81,40 @@ class ScraperControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("Action - Import Execute - Should call service and redirect")
     void executeScrape_ShouldImportAndRedirect() throws Exception {
-        // 1. Fix Class Name and Constructor (Name, URL, Image)
+        String ownerId = "owner-execute";
+
+        // 1. Fix Class Name and Constructor
         HellHadesScraperService.ScrapingContext context =
                 new HellHadesScraperService.ScrapingContext("Test Champion", "http://test-url.com", "http://test-img.png", "520");
 
-        // 2. Fix Method Name and Arguments (Faction, forceRefresh=false)
         when(scraperService.scanForChampions(Faction.BANNER_LORDS, false))
                 .thenReturn(Collections.singletonList(context));
 
+        // FIX: Mock authorities for Filter
+        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
+
         mockMvc.perform(post("/admin/scraper/faction/Banner-Lords/execute")
                         .with(csrf())
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
+                        .with(oauth2User("ROLE_OWNER", ownerId))) // Use Helper
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/scraper")) // Default redirect when no Referer
+                .andExpect(redirectedUrl("/admin/scraper"))
                 .andExpect(flash().attribute("message", containsString("Successfully imported")));
 
-        // 3. Verify the import call uses the correct list type
         verify(scraperService).importChampions(anyList(), eq(Faction.BANNER_LORDS), any());
     }
 
     @Test
     @DisplayName("Security - Access Denied for Non-Owners")
     void showDashboard_WhenNotOwner_ShouldReturnForbidden() throws Exception {
+        String adminId = "admin-user";
+
+        // FIX: User exists, but is NOT Owner -> 403 (instead of Kick)
+        when(clanmemberService.getFreshAuthorities(eq(adminId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
         mockMvc.perform(get("/admin/scraper")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                        .with(oauth2User("ROLE_ADMIN", adminId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
@@ -107,8 +122,14 @@ class ScraperControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("Security - Dashboard Access Denied for MEMBER")
     void showDashboard_WhenMember_ShouldReturnForbidden() throws Exception {
+        String memberId = "member-user";
+
+        // FIX: User exists, but is Member -> 403
+        when(clanmemberService.getFreshAuthorities(eq(memberId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
         mockMvc.perform(get("/admin/scraper")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                        .with(oauth2User("ROLE_MEMBER", memberId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
@@ -116,9 +137,15 @@ class ScraperControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("Security - Import Execution Denied for MEMBER")
     void executeScrape_WhenMember_ShouldReturnForbidden() throws Exception {
+        String memberId = "member-execute";
+
+        // FIX: User exists -> 403
+        when(clanmemberService.getFreshAuthorities(eq(memberId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
         mockMvc.perform(post("/admin/scraper/faction/Banner-Lords/execute")
                         .with(csrf())
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                        .with(oauth2User("ROLE_MEMBER", memberId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
 

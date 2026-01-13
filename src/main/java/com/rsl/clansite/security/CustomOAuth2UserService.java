@@ -62,47 +62,18 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         clanmemberService.linkClanmember(userId, globalName, avatarHash, roleList);
 
-        Set<SimpleGrantedAuthority> authorities = mapRolesToAuthorities(userDiscordRoles);
-
-        if (kloepDiscordId.equals(userId)) {
-            log.info("Granting ROLE_OWNER to Discord ID: {}", userId);
-            authorities.add(new SimpleGrantedAuthority("ROLE_OWNER"));
-        }
+        Set<SimpleGrantedAuthority> authorities = discordRoleService.getAuthoritiesForRoles(userDiscordRoles, userId);
 
         Map<String, Object> updatedAttributes = new HashMap<>(oauth2User.getAttributes());
         updatedAttributes.put("rawDiscordRoleIds", userDiscordRoles);
 
         log.info("Logged in user {} has the following roles: {}", globalName, authorities);
 
-        //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
-        //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
-        //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
-
         return new DefaultOAuth2User(
                 authorities,
                 updatedAttributes,
                 "id"
         );
-    }
-
-    private Set<SimpleGrantedAuthority> mapRolesToAuthorities(Set<String> userDiscordRoles) {
-        Set<SimpleGrantedAuthority> authorities = new HashSet<>();
-
-        if (userDiscordRoles.contains(discordRoleService.getClanLeaderRoleId()) ||
-                userDiscordRoles.contains(discordRoleService.getDeputyRoleId())) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
-        }
-
-        if (userDiscordRoles.contains(discordRoleService.getSiegeCoordinatorRoleId())) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
-        }
-
-        if (userDiscordRoles.contains(discordRoleService.getT1RoleId()) ||
-                userDiscordRoles.contains(discordRoleService.getT2RoleId())) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
-        }
-
-        return authorities;
     }
 
     protected OAuth2User fetchUserInfo(OAuth2UserRequest userRequest) {

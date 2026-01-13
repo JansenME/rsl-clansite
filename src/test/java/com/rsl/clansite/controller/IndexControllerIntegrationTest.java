@@ -4,11 +4,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+import java.util.Optional;
+import java.util.Set;
+
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -33,8 +37,14 @@ class IndexControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /index - MEMBER should access homepage but NOT see Login Button")
     void index_AsMember_ShouldSucceed_NoLoginButton() throws Exception {
+        String memberId = "member-index";
+
+        // FIX: Mock authorities for Filter
+        when(clanmemberService.getFreshAuthorities(eq(memberId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
         mockMvc.perform(get("/index")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                        .with(oauth2User("ROLE_MEMBER", memberId))) // Use Helper
                 .andExpect(status().isOk())
                 .andExpect(view().name("index"))
                 .andExpect(content().string(not(containsString(LOGIN_LINK))));
@@ -60,8 +70,14 @@ class IndexControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /login - AUTHENTICATED user should be redirected to Profile (302)")
     void login_AsAuthenticatedUser_ShouldRedirect() throws Exception {
+        String memberId = "member-login-redirect";
+
+        // FIX: Mock authorities for Filter
+        when(clanmemberService.getFreshAuthorities(eq(memberId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
         mockMvc.perform(get("/login")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                        .with(oauth2User("ROLE_MEMBER", memberId))) // Use Helper
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/profile"));
     }

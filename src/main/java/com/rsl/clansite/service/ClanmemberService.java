@@ -19,6 +19,7 @@ import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,9 +27,11 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -112,7 +115,7 @@ public class ClanmemberService {
         }
     }
 
-    @Scheduled(cron = "0 0 * * * *")
+    @Scheduled(cron = "0 */5 * * * *")
     @Transactional
     public void updateAllClanmemberDiscordRoles() {
         log.info("Starting scheduled Discord role verification job.");
@@ -439,6 +442,15 @@ public class ClanmemberService {
                 visitorLogRepository.save(visitor);
             }
         }
+    }
+
+    public Optional<Set<SimpleGrantedAuthority>> getFreshAuthorities(String discordId) {
+        return clanmemberRepository.findAllByDiscordId(discordId).stream()
+                .findFirst()
+                .map(member -> {
+                    Set<String> dbRoles = new HashSet<>(member.getDiscordRoles());
+                    return discordRoleService.getAuthoritiesForRoles(dbRoles, discordId);
+                });
     }
 
     private boolean shouldUpdateTimestamp(LocalDateTime lastDate) {

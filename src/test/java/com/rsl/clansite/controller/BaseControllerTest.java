@@ -14,17 +14,20 @@ import com.rsl.clansite.service.CommonsService;
 import com.rsl.clansite.service.DiscordRoleService;
 import com.rsl.clansite.service.HellHadesScraperService;
 import com.rsl.clansite.service.TargetService;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.data.mongodb.core.index.IndexOperations;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.session.MapSessionRepository;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
@@ -32,11 +35,17 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Collections;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -93,6 +102,40 @@ public abstract class BaseControllerTest {
 
     @MockitoBean
     protected CustomAuthenticationFailureHandler customAuthenticationFailureHandler;
+
+    @BeforeEach
+    void setup() {
+        visitorLogRepository.deleteAll();
+        clanmemberRepository.deleteAll();
+
+        // SMART MOCK: Mirror the Security Context
+        when(clanmemberService.getFreshAuthorities(any())).thenAnswer(invocation -> {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+            if (auth != null) {
+                // 1. Convert authorities
+                Set<SimpleGrantedAuthority> auths = auth.getAuthorities().stream()
+                        .map(a -> new SimpleGrantedAuthority(a.getAuthority()))
+                        .collect(Collectors.toSet());
+
+                // 2. WRAP IN OPTIONAL (The Fix)
+                return Optional.of(auths);
+            }
+
+            // 3. RETURN OPTIONAL.EMPTY (Instead of Collections.emptySet())
+            return Optional.empty();
+        });
+    }
+
+    protected static SecurityMockMvcRequestPostProcessors.OAuth2LoginRequestPostProcessor oauth2User(String role, String id) {
+        return oauth2Login()
+                .attributes(attrs -> attrs.put("id", id))
+                .authorities(new SimpleGrantedAuthority(role));
+    }
+
+    protected static SecurityMockMvcRequestPostProcessors.OAuth2LoginRequestPostProcessor oauth2User(String role) {
+        return oauth2User(role, "test-user-id");
+    }
 
     @TestConfiguration
     static class SharedTestConfig {

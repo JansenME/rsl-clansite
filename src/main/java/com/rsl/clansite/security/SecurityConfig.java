@@ -1,7 +1,6 @@
 package com.rsl.clansite.security;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
@@ -13,6 +12,7 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.logout.CookieClearingLogoutHandler;
 import org.springframework.session.data.mongo.config.annotation.web.http.EnableMongoHttpSession;
@@ -27,13 +27,16 @@ import org.springframework.session.web.http.DefaultCookieSerializer;
 public class SecurityConfig {
     private static final int SESSION_TIMEOUT_SECONDS = 31536000;
 
-    @Autowired
-    private OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService;
-
+    private final OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService;
     private final CustomAuthenticationFailureHandler failureHandler;
+    private final SessionSecurityFilter sessionSecurityFilter;
 
-    public SecurityConfig(CustomAuthenticationFailureHandler failureHandler) {
+    public SecurityConfig(OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService,
+                          CustomAuthenticationFailureHandler failureHandler,
+                          SessionSecurityFilter sessionSecurityFilter) {
+        this.customOAuth2UserService = customOAuth2UserService;
         this.failureHandler = failureHandler;
+        this.sessionSecurityFilter = sessionSecurityFilter;
     }
 
     @Bean
@@ -65,6 +68,7 @@ public class SecurityConfig {
                         .requestMatchers("/profile", "/champions/**", "/clanmembers/**").authenticated()
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(sessionSecurityFilter, AuthorizationFilter.class)
                 .exceptionHandling(exception -> exception
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.sendRedirect("/error/403");

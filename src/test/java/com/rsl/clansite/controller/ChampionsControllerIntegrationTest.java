@@ -9,12 +9,14 @@ import com.rsl.clansite.model.enums.Affinity;
 import com.rsl.clansite.model.enums.Faction;
 import com.rsl.clansite.model.enums.Rarity;
 import com.rsl.clansite.model.enums.Type;
-import com.rsl.clansite.repository.ChampionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import java.util.Optional;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasProperty;
@@ -26,7 +28,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -43,8 +44,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /champions - OWNER should see 'Add new Champion' button")
     void viewChampions_AsOwner_ShouldShowAddButton() throws Exception {
+        String ownerId = "owner-view";
+
+        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
+
         mockMvc.perform(get("/champions")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
+                        .with(oauth2User("ROLE_OWNER", ownerId)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("champions"))
                 .andExpect(content().string(containsString("href=\"/champions/new\"")));
@@ -53,8 +59,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /champions - ADMIN should NOT see 'Add new Champion' button")
     void viewChampions_AsAdmin_ShouldNotShowAddButton() throws Exception {
+        String adminId = "admin-view";
+
+        when(clanmemberService.getFreshAuthorities(eq(adminId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
         mockMvc.perform(get("/champions")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                        .with(oauth2User("ROLE_ADMIN", adminId)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("champions"))
                 .andExpect(content().string(not(containsString("href=\"/champions/new\""))));
@@ -63,8 +74,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /champions - COORDINATOR should NOT see 'Add new Champion' button")
     void viewChampions_AsCoordinator_ShouldNotShowAddButton() throws Exception {
+        String coordId = "coord-view";
+
+        when(clanmemberService.getFreshAuthorities(eq(coordId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_COORDINATOR"))));
+
         mockMvc.perform(get("/champions")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_COORDINATOR"))))
+                        .with(oauth2User("ROLE_COORDINATOR", coordId)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(not(containsString("href=\"/champions/new\""))));
     }
@@ -72,8 +88,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /champions - MEMBER should NOT see 'Add new Champion' button")
     void viewChampions_AsMember_ShouldNotShowAddButton() throws Exception {
+        String memberId = "member-view";
+
+        when(clanmemberService.getFreshAuthorities(eq(memberId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
         mockMvc.perform(get("/champions")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                        .with(oauth2User("ROLE_MEMBER", memberId)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(not(containsString("href=\"/champions/new\""))));
     }
@@ -90,8 +111,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /new - OWNER should access the form (200 OK)")
     void newChampionForm_AsOwner_ShouldSucceed() throws Exception {
+        String ownerId = "owner-new";
+
+        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
+
         mockMvc.perform(get("/champions/new")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
+                        .with(oauth2User("ROLE_OWNER", ownerId)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("champion-entry"))
                 .andExpect(model().attributeExists("newChampion"));
@@ -100,8 +126,14 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /new - ADMIN should be denied (403 Forbidden)")
     void newChampionForm_AsAdmin_ShouldFail() throws Exception {
+        String adminId = "admin-new";
+
+        // User exists -> 403
+        when(clanmemberService.getFreshAuthorities(eq(adminId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
         mockMvc.perform(get("/champions/new")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                        .with(oauth2User("ROLE_ADMIN", adminId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
@@ -109,8 +141,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /new - COORDINATOR should be denied (403 Forbidden)")
     void newChampionForm_AsCoordinator_ShouldFail() throws Exception {
+        String coordId = "coord-new";
+
+        when(clanmemberService.getFreshAuthorities(eq(coordId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_COORDINATOR"))));
+
         mockMvc.perform(get("/champions/new")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_COORDINATOR"))))
+                        .with(oauth2User("ROLE_COORDINATOR", coordId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
@@ -118,8 +155,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /new - MEMBER should be denied (403 Forbidden)")
     void newChampionForm_AsMember_ShouldFail() throws Exception {
+        String memberId = "member-new";
+
+        when(clanmemberService.getFreshAuthorities(eq(memberId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
         mockMvc.perform(get("/champions/new")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                        .with(oauth2User("ROLE_MEMBER", memberId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
@@ -134,8 +176,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("POST /save - OWNER should save and redirect to list (302 Found)")
     void saveChampion_AsOwner_ShouldSaveAndRedirect() throws Exception {
+        String ownerId = "owner-save";
+
+        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
+
         mockMvc.perform(post("/champions/save")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER")))
+                        .with(oauth2User("ROLE_OWNER", ownerId))
                         .with(csrf())
                         .param("name", "TestChamp")
                         .param("rarity", "LEGENDARY")
@@ -161,8 +208,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("POST /save - ADMIN should be denied (403 Forbidden)")
     void saveChampion_AsAdmin_ShouldFail() throws Exception {
+        String adminId = "admin-save";
+
+        when(clanmemberService.getFreshAuthorities(eq(adminId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
         mockMvc.perform(post("/champions/save")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(oauth2User("ROLE_ADMIN", adminId))
                         .with(csrf())
                         .param("name", "TestChamp")
                         .param("percentageAura", "false"))
@@ -173,8 +225,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("POST /save - COORDINATOR should be denied (403 Forbidden)")
     void saveChampion_AsCoordinator_ShouldFail() throws Exception {
+        String coordId = "coord-save";
+
+        when(clanmemberService.getFreshAuthorities(eq(coordId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_COORDINATOR"))));
+
         mockMvc.perform(post("/champions/save")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_COORDINATOR")))
+                        .with(oauth2User("ROLE_COORDINATOR", coordId))
                         .with(csrf())
                         .param("name", "TestChamp")
                         .param("percentageAura", "false"))
@@ -185,8 +242,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("POST /save - MEMBER should be denied (403 Forbidden)")
     void saveChampion_AsMember_ShouldFail() throws Exception {
+        String memberId = "member-save";
+
+        when(clanmemberService.getFreshAuthorities(eq(memberId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
         mockMvc.perform(post("/champions/save")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER")))
+                        .with(oauth2User("ROLE_MEMBER", memberId))
                         .with(csrf())
                         .param("name", "TestChamp")
                         .param("percentageAura", "false"))
@@ -205,10 +267,15 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("POST /save - Service Exception should return form with error (No Redirect)")
     void saveChampion_ServiceError_ShouldReturnForm() throws Exception {
+        String ownerId = "owner-error";
+
         doThrow(new ChampionSaveException("Database error")).when(championsService).saveNewChampion(any(ChampionEntryDTO.class), any(Authentication.class));
 
+        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
+
         mockMvc.perform(post("/champions/save")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER")))
+                        .with(oauth2User("ROLE_OWNER", ownerId))
                         .with(csrf())
                         .param("name", "Valid Name")
                         .param("rarity", "LEGENDARY")
@@ -233,8 +300,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("POST /save - Standard Validation - Should show errors for Missing Enum and Negative Stat")
     void saveChampion_StandardValidationFailures_ShouldShowErrors() throws Exception {
+        String ownerId = "owner-valid";
+
+        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
+
         mockMvc.perform(post("/champions/save")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER")))
+                        .with(oauth2User("ROLE_OWNER", ownerId))
                         .with(csrf())
                         .param("name", "Valid Name")
                         .param("hp", "-100")
@@ -250,11 +322,16 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("POST /save - Service Validation - Should show error for Duplicate Name")
     void saveChampion_DuplicateName_ShouldShowError() throws Exception {
+        String ownerId = "owner-dup";
+
         doThrow(new ChampionSaveException("Champion name 'Existing Champion' is already taken."))
                 .when(championsService).saveNewChampion(any(ChampionEntryDTO.class), any(Authentication.class));
 
+        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
+
         mockMvc.perform(post("/champions/save")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER")))
+                        .with(oauth2User("ROLE_OWNER", ownerId))
                         .with(csrf())
                         .param("name", "Existing Champion")
                         .param("hp", "1000")
@@ -270,16 +347,26 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /restore-backup - OWNER should succeed")
     void restoreBackup_AsOwner_ShouldSucceed() throws Exception {
+        String ownerId = "owner-backup";
+
+        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
+
         mockMvc.perform(get("/backup/restore-backup")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
+                        .with(oauth2User("ROLE_OWNER", ownerId)))
                 .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("GET /restore-backup - ADMIN should be denied")
     void restoreBackup_AsAdmin_ShouldFail() throws Exception {
+        String adminId = "admin-backup";
+
+        when(clanmemberService.getFreshAuthorities(eq(adminId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
         mockMvc.perform(get("/backup/restore-backup")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                        .with(oauth2User("ROLE_ADMIN", adminId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
@@ -287,8 +374,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /restore-backup - COORDINATOR should be denied (403)")
     void restoreBackup_AsCoordinator_ShouldFail() throws Exception {
+        String coordId = "coord-backup";
+
+        when(clanmemberService.getFreshAuthorities(eq(coordId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_COORDINATOR"))));
+
         mockMvc.perform(get("/backup/restore-backup")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_COORDINATOR"))))
+                        .with(oauth2User("ROLE_COORDINATOR", coordId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
@@ -296,8 +388,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /restore-backup - MEMBER should be denied (403)")
     void restoreBackup_AsMember_ShouldFail() throws Exception {
+        String memberId = "member-backup";
+
+        when(clanmemberService.getFreshAuthorities(eq(memberId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
         mockMvc.perform(get("/backup/restore-backup")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                        .with(oauth2User("ROLE_MEMBER", memberId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
@@ -313,6 +410,7 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @DisplayName("GET /champions/{id} - Should return Details View with Correct Data")
     void viewChampionDetails_ShouldReturnPage() throws Exception {
         String id = "507f1f77bcf86cd799439011";
+        String memberId = "member-details";
 
         ChampionEntity mockEntity = new ChampionEntity();
         mockEntity.setId(new org.bson.types.ObjectId(id));
@@ -326,8 +424,11 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
 
         when(championsService.getChampionById(id)).thenReturn(mockEntity);
 
+        when(clanmemberService.getFreshAuthorities(eq(memberId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
         mockMvc.perform(get("/champions/" + id)
-                        .with(oauth2Login()))
+                        .with(oauth2User("ROLE_MEMBER", memberId)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("champion-details"))
 
@@ -344,14 +445,19 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @DisplayName("GET /edit/{id} - OWNER should access the edit form (200 OK)")
     void editChampionForm_AsOwner_ShouldSucceed() throws Exception {
         String id = "507f1f77bcf86cd799439011";
+        String ownerId = "owner-edit";
+
         ChampionEntryDTO mockDto = new ChampionEntryDTO();
         mockDto.setId(id);
         mockDto.setName("Test Champ");
 
         when(championsService.getChampionForEdit(id)).thenReturn(mockDto);
 
+        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
+
         mockMvc.perform(get("/champions/" + id + "/edit")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
+                        .with(oauth2User("ROLE_OWNER", ownerId)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("champion-entry"))
                 .andExpect(model().attribute("isEditMode", true))
@@ -361,8 +467,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /edit/{id} - ADMIN should be denied (403 Forbidden)")
     void editChampionForm_AsAdmin_ShouldFail() throws Exception {
+        String adminId = "admin-edit";
+
+        when(clanmemberService.getFreshAuthorities(eq(adminId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
         mockMvc.perform(get("/champions/someId/edit")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                        .with(oauth2User("ROLE_ADMIN", adminId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
@@ -370,8 +481,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /edit/{id} - COORDINATOR should be denied (403 Forbidden)")
     void editChampionForm_AsCoordinator_ShouldFail() throws Exception {
+        String coordId = "coord-edit";
+
+        when(clanmemberService.getFreshAuthorities(eq(coordId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_COORDINATOR"))));
+
         mockMvc.perform(get("/champions/someId/edit")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_COORDINATOR"))))
+                        .with(oauth2User("ROLE_COORDINATOR", coordId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
@@ -379,8 +495,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("GET /edit/{id} - MEMBER should be denied (403 Forbidden)")
     void editChampionForm_AsMember_ShouldFail() throws Exception {
+        String memberId = "member-edit";
+
+        when(clanmemberService.getFreshAuthorities(eq(memberId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
         mockMvc.perform(get("/champions/someId/edit")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                        .with(oauth2User("ROLE_MEMBER", memberId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }
@@ -396,9 +517,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @DisplayName("POST /edit/{id} - OWNER should update and redirect to details (302 Found)")
     void updateChampion_AsOwner_ShouldUpdateAndRedirect() throws Exception {
         String id = "507f1f77bcf86cd799439011";
+        String ownerId = "owner-update";
+
+        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
 
         mockMvc.perform(post("/champions/" + id + "/edit")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER")))
+                        .with(oauth2User("ROLE_OWNER", ownerId))
                         .with(csrf())
                         .param("name", "Updated Champ")
                         .param("rarity", "LEGENDARY")
@@ -424,8 +549,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("POST /edit/{id} - ADMIN should be denied (403 Forbidden)")
     void updateChampion_AsAdmin_ShouldFail() throws Exception {
+        String adminId = "admin-update";
+
+        when(clanmemberService.getFreshAuthorities(eq(adminId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
         mockMvc.perform(post("/champions/someId/edit")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(oauth2User("ROLE_ADMIN", adminId))
                         .with(csrf())
                         .param("name", "Hacked Champ"))
                 .andExpect(status().is3xxRedirection())
@@ -435,8 +565,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("POST /edit/{id} - COORDINATOR should be denied (403 Forbidden)")
     void updateChampion_AsCoordinator_ShouldFail() throws Exception {
+        String coordId = "coord-update";
+
+        when(clanmemberService.getFreshAuthorities(eq(coordId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_COORDINATOR"))));
+
         mockMvc.perform(post("/champions/someId/edit")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_COORDINATOR")))
+                        .with(oauth2User("ROLE_COORDINATOR", coordId))
                         .with(csrf())
                         .param("name", "Hacked Champ"))
                 .andExpect(status().is3xxRedirection())
@@ -446,8 +581,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("POST /edit/{id} - MEMBER should be denied (403 Forbidden)")
     void updateChampion_AsMember_ShouldFail() throws Exception {
+        String memberId = "member-update";
+
+        when(clanmemberService.getFreshAuthorities(eq(memberId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
         mockMvc.perform(post("/champions/someId/edit")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER")))
+                        .with(oauth2User("ROLE_MEMBER", memberId))
                         .with(csrf())
                         .param("name", "Hacked Champ"))
                 .andExpect(status().is3xxRedirection())
@@ -458,10 +598,15 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @DisplayName("POST /edit/{id} - Service Exception (e.g. Duplicate Name) should return form with error")
     void updateChampion_ServiceError_ShouldReturnForm() throws Exception {
         String id = "507f1f77bcf86cd799439011";
+        String ownerId = "owner-dup-edit";
+
         doThrow(new ChampionSaveException("Champion name taken")).when(championsService).updateChampion(any(), any(), any());
 
+        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
+
         mockMvc.perform(post("/champions/" + id + "/edit")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER")))
+                        .with(oauth2User("ROLE_OWNER", ownerId))
                         .with(csrf())
                         .param("name", "Duplicate Name")
                         .param("rarity", "LEGENDARY")
@@ -487,9 +632,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @DisplayName("POST /delete - OWNER should delete and redirect (302 Found)")
     void deleteChampion_AsOwner_ShouldSucceed() throws Exception {
         String id = "507f1f77bcf86cd799439011";
+        String ownerId = "owner-delete";
+
+        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
 
         mockMvc.perform(post("/champions/" + id + "/delete")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER")))
+                        .with(oauth2User("ROLE_OWNER", ownerId))
                         .with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/champions"))
@@ -501,8 +650,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("POST /delete - ADMIN should be denied (403 Forbidden)")
     void deleteChampion_AsAdmin_ShouldFail() throws Exception {
+        String adminId = "admin-delete";
+
+        when(clanmemberService.getFreshAuthorities(eq(adminId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
         mockMvc.perform(post("/champions/someId/delete")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(oauth2User("ROLE_ADMIN", adminId))
                         .with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
@@ -511,8 +665,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("POST /delete - MEMBER should be denied (403 Forbidden)")
     void deleteChampion_AsMember_ShouldFail() throws Exception {
+        String memberId = "member-delete";
+
+        when(clanmemberService.getFreshAuthorities(eq(memberId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
         mockMvc.perform(post("/champions/someId/delete")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER")))
+                        .with(oauth2User("ROLE_MEMBER", memberId))
                         .with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
@@ -529,8 +688,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("UI - Scrape Button Visible for OWNER")
     void getChampions_WhenOwner_ShouldShowScraperButton() throws Exception {
+        String ownerId = "owner-scrape-btn";
+
+        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
+
         mockMvc.perform(get("/champions")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_OWNER"))))
+                        .with(oauth2User("ROLE_OWNER", ownerId)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("champions"))
                 .andExpect(content().string(containsString("/admin/scraper")));
@@ -539,8 +703,13 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("UI - Scrape Button Hidden for MEMBER")
     void getChampions_WhenMember_ShouldNotShowScraperButton() throws Exception {
+        String memberId = "member-scrape-btn";
+
+        when(clanmemberService.getFreshAuthorities(eq(memberId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+
         mockMvc.perform(get("/champions")
-                        .with(oauth2Login().authorities(new SimpleGrantedAuthority("ROLE_MEMBER"))))
+                        .with(oauth2User("ROLE_MEMBER", memberId)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("champions"))
                 .andExpect(content().string(not(containsString("/admin/scraper"))));

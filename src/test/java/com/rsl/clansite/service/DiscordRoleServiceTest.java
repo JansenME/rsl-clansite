@@ -2,14 +2,21 @@ package com.rsl.clansite.service;
 
 import com.rsl.clansite.client.DiscordApiClient;
 import com.rsl.clansite.model.dto.DiscordRoleDTO;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,6 +29,23 @@ class DiscordRoleServiceTest {
 
     @InjectMocks
     private DiscordRoleService discordRoleService;
+
+    private final String LEADER_ID = "leader-123";
+    private final String DEPUTY_ID = "deputy-456";
+    private final String COORD_ID = "coord-789";
+    private final String T1_ID = "t1-111";
+    private final String T2_ID = "t2-222";
+    private final String OWNER_ID = "owner-999";
+
+    @BeforeEach
+    void setup() {
+        ReflectionTestUtils.setField(discordRoleService, "clanLeaderRoleId", LEADER_ID);
+        ReflectionTestUtils.setField(discordRoleService, "deputyRoleId", DEPUTY_ID);
+        ReflectionTestUtils.setField(discordRoleService, "siegeCoordinatorRoleId", COORD_ID);
+        ReflectionTestUtils.setField(discordRoleService, "t1RoleId", T1_ID);
+        ReflectionTestUtils.setField(discordRoleService, "t2RoleId", T2_ID);
+        ReflectionTestUtils.setField(discordRoleService, "kloepDiscordId", OWNER_ID);
+    }
 
     @Test
     @DisplayName("init should fetch, cache and sort roles by position descending")
@@ -100,5 +124,95 @@ class DiscordRoleServiceTest {
 
         assertEquals("unknownA", result.get(0));
         assertEquals("unknownB", result.get(1));
+    }
+
+    @Test
+    @DisplayName("Leader Role should map to ROLE_ADMIN")
+    void getAuthorities_Leader_ShouldBeAdmin() {
+        List<String> roles = List.of(LEADER_ID);
+        Set<SimpleGrantedAuthority> result = discordRoleService.getAuthoritiesForRoles(roles, "random-user");
+
+        assertHasAuthority("ROLE_ADMIN", result);
+    }
+
+    @Test
+    @DisplayName("Deputy Role should map to ROLE_ADMIN")
+    void getAuthorities_Deputy_ShouldBeAdmin() {
+        List<String> roles = List.of(DEPUTY_ID);
+        Set<SimpleGrantedAuthority> result = discordRoleService.getAuthoritiesForRoles(roles, "random-user");
+
+        assertHasAuthority("ROLE_ADMIN", result);
+    }
+
+    @Test
+    @DisplayName("Coordinator Role should map to ROLE_COORDINATOR")
+    void getAuthorities_Coordinator_ShouldBeCoordinator() {
+        List<String> roles = List.of(COORD_ID);
+        Set<SimpleGrantedAuthority> result = discordRoleService.getAuthoritiesForRoles(roles, "random-user");
+
+        assertHasAuthority("ROLE_COORDINATOR", result);
+    }
+
+    @Test
+    @DisplayName("T1/T2 Roles should map to ROLE_MEMBER")
+    void getAuthorities_Members_ShouldBeMember() {
+        // Test T1
+        Set<SimpleGrantedAuthority> t1Result = discordRoleService.getAuthoritiesForRoles(List.of(T1_ID), "random-user");
+        assertHasAuthority("ROLE_MEMBER", t1Result);
+
+        // Test T2
+        Set<SimpleGrantedAuthority> t2Result = discordRoleService.getAuthoritiesForRoles(List.of(T2_ID), "random-user");
+        assertHasAuthority("ROLE_MEMBER", t2Result);
+    }
+
+    @Test
+    @DisplayName("Owner ID should map to ROLE_OWNER (and ADMIN/MEMBER if configured)")
+    void getAuthorities_OwnerId_ShouldBeOwner() {
+        // Owner usually has no roles in the list, or random roles, but the ID matches
+        List<String> roles = Collections.emptyList();
+
+        Set<SimpleGrantedAuthority> result = discordRoleService.getAuthoritiesForRoles(roles, OWNER_ID);
+
+        assertHasAuthority("ROLE_OWNER", result);
+    }
+
+    @Test
+    @DisplayName("Multiple Roles should result in Multiple Authorities")
+    void getAuthorities_MixedRoles_ShouldHaveAll() {
+        // A user who is a Coordinator AND a T1 Member
+        List<String> roles = List.of(COORD_ID, T1_ID);
+
+        Set<SimpleGrantedAuthority> result = discordRoleService.getAuthoritiesForRoles(roles, "random-user");
+
+        assertHasAuthority("ROLE_COORDINATOR", result);
+        assertHasAuthority("ROLE_MEMBER", result);
+        assertEquals(2, result.size());
+    }
+
+    @Test
+    @DisplayName("Unknown Roles should return Empty Set")
+    void getAuthorities_UnknownRoles_ShouldBeEmpty() {
+        List<String> roles = List.of("unknown-1", "unknown-2");
+
+        Set<SimpleGrantedAuthority> result = discordRoleService.getAuthoritiesForRoles(roles, "random-user");
+
+        assertTrue(result.isEmpty(), "Should return empty set for unknown roles");
+    }
+
+    @Test
+    @DisplayName("Null Role List should return Empty Set (No NPE)")
+    void getAuthorities_NullList_ShouldBeEmpty() {
+        Set<SimpleGrantedAuthority> result = discordRoleService.getAuthoritiesForRoles(null, "random-user");
+
+        assertTrue(result.isEmpty());
+    }
+
+    private void assertHasAuthority(String expectedAuth, Set<SimpleGrantedAuthority> authorities) {
+        Set<String> authStrings = authorities.stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
+
+        assertTrue(authStrings.contains(expectedAuth),
+                "Expected authorities to contain " + expectedAuth + " but found: " + authStrings);
     }
 }
