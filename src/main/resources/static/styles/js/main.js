@@ -128,6 +128,17 @@ function applyChampionFilters() {
     const searchInput = document.getElementById('champion-search');
     const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
+    const showOwnedCheckbox = document.getElementById('filter-roster-owned');
+    const showUnownedCheckbox = document.getElementById('filter-roster-unowned');
+
+    let showOwned = showOwnedCheckbox ? showOwnedCheckbox.checked : true;
+    let showUnowned = showUnownedCheckbox ? showUnownedCheckbox.checked : true;
+
+    if (!showOwned && !showUnowned) {
+        showOwned = true;
+        showUnowned = true;
+    }
+
     const selectedRarities = Array.from(document.querySelectorAll('.filter-rarity:checked')).map(cb => cb.getAttribute('data-filter-name').trim());
     const selectedTypes = Array.from(document.querySelectorAll('.filter-type:checked')).map(cb => cb.getAttribute('data-filter-name').trim());
     const selectedAffinities = Array.from(document.querySelectorAll('.filter-affinity:checked')).map(cb => cb.getAttribute('data-filter-name').trim());
@@ -146,6 +157,15 @@ function applyChampionFilters() {
         const alliance = (card.getAttribute('data-alliance') || '').trim();
 
         let passesFilters = true;
+
+        const isOwned = card.classList.contains('selected');
+
+        if (isOwned && !showOwned) {
+            passesFilters = false;
+        }
+        if (!isOwned && !showUnowned) {
+            passesFilters = false;
+        }
 
         const shouldSkipFilter = (selectedArray) => {
             return selectedArray.length === 0;

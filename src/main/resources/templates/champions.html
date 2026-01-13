@@ -158,6 +158,17 @@
 							   style="width: 250px; padding: 4px;"
 						/>
 
+						<span sec:authorize="isAuthenticated()" style="margin-left: 20px; display: inline-flex; gap: 15px; align-items: center;">
+							<label style="cursor:pointer; display:flex; align-items:center; gap:5px;">
+								<input type="checkbox" id="filter-roster-owned" checked onchange="applyChampionFilters()">
+								Owned
+							</label>
+							<label style="cursor:pointer; display:flex; align-items:center; gap:5px;">
+								<input type="checkbox" id="filter-roster-unowned" checked onchange="applyChampionFilters()">
+								Unowned
+							</label>
+						</span>
+
 						<table>
 							<thead>
 							<tr>
