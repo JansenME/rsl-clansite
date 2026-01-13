@@ -75,4 +75,14 @@ public class SessionSecurityFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/css/") ||
+                path.startsWith("/js/") ||
+                path.startsWith("/images/") ||
+                path.startsWith("/favicon.ico") ||
+                path.startsWith("/error");
+    }
 }

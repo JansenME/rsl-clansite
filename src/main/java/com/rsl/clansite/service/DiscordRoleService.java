@@ -128,7 +128,6 @@ public class DiscordRoleService {
         }
 
         if (kloepDiscordId.equals(userId)) {
-            log.info("Granting ROLE_OWNER to Discord ID: {}", userId);
             authorities.add(new SimpleGrantedAuthority("ROLE_OWNER"));
         }
 
