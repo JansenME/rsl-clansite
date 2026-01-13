@@ -1,139 +1,145 @@
 <!DOCTYPE HTML>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-	<head>
-		<title>Raid Shadow Legends Fan Site</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
-		<script th:src="@{/styles/js/main.js}"></script>
-	</head>
-	<body>
-		<div id="page-wrapper">
-			<section id="header">
-				<div th:insert="~{inserts/nav :: nav}" class="container">
+<head>
+	<title>Raid Shadow Legends Fan Site</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+	<script th:src="@{/styles/js/main.js}"></script>
+</head>
+<body>
+<div id="page-wrapper">
+	<section id="header">
+		<div th:insert="~{inserts/nav :: nav}" class="container">
+		</div>
+	</section>
+
+	<section id="content">
+		<div class="container">
+			<h2>
+				Login History
+				<span sec:authorize="hasRole('OWNER')">& Security Audit</span>
+			</h2>
+
+			<a th:href="@{/clanmembers}" class="btn-primary" style="text-decoration: none; padding: 8px 16px;">Back to Roster</a>
+
+			<div class="card" style="margin-bottom: 40px;">
+				<h3 style="background-color: #2c3e50; color: white; padding: 10px 15px; margin: 0; border-radius: 5px 5px 0 0;">
+					Clan Member Activity
+				</h3>
+				<div style="padding: 0;">
+					<table style="width: 100%; border-collapse: collapse;">
+						<thead>
+						<tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; color: #666;">
+							<th style="padding: 12px; text-align: left;">Identity</th>
+							<th style="padding: 12px; text-align: left;">In-Game Name</th>
+							<th style="padding: 12px; text-align: left;">Rank</th>
+							<th style="padding: 12px; text-align: left;">Clan</th> <th style="padding: 12px; text-align: left;">Last Online</th>
+							<th style="padding: 12px; text-align: left;">Status</th>
+						</tr>
+						</thead>
+						<tbody>
+						<tr th:if="${#lists.isEmpty(memberHistory)}">
+							<td colspan="6" style="padding: 20px; text-align: center; color: #666;">No member activity recorded yet.</td>
+						</tr>
+						<tr th:each="member : ${memberHistory}" style="border-bottom: 1px solid #eee;">
+							<td style="padding: 10px;">
+								<div style="display: flex; align-items: center; gap: 10px;">
+									<img th:if="${member.avatarHash}"
+										 th:src="@{'https://cdn.discordapp.com/avatars/' + ${member.discordId} + '/' + ${member.avatarHash} + '.png'}"
+										 style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #ddd;">
+									<div style="display: flex; flex-direction: column;">
+										<span th:text="${member.discordName}" style="font-weight: bold; font-size: 0.9rem;">DiscordName</span>
+										<span th:text="${member.discordId}" style="font-size: 0.75rem; color: #888;">ID</span>
+									</div>
+								</div>
+							</td>
+							<td th:text="${member.ingameName}" style="padding: 10px;">IGN</td>
+							<td style="padding: 10px;">
+								<span th:text="${member.clanRank}" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; background-color: #e9ecef;">Rank</span>
+							</td>
+							<td style="padding: 10px;">
+                               <span th:text="${member.clanGroup}"
+									 style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; background-color: #d1ecf1; color: #0c5460; font-weight: bold;">
+                                     Clan
+                               </span>
+							</td>
+							<td th:text="${#temporals.format(member.lastLogin, 'dd-MM-yyyy HH:mm')}" style="padding: 10px;">Date</td>
+							<td style="padding: 10px;">
+                                <span th:if="${member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusMinutes(5))}"
+									  style="color: #27ae60; font-weight: bold;">
+                                     ● Online Now
+                                </span>
+
+								<span th:if="${!member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusMinutes(5))
+                                         and member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusDays(7))}"
+									  style="color: #e67e22; font-weight: bold;">
+                                     ● Recent
+                                </span>
+
+								<span th:if="${!member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusDays(7))}"
+									  style="color: #999;">
+                                     ● Inactive
+                                </span>
+							</td>
+						</tr>
+						</tbody>
+					</table>
 				</div>
-			</section>
+			</div>
 
-			<section id="content">
-				<div class="container">
-					<h2>
-						Login History
-						<span sec:authorize="hasRole('OWNER')">& Security Audit</span>
-					</h2>
-
-					<a th:href="@{/clanmembers}" class="btn-primary" style="text-decoration: none; padding: 8px 16px;">Back to Roster</a>
-
-					<div class="card" style="margin-bottom: 40px;">
-						<h3 style="background-color: #2c3e50; color: white; padding: 10px 15px; margin: 0; border-radius: 5px 5px 0 0;">
-							Clan Member Activity
-						</h3>
-						<div style="padding: 0;">
-							<table style="width: 100%; border-collapse: collapse;">
-								<thead>
-								<tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; color: #666;">
-									<th style="padding: 12px; text-align: left;">Identity</th>
-									<th style="padding: 12px; text-align: left;">In-Game Name</th>
-									<th style="padding: 12px; text-align: left;">Rank</th>
-									<th style="padding: 12px; text-align: left;">Last Online</th>
-									<th style="padding: 12px; text-align: left;">Status</th>
-								</tr>
-								</thead>
-								<tbody>
-								<tr th:if="${#lists.isEmpty(memberHistory)}">
-									<td colspan="5" style="padding: 20px; text-align: center; color: #666;">No member activity recorded yet.</td>
-								</tr>
-								<tr th:each="member : ${memberHistory}" style="border-bottom: 1px solid #eee;">
-									<td style="padding: 10px;">
-										<div style="display: flex; align-items: center; gap: 10px;">
-											<img th:if="${member.avatarHash}"
-												 th:src="@{'https://cdn.discordapp.com/avatars/' + ${member.discordId} + '/' + ${member.avatarHash} + '.png'}"
-												 style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #ddd;">
-											<div style="display: flex; flex-direction: column;">
-												<span th:text="${member.discordName}" style="font-weight: bold; font-size: 0.9rem;">DiscordName</span>
-												<span th:text="${member.discordId}" style="font-size: 0.75rem; color: #888;">ID</span>
-											</div>
-										</div>
-									</td>
-									<td th:text="${member.ingameName}" style="padding: 10px;">IGN</td>
-									<td style="padding: 10px;">
-                            			<span th:text="${member.clanRank}" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; background-color: #e9ecef;">Rank</span>
-									</td>
-									<td th:text="${#temporals.format(member.lastLogin, 'dd-MM-yyyy HH:mm')}" style="padding: 10px;">Date</td>
-									<td style="padding: 10px;">
-										 <span th:if="${member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusMinutes(5))}"
-											   style="color: #27ae60; font-weight: bold;">
-											   ● Online Now
-										 </span>
-
-																			<span th:if="${!member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusMinutes(5))
-													 and member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusDays(7))}"
-																				  style="color: #e67e22; font-weight: bold;">
-											   ● Recent
-										 </span>
-
-																			<span th:if="${!member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusDays(7))}"
-																				  style="color: #999;">
-											   ● Inactive
-										 </span>
-									</td>
-								</tr>
-								</tbody>
-							</table>
-						</div>
-					</div>
-
-					<div class="card" sec:authorize="hasRole('OWNER')">
-						<h3 style="background-color: #c0392b; color: white; padding: 10px 15px; margin: 0; border-radius: 5px 5px 0 0; display: flex; justify-content: space-between;">
-							<span>Unknown Visitor Log (Discord Users not in Roster)</span>
-							<span style="font-size: 0.8rem; opacity: 0.8;">Security Audit</span>
-						</h3>
-						<div style="padding: 0;">
-							<table style="width: 100%; border-collapse: collapse;">
-								<thead>
-								<tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-									<th style="padding: 12px; text-align: left;">Discord User</th>
-									<th style="padding: 12px; text-align: left;">Discord ID</th>
-									<th style="padding: 12px; text-align: left;">Last Seen</th>
-									<th style="padding: 12px; text-align: left;">Visit Count</th>
-									<th style="padding: 12px; text-align: center;">Action</th>
-								</tr>
-								</thead>
-								<tbody>
-								<tr th:if="${#lists.isEmpty(visitorHistory)}">
-									<td colspan="5" style="padding: 20px; text-align: center; color: #666;">No unknown visitors recorded.</td>
-								</tr>
-								<tr th:each="visitor : ${visitorHistory}" style="border-bottom: 1px solid #eee;">
-									<td style="padding: 10px;">
-										<div style="display: flex; align-items: center; gap: 10px;">
-											<img th:if="${visitor.avatarHash}"
-												 th:src="@{'https://cdn.discordapp.com/avatars/' + ${visitor.discordId} + '/' + ${visitor.avatarHash} + '.png'}"
-												 style="width: 32px; height: 32px; border-radius: 50%;">
-											<span th:text="${visitor.username}" style="font-weight: 500;">User</span>
-										</div>
-									</td>
-									<td th:text="${visitor.discordId}" style="padding: 10px; font-family: monospace;">ID</td>
-									<td th:text="${#temporals.format(visitor.lastLogin, 'dd-MM-yyyy HH:mm')}" style="padding: 10px;">Date</td>
-									<td th:text="${visitor.visitCount}" style="padding: 10px; font-weight: bold;">1</td>
-									<td style="padding: 10px; text-align: center;">
-										<a th:href="@{/clanmembers/add(discordId=${visitor.discordId})}"
-										   class="btn-secondary"
-										   style="font-size: 0.8rem; padding: 4px 8px; text-decoration: none; border: 1px solid #ccc; border-radius: 4px;">
-											Add to Roster
-										</a>
-									</td>
-								</tr>
-								</tbody>
-							</table>
-						</div>
-					</div>
+			<div class="card" sec:authorize="hasRole('OWNER')">
+				<h3 style="background-color: #c0392b; color: white; padding: 10px 15px; margin: 0; border-radius: 5px 5px 0 0; display: flex; justify-content: space-between;">
+					<span>Unknown Visitor Log (Discord Users not in Roster)</span>
+					<span style="font-size: 0.8rem; opacity: 0.8;">Security Audit</span>
+				</h3>
+				<div style="padding: 0;">
+					<table style="width: 100%; border-collapse: collapse;">
+						<thead>
+						<tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; color: #666;">
+							<th style="padding: 12px; text-align: left;">Discord User</th>
+							<th style="padding: 12px; text-align: left;">Discord ID</th>
+							<th style="padding: 12px; text-align: left;">Last Seen</th>
+							<th style="padding: 12px; text-align: left;">Visit Count</th>
+							<th style="padding: 12px; text-align: center;">Action</th>
+						</tr>
+						</thead>
+						<tbody>
+						<tr th:if="${#lists.isEmpty(visitorHistory)}">
+							<td colspan="5" style="padding: 20px; text-align: center; color: #666;">No unknown visitors recorded.</td>
+						</tr>
+						<tr th:each="visitor : ${visitorHistory}" style="border-bottom: 1px solid #eee;">
+							<td style="padding: 10px;">
+								<div style="display: flex; align-items: center; gap: 10px;">
+									<img th:if="${visitor.avatarHash}"
+										 th:src="@{'https://cdn.discordapp.com/avatars/' + ${visitor.discordId} + '/' + ${visitor.avatarHash} + '.png'}"
+										 style="width: 32px; height: 32px; border-radius: 50%;">
+									<span th:text="${visitor.username}" style="font-weight: 500;">User</span>
+								</div>
+							</td>
+							<td th:text="${visitor.discordId}" style="padding: 10px; font-family: monospace;">ID</td>
+							<td th:text="${#temporals.format(visitor.lastLogin, 'dd-MM-yyyy HH:mm')}" style="padding: 10px;">Date</td>
+							<td th:text="${visitor.visitCount}" style="padding: 10px; font-weight: bold;">1</td>
+							<td style="padding: 10px; text-align: center;">
+								<a th:href="@{/clanmembers/add(discordId=${visitor.discordId})}"
+								   class="btn-secondary"
+								   style="font-size: 0.8rem; padding: 4px 8px; text-decoration: none; border: 1px solid #ccc; border-radius: 4px;">
+									Add to Roster
+								</a>
+							</td>
+						</tr>
+						</tbody>
+					</table>
 				</div>
-			</section>
-
-			<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
 			</div>
 		</div>
-		<button id="backToTopBtn" title="Go to top">
-			↑
-		</button>
-	</body>
+	</section>
+
+	<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+	</div>
+</div>
+<button id="backToTopBtn" title="Go to top">
+	↑
+</button>
+</body>
 </html>
