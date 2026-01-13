@@ -23,12 +23,14 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -47,7 +49,9 @@ public class HellHadesScraperService {
     private final CommonsService commonsService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private static final String IMAGE_SAVE_DIR = "src/main/resources/static/images/champions/";
+    @Value("${app.storage.location.champion-cards}")
+    private String imageStorageLocation;
+
     private static final double LEVEL_60_MULTIPLIER = 11.014;
 
     // --- MAIN FLOW: SCANNING ---
@@ -317,8 +321,15 @@ public class HellHadesScraperService {
     private void downloadImage(String imageUrl, String filename) {
         try {
             Connection.Response res = Jsoup.connect(imageUrl).userAgent("Mozilla/5.0").ignoreContentType(true).execute();
-            Path path = Paths.get(IMAGE_SAVE_DIR + filename);
-            try (FileOutputStream out = new FileOutputStream(path.toFile())) {
+            Path directoryPath = Paths.get(imageStorageLocation);
+
+            if (!Files.exists(directoryPath)) {
+                Files.createDirectories(directoryPath);
+            }
+
+            Path filePath = directoryPath.resolve(filename);
+
+            try (FileOutputStream out = new FileOutputStream(filePath.toFile())) {
                 out.write(res.bodyAsBytes());
             }
         } catch (IOException e) {

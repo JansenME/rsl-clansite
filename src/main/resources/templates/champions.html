@@ -159,14 +159,13 @@
 								 th:data-score="${champion.arenaScore}">
 
 								<a th:href="@{/champions/{id}(id=${champion.id})}" style="text-decoration: none; border-bottom: none;">
-									<img th:src="${champion.imagename != null and !#strings.isEmpty(champion.imagename)} ? @{'/images/champions/' + ${champion.imagename}} : @{/images/champions/placeholder.png}"
+									<img th:src="${champion.imagename != null and !#strings.isEmpty(champion.imagename)} ? @{/images/champion-cards/{name}(name=${champion.imagename})} : @{/images/champion-cards/placeholder.png}"
 										 alt="Champion Image"
 										 style="width:140px;"
 										 class="champion-portrait"
 										 th:classappend="${champion.rarity != null} ? 'rarity-border-' + ${#strings.toLowerCase(champion.rarity)} : ''"
 										 loading="lazy"
-										 decoding="async"
-										 onerror="this.onerror=null; this.src='/images/champions/placeholder.png';" />
+										 decoding="async" />
 								</a>
 								<div class="champion-rating-placeholder"></div>
 								<p class="champion-name" th:text="${champion.name}"></p>
@@ -182,5 +181,23 @@
 		<button id="backToTopBtn" title="Go to top">
 			↑
 		</button>
+
+		<script>
+			document.addEventListener("DOMContentLoaded", function() {
+                const images = document.querySelectorAll("img.champion-portrait");
+                const placeholder = "/images/champion-cards/placeholder.png";
+
+                images.forEach(function(img) {
+                    img.onerror = function() {
+                        this.onerror = null;
+                        this.src = placeholder;
+                    };
+
+                    if (img.complete && img.naturalWidth === 0) {
+                        img.src = placeholder;
+                    }
+                });
+            });
+		</script>
 	</body>
 </html>

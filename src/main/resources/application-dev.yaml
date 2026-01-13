@@ -1,3 +1,7 @@
+app:
+  storage:
+    location:
+      champion-cards: "C:/Development/images-rsl-clansite/champion-cards"
 discord:
   clan-server-id: "728792086438084608"
   roles:

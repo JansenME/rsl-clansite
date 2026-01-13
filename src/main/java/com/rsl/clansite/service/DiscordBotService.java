@@ -52,9 +52,7 @@ public class DiscordBotService extends ListenerAdapter {
         if (event.getName().equals("hello")) {
             event.reply("Fuck off!")
                     .setEphemeral(false)
-                    .flatMap(v ->
-                            event.getHook().editOriginalFormat("Fuck off!")
-                    ).queue();
+                    .queue();
         }
     }
 

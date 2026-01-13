@@ -31,11 +31,11 @@
 						<h3>Champion Identity</h3>
 
 						<div class="form-group" th:if="${isEditMode == true and newChampion.currentImageName != null}" style="text-align: center; margin-bottom: 20px;">
-							<img th:src="${newChampion.currentImageName != null and !#strings.isEmpty(newChampion.currentImageName)} ? @{'/images/champions/' + ${newChampion.currentImageName}} : @{/images/champions/placeholder.png}"
+							<img th:src="${newChampion.currentImageName != null and !#strings.isEmpty(newChampion.currentImageName)} ? @{'/images/champion-cards/' + ${newChampion.currentImageName}} : @{/images/champion-cards/placeholder.png}"
 								 alt="Champion Image"
 								 style="width: 100px; height: auto; border-radius: 10px; border: 4px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.1);"
 								 title="Current Image"
-								 onerror="this.onerror=null; this.src='/images/champions/placeholder.png';" />
+								 onerror="this.onerror=null; this.src='/images/champion-cards/placeholder.png';" />
 						</div>
 
 						<div class="form-group">

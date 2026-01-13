@@ -45,8 +45,9 @@
 
                 <div class="details-container">
                     <div class="details-card" style="text-align: center;">
-                        <img th:src="@{/images/champions/{imagename}(imagename=${champion.imagename})}"
-                             style="width: 200px; border-radius: 10px; margin-bottom: 20px;" /><p><strong>Type: </strong><span th:text="${champion.type != null ? champion.type.getName() : 'Unknown'}">Attack</span>
+                        <img th:src="@{/images/champion-cards/{imagename}(imagename=${champion.imagename})}"
+                             style="width: 200px; border-radius: 10px; margin-bottom: 20px;"
+                             th:onerror="'this.onerror=null; this.src=\'' + @{/images/champion-cards/placeholder.png} + '\';'" /><p><strong>Type: </strong><span th:text="${champion.type != null ? champion.type.getName() : 'Unknown'}">Attack</span>
                         </p>
 
                         <div th:if="${champion.aura != null}" style="background: #f0f8ff; padding: 10px; border-radius: 5px; margin-top: 15px;">

@@ -1,5 +1,8 @@
 app:
   version: '@project.version@'
+  storage:
+    location:
+      champion-cards: ""
 discord:
   bot-token: ${DISCORD_BOT_TOKEN}
   clan-server-id: "1062302225701015552"

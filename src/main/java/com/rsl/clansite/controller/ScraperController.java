@@ -10,6 +10,7 @@ import com.rsl.clansite.service.HellHadesScraperService;
 import com.rsl.clansite.service.TargetService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -31,10 +32,12 @@ import java.util.Map;
 @Controller
 @RequestMapping("/admin")
 public class ScraperController {
-
     private final HellHadesScraperService scraperService;
     private final TargetService targetService;
     private final ChampionRepository championRepository;
+
+    @Value("${app.storage.location.champion-cards}")
+    private String imageStorageLocation;
 
     public ScraperController(HellHadesScraperService scraperService, TargetService targetService, ChampionRepository championRepository) {
         this.scraperService = scraperService;
@@ -144,8 +147,6 @@ public class ScraperController {
         List<ChampionEntity> allChampions = championRepository.findAll();
         List<ProblemRow> problems = new ArrayList<>();
 
-        String imageBasePath = "src/main/resources/static/images/champions/";
-
         for (ChampionEntity c : allChampions) {
             List<String> issues = new ArrayList<>();
 
@@ -161,7 +162,7 @@ public class ScraperController {
                 issues.add("No Image Name in DB");
             } else {
                 // 3. Check Physical File
-                Path path = Paths.get(imageBasePath + c.getImagename());
+                Path path = Paths.get(imageStorageLocation, c.getImagename());
                 if (!Files.exists(path)) {
                     issues.add("File Missing on Disk");
                 }
