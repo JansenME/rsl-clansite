@@ -61,10 +61,7 @@ public class ClanmemberController {
     public String viewLoginHistory(Model model, Authentication authentication) {
         commonsService.fillModel(model, authentication);
 
-        List<ClanmemberEntity> members = clanmemberService.findAllClanmemberEntities().stream()
-                .filter(m -> m.getLastLogin() != null)
-                .sorted((m1, m2) -> m2.getLastLogin().compareTo(m1.getLastLogin()))
-                .toList();
+        List<ClanmemberService.LoginHistoryDTO> members = clanmemberService.getDeduplicatedLoginHistory();
 
         List<VisitorLogEntity> visitors = visitorLogRepository.findAll().stream()
                 .sorted((v1, v2) -> v2.getLastLogin().compareTo(v1.getLastLogin()))

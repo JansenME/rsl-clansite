@@ -26,12 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -57,6 +52,78 @@ public class ClanmemberService {
         this.auditLogService = auditLogService;
         this.discordApiClient = discordApiClient;
         this.siteAssetService = siteAssetService;
+    }
+
+    public record AccountDetailDTO(String ingameName, String clanRank, ClanGroup clanGroup) {}
+
+    public record LoginHistoryDTO(
+            String discordId,
+            String discordName,
+            String avatarUrl,
+            LocalDateTime lastLogin,
+            List<AccountDetailDTO> accounts
+    ) {}
+
+    public List<LoginHistoryDTO> getDeduplicatedLoginHistory() {
+        List<ClanmemberEntity> activeMembers = clanmemberRepository.findAll().stream()
+                .filter(m -> m.getLastLogin() != null)
+                .toList();
+
+        Map<String, List<ClanmemberEntity>> groupedByDiscord = activeMembers.stream()
+                .filter(m -> StringUtils.hasText(m.getDiscordId()))
+                .collect(Collectors.groupingBy(ClanmemberEntity::getDiscordId));
+
+        List<LoginHistoryDTO> historyList = new ArrayList<>();
+
+        for (Map.Entry<String, List<ClanmemberEntity>> entry : groupedByDiscord.entrySet()) {
+            String discordId = entry.getKey();
+            List<ClanmemberEntity> accounts = entry.getValue();
+
+            LocalDateTime latestLogin = accounts.stream()
+                    .map(ClanmemberEntity::getLastLogin)
+                    .filter(Objects::nonNull)
+                    .max(LocalDateTime::compareTo)
+                    .orElse(null);
+
+            if (latestLogin == null) continue;
+
+            List<AccountDetailDTO> accountDetails = accounts.stream()
+                    .sorted(this::compareAccountsForHistory) // <--- UPDATED SORTING
+                    .map(m -> new AccountDetailDTO(m.getIngameName(), m.getClanRank(), m.getClanGroup()))
+                    .toList();
+
+            ClanmemberEntity primary = accounts.get(0);
+            String avatarUrl = buildAvatarUrl(discordId, primary.getAvatarHash());
+
+            historyList.add(new LoginHistoryDTO(
+                    discordId,
+                    primary.getDiscordName(),
+                    avatarUrl,
+                    latestLogin,
+                    accountDetails
+            ));
+        }
+
+        historyList.sort((a, b) -> b.lastLogin().compareTo(a.lastLogin()));
+
+        return historyList;
+    }
+
+    private int compareAccountsForHistory(ClanmemberEntity m1, ClanmemberEntity m2) {
+        if (m1.getClanGroup() != m2.getClanGroup()) {
+            if (m1.getClanGroup() == null) return 1;
+            if (m2.getClanGroup() == null) return -1;
+            return m1.getClanGroup().compareTo(m2.getClanGroup());
+        }
+
+        int rankComparison = compareClanRanks(m1, m2);
+        if (rankComparison != 0) {
+            return rankComparison;
+        }
+
+        String n1 = m1.getIngameName() != null ? m1.getIngameName() : "";
+        String n2 = m2.getIngameName() != null ? m2.getIngameName() : "";
+        return n1.compareToIgnoreCase(n2);
     }
 
     public ClanmemberEntity getActiveClanmember(HttpSession session, Authentication authentication) {

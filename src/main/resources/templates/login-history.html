@@ -6,6 +6,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
 	<script th:src="@{/styles/js/main.js}"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 </head>
 <body>
 <div id="page-wrapper">
@@ -21,7 +22,13 @@
 				<span sec:authorize="hasRole('OWNER')">& Security Audit</span>
 			</h2>
 
-			<a th:href="@{/clanmembers}" class="btn-primary" style="text-decoration: none; padding: 8px 16px;">Back to Roster</a>
+			<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+				<a th:href="@{/clanmembers}" class="btn-primary" style="text-decoration: none; padding: 8px 16px;">Back to Roster</a>
+
+				<div style="background-color: #d1ecf1; color: #0c5460; padding: 8px 15px; border-radius: 4px; font-size: 0.9em; border: 1px solid #bee5eb;">
+					<i class="fas fa-globe"></i> Times displayed in your local timezone: <strong id="user-timezone">Detecting...</strong>
+				</div>
+			</div>
 
 			<div class="card" style="margin-bottom: 40px;">
 				<h3 style="background-color: #2c3e50; color: white; padding: 10px 15px; margin: 0; border-radius: 5px 5px 0 0;">
@@ -35,7 +42,7 @@
 							<th style="padding: 12px; text-align: left;">In-Game Name</th>
 							<th style="padding: 12px; text-align: left;">Rank</th>
 							<th style="padding: 12px; text-align: left;">Clan</th>
-							<th style="padding: 12px; text-align: left;">Last Online</th>
+							<th style="padding: 12px; text-align: left;">Last Online (Local)</th>
 							<th style="padding: 12px; text-align: left;">Status</th>
 						</tr>
 						</thead>
@@ -43,11 +50,13 @@
 						<tr th:if="${#lists.isEmpty(memberHistory)}">
 							<td colspan="6" style="padding: 20px; text-align: center; color: #666;">No member activity recorded yet.</td>
 						</tr>
+
 						<tr th:each="member : ${memberHistory}" style="border-bottom: 1px solid #eee;">
-							<td style="padding: 10px;">
+
+							<td style="padding: 10px; vertical-align: middle;">
 								<div style="display: flex; align-items: center; gap: 10px;">
-									<img th:if="${member.avatarHash}"
-										 th:src="@{'https://cdn.discordapp.com/avatars/' + ${member.discordId} + '/' + ${member.avatarHash} + '.png'}"
+									<img th:if="${member.avatarUrl}"
+										 th:src="${member.avatarUrl}"
 										 style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #ddd;">
 									<div style="display: flex; flex-direction: column;">
 										<span th:text="${member.discordName}" style="font-weight: bold; font-size: 0.9rem;">DiscordName</span>
@@ -55,24 +64,38 @@
 									</div>
 								</div>
 							</td>
-							<td th:text="${member.ingameName}" style="padding: 10px;">IGN</td>
-							<td style="padding: 10px;">
-								<span th:text="${member.clanRank}" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; background-color: #e9ecef;">Rank</span>
+
+							<td style="padding: 10px; vertical-align: middle;">
+								<div th:each="acc : ${member.accounts}" style="height: 28px; display: flex; align-items: center;">
+									<span th:text="${acc.ingameName}" style="font-weight: 500;">IGN</span>
+								</div>
 							</td>
-							<td style="padding: 10px;">
-                               <span th:text="${member.clanGroup}"
-									 style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; background-color: #d1ecf1; color: #0c5460; font-weight: bold;">
+
+							<td style="padding: 10px; vertical-align: middle;">
+								<div th:each="acc : ${member.accounts}" style="height: 28px; display: flex; align-items: center;">
+									<span th:text="${acc.clanRank}" style="padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; background-color: #e9ecef; white-space: nowrap;">Rank</span>
+								</div>
+							</td>
+
+							<td style="padding: 10px; vertical-align: middle;">
+								<div th:each="acc : ${member.accounts}" style="height: 28px; display: flex; align-items: center;">
+                               <span th:if="${acc.clanGroup != null}"
+									 th:text="${acc.clanGroup}"
+									 style="padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; background-color: #d1ecf1; color: #0c5460; font-weight: bold;">
                                      Clan
                                </span>
+								</div>
 							</td>
-							<td style="padding: 10px;">
+
+							<td style="padding: 10px; vertical-align: middle; text-align: center;">
                                <span class="local-time"
 									 th:data-time="${member.lastLogin}"
 									 th:text="${#temporals.format(member.lastLogin, 'dd-MM-yyyy HH:mm')}">
                                      Date Placeholder
                                </span>
 							</td>
-							<td style="padding: 10px;">
+
+							<td style="padding: 10px; vertical-align: middle; text-align: center;">
                                 <span th:if="${member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusMinutes(5))}"
 									  style="color: #27ae60; font-weight: bold;">
                                      ● Online Now
@@ -106,7 +129,7 @@
 						<tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; color: #666;">
 							<th style="padding: 12px; text-align: left;">Discord User</th>
 							<th style="padding: 12px; text-align: left;">Discord ID</th>
-							<th style="padding: 12px; text-align: left;">Last Seen</th>
+							<th style="padding: 12px; text-align: left;">Last Seen (Local)</th>
 							<th style="padding: 12px; text-align: left;">Visit Count</th>
 							<th style="padding: 12px; text-align: center;">Action</th>
 						</tr>
@@ -159,8 +182,15 @@
 
 <script>
 	document.addEventListener("DOMContentLoaded", function() {
-        const timeElements = document.querySelectorAll('.local-time');
+        // 1. Detect and display User Timezone
+        const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const tzDisplay = document.getElementById('user-timezone');
+        if (tzDisplay) {
+            tzDisplay.innerText = userTz;
+        }
 
+        // 2. Format Timestamps
+        const timeElements = document.querySelectorAll('.local-time');
         timeElements.forEach(function(el) {
             const rawTime = el.getAttribute('data-time');
             if (rawTime) {
