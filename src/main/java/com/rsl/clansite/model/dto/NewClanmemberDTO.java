@@ -5,8 +5,6 @@ import com.rsl.clansite.model.enums.ClanRank;
 import com.rsl.clansite.validation.OnCreate;
 import com.rsl.clansite.validation.UniqueIngameName;
 import com.rsl.clansite.validation.ValidClanAssignment;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import lombok.NoArgsConstructor;
