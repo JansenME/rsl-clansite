@@ -7,8 +7,10 @@ import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.info.BuildProperties;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
 
@@ -16,6 +18,7 @@ import java.time.Year;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 @Slf4j
@@ -25,11 +28,14 @@ public class CommonsService {
 
     private final ClanmemberService clanmemberService;
     private final BuildProperties buildProperties;
+    private final RoleHierarchy roleHierarchy;
 
     public CommonsService(ClanmemberService clanmemberService,
-                          @Autowired(required = false) BuildProperties buildProperties) {
+                          @Autowired(required = false) BuildProperties buildProperties,
+                          RoleHierarchy roleHierarchy) {
         this.clanmemberService = clanmemberService;
         this.buildProperties = buildProperties;
+        this.roleHierarchy = roleHierarchy;
     }
 
     public String generateImageFilename(String championName) {
@@ -37,7 +43,7 @@ public class CommonsService {
             return "placeholder.png";
         }
 
-        String cleanName = championName.toLowerCase().replaceAll("[^a-z0-9\\s]", ""); // Keep only alphanumeric + whitespace
+        String cleanName = championName.toLowerCase().replaceAll("[^a-z0-9\\s]", "");
 
         return cleanName.replaceAll("\\s+", " ").trim().replace(" ", "-") + ".png";
     }
@@ -61,47 +67,50 @@ public class CommonsService {
             }
 
             model.addAttribute("isLoggedIn", true);
-            model.addAttribute("quickLinks", getVisibleQuickLinks(authentication));
+            model.addAttribute("quickLinks", getVisibleQuickLinks(authentication, session));
         } else {
             model.addAttribute("isLoggedIn", false);
         }
     }
 
-    public List<QuickLink> getVisibleQuickLinks(Authentication authentication) {
+    public List<VisibleQuickLink> getVisibleQuickLinks(Authentication authentication, HttpSession session) {
         if (authentication == null || !authentication.isAuthenticated()) {
             return List.of();
         }
 
-        List<QuickLink> visibleLinks = new ArrayList<>();
+        Collection<? extends GrantedAuthority> reachableAuthorities =
+                roleHierarchy.getReachableGrantedAuthorities(authentication.getAuthorities());
 
-        // Get user roles as a list of strings (e.g., ["ROLE_ADMIN", "ROLE_MEMBER"])
-        List<String> userRoles = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .toList();
+        String activeMemberId = "";
+        if (session != null) {
+            ClanmemberEntity active = clanmemberService.getActiveClanmember(session, authentication);
+            if (active != null) {
+                activeMemberId = active.getId().toHexString();
+            }
+        }
 
-        // Check if user is OWNER (assuming Owner has access to Admin links via Hierarchy or explicit check)
-        boolean isOwner = userRoles.contains("ROLE_OWNER");
-        boolean isAdmin = userRoles.contains("ROLE_ADMIN") || isOwner;
+        List<VisibleQuickLink> visibleLinks = new ArrayList<>();
 
         for (QuickLink link : QuickLink.values()) {
-            boolean hasAccess = false;
+            if (reachableAuthorities.contains(new SimpleGrantedAuthority(link.getRequiredRole()))) {
 
-            // Simple Role Check Logic
-            if ("ROLE_OWNER".equals(link.getRequiredRole())) {
-                hasAccess = isOwner;
-            } else if ("ROLE_ADMIN".equals(link.getRequiredRole())) {
-                hasAccess = isAdmin;
-            } else {
-                // If we add public links later
-                hasAccess = true;
-            }
+                String finalUrl = link.getUrl();
 
-            if (hasAccess) {
-                visibleLinks.add(link);
+                if (link == QuickLink.EDIT_ROSTER) {
+                    if (!activeMemberId.isEmpty()) {
+                        finalUrl = link.getUrl() + activeMemberId;
+                    } else {
+                        continue;
+                    }
+                }
+
+                visibleLinks.add(new VisibleQuickLink(link.getLabel(), finalUrl));
             }
         }
         return visibleLinks;
     }
+
+    public record VisibleQuickLink(String label, String url) {}
 
     private String getAppVersion() {
         if (buildProperties != null) {

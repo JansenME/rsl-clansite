@@ -4,6 +4,7 @@ import lombok.Getter;
 
 @Getter
 public enum QuickLink {
+    EDIT_ROSTER("Edit My Roster", "/champions?editingMemberId=", "ROLE_MEMBER"),
     ADD_CLANMEMBER("Add Clanmember", "/clanmembers/add", "ROLE_ADMIN"),
     ADD_CHAMPION("Add Champion", "/champions/new", "ROLE_OWNER"),
     AUDIT_LOG("Audit Log", "/audit-log", "ROLE_ADMIN"),
