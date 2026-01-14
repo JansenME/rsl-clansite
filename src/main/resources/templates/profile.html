@@ -145,6 +145,12 @@
 				<div style="border-top: 2px solid #eee; margin-top: 40px; padding-top: 30px;">
 					<h3>My Champion Roster</h3>
 
+					<div th:if="${member.rosterLastUpdated != null}" style="text-align: center; color: #666; font-size: 0.9em; margin-bottom: 15px;">
+						<i class="fas fa-history"></i> Last updated:
+						<span class="utc-time" th:text="${member.rosterLastUpdated}"></span>
+						by <strong th:text="${member.rosterUpdatedBy}">User</strong>
+					</div>
+
 					<div style="text-align: center; margin-bottom: 20px;">
 						<div style="font-size: 1.1em; margin-bottom: 15px;">
 							Showing <strong id="visible-champion-count" th:text="${champions.size()}">0</strong> / <strong th:text="${champions.size()}">0</strong> Owned Champions
@@ -292,6 +298,21 @@
         if (typeof checkAll === "function") {
             checkAll(true);
         }
+
+        document.querySelectorAll('.utc-time').forEach(el => {
+            const raw = el.innerText;
+            if (raw) {
+                const dateStr = raw.endsWith('Z') ? raw : raw + 'Z';
+                const date = new Date(dateStr);
+                el.innerText = date.toLocaleString(undefined, {
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+        });
     });
 </script>
 </body>

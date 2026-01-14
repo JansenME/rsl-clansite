@@ -38,4 +38,7 @@ public class ClanmemberEntity {
     private List<String> rosterChampionIds = new ArrayList<>();
 
     private LocalDateTime lastLogin;
+
+    private LocalDateTime rosterLastUpdated;
+    private String rosterUpdatedBy;
 }
