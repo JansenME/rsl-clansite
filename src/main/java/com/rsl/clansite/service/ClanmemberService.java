@@ -88,7 +88,7 @@ public class ClanmemberService {
             if (latestLogin == null) continue;
 
             List<AccountDetailDTO> accountDetails = accounts.stream()
-                    .sorted(this::compareAccountsForHistory) // <--- UPDATED SORTING
+                    .sorted(this::compareAccountsForHistory)
                     .map(m -> new AccountDetailDTO(m.getIngameName(), m.getClanRank(), m.getClanGroup()))
                     .toList();
 
@@ -403,9 +403,19 @@ public class ClanmemberService {
             throw new IllegalArgumentException("The In-Game Name '" + dto.getIngameName() + "' is already in use by another member.");
         }
 
+        String oldDiscordId = member.getDiscordId();
+        String newDiscordId = dto.getDiscordId();
+
+        if (!StringUtils.hasText(newDiscordId)) {
+            newDiscordId = null;
+        }
+
+        boolean discordIdChanged = !Objects.equals(oldDiscordId, newDiscordId);
+
         member.setIngameName(dto.getIngameName());
         member.setClanRank(dto.getClanRank().name());
         member.setClanGroup(dto.getClanGroup());
+        member.setDiscordId(newDiscordId);
 
         clanmemberRepository.save(member);
 
@@ -415,6 +425,19 @@ public class ClanmemberService {
                 member.getIngameName(),
                 "Updated details for: " + member.getIngameName()
         );
+
+        if (discordIdChanged && newDiscordId != null) {
+            try {
+                List<ClanmemberEntity> allLinked = clanmemberRepository.findAllByDiscordId(newDiscordId);
+                boolean isMultiAccount = allLinked.size() > 1;
+
+                tryUpdateMemberRoles(member, isMultiAccount);
+                log.info("Auto-synced member {} after manual Discord ID link.", member.getIngameName());
+
+            } catch (Exception e) {
+                log.warn("Auto-sync failed after linking Discord ID for {}: {}", member.getIngameName(), e.getMessage());
+            }
+        }
     }
 
     public List<SyncStatusDTO> getMemberSyncStatus() {
@@ -514,7 +537,6 @@ public class ClanmemberService {
     public void updateLastSeen(String discordId) {
         if (!StringUtils.hasText(discordId)) return;
 
-        // 1. Try to find Linked Members
         List<ClanmemberEntity> members = clanmemberRepository.findAllByDiscordId(discordId);
         if (!members.isEmpty()) {
             for (ClanmemberEntity member : members) {
@@ -523,15 +545,14 @@ public class ClanmemberService {
                     clanmemberRepository.save(member);
                 }
             }
-            return; // If found as member, we are done (don't check visitor log)
+            return;
         }
 
-        // 2. If not a member, check Visitor Log
         Optional<VisitorLogEntity> visitorOpt = visitorLogRepository.findByDiscordId(discordId);
         if (visitorOpt.isPresent()) {
             VisitorLogEntity visitor = visitorOpt.get();
             if (shouldUpdateTimestamp(visitor.getLastLogin())) {
-                visitor.updateLogin(); // Reuse existing method which sets Now()
+                visitor.updateLogin();
                 visitorLogRepository.save(visitor);
             }
         }
@@ -603,6 +624,9 @@ public class ClanmemberService {
             boolean avatarChanged = member.getAvatarHash() == null || !newAvatarHash.equals(member.getAvatarHash());
             boolean groupChanged = false;
 
+            boolean discordNameChanged = !Objects.equals(member.getDiscordName(), discordData.getDiscordName());
+            boolean nicknameChanged = !Objects.equals(member.getPlayerNickname(), discordData.getPlayerNickname());
+
             if (!isMultiAccount && newDetectedGroup != null && !newDetectedGroup.equals(member.getClanGroup())) {
                 log.info("SYNC: Clan Group change detected for '{}': {} -> {}",
                         member.getIngameName(), member.getClanGroup(), newDetectedGroup);
@@ -611,17 +635,13 @@ public class ClanmemberService {
                 groupChanged = true;
             }
 
-            if (rolesChanged) {
-                log.info("SYNC: Discord Roles updated for '{}'", member.getIngameName());
-                member.setDiscordRoles(sortedRoles);
-            }
+            if (rolesChanged) member.setDiscordRoles(sortedRoles);
+            if (avatarChanged) member.setAvatarHash(newAvatarHash);
 
-            if (avatarChanged) {
-                log.info("SYNC: Avatar updated for '{}'", member.getIngameName());
-                member.setAvatarHash(newAvatarHash);
-            }
+            if (discordNameChanged) member.setDiscordName(discordData.getDiscordName());
+            if (nicknameChanged) member.setPlayerNickname(discordData.getPlayerNickname());
 
-            if (rolesChanged || avatarChanged || groupChanged) {
+            if (rolesChanged || avatarChanged || groupChanged || discordNameChanged || nicknameChanged) {
                 clanmemberRepository.save(member);
                 return true;
             }

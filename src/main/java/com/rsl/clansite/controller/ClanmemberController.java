@@ -162,6 +162,7 @@ public class ClanmemberController {
             @ModelAttribute("clanmemberRosterDto") @Validated(Default.class) NewClanmemberDTO dto,
             BindingResult bindingResult,
             Model model,
+            RedirectAttributes redirectAttributes,
             Authentication authentication) {
 
         if (bindingResult.hasErrors()) {
@@ -179,6 +180,7 @@ public class ClanmemberController {
 
         try {
             clanmemberService.updateClanmember(id, dto, authentication);
+            redirectAttributes.addFlashAttribute("successMessage", "Clanmember details updated successfully.");
         } catch (Exception e) {
             commonsService.fillModel(model, authentication);
             model.addAttribute("clanRanks", ClanRank.values());

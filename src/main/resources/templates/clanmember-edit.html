@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
     <script th:src="@{/styles/js/main.js}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 </head>
 <body>
 <div id="page-wrapper">
@@ -27,41 +28,35 @@
                           th:object="${clanmemberRosterDto}"
                           method="POST">
 
-                        <input type="hidden" th:field="*{discordId}" />
                         <input type="hidden" th:field="*{discordName}" />
                         <input type="hidden" th:field="*{playerNickname}" />
                         <input type="hidden" th:field="*{avatarHash}" />
 
                         <div th:if="${clanmemberRosterDto.discordId != null and !clanmemberRosterDto.discordId.isEmpty()}"
-                             style="background: #f4f4f4; padding: 20px; border-radius: 5px; margin-bottom: 25px; border: 1px solid #ddd; text-align: center;">
+                             style="background: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 25px; border: 1px solid #e9ecef; text-align: center;">
 
-                            <h3 style="margin-top: 0; margin-bottom: 15px;">Linked Discord Account</h3>
+                            <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1em; color: #495057;">Current Linked Account</h3>
 
                             <div style="display: flex; align-items: center; justify-content: center; gap: 15px; text-align: left;">
                                 <div th:if="${clanmemberRosterDto.avatarHash != null}">
                                     <img th:src="'https://cdn.discordapp.com/avatars/' + ${clanmemberRosterDto.discordId} + '/' + ${clanmemberRosterDto.avatarHash} + '.png'"
-                                         alt="Avatar" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+                                         alt="Avatar" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
                                 </div>
 
                                 <div>
-                                    <div style="font-weight: bold; font-size: 1.1em;" th:text="${clanmemberRosterDto.discordName}">Global Name</div>
-                                    <div style="font-size: 0.9em; color: #555;">
+                                    <div style="font-weight: bold; font-size: 1.0em;" th:text="${clanmemberRosterDto.discordName}">Global Name</div>
+                                    <div style="font-size: 0.85em; color: #555;">
                                         Nickname: <span th:text="${clanmemberRosterDto.playerNickname}">Nick</span>
-                                    </div>
-                                    <div style="font-size: 0.8em; color: #888;">
-                                        ID: <span th:text="${clanmemberRosterDto.discordId}">12345</span>
                                     </div>
                                 </div>
                             </div>
-
-                            <p style="font-size: 0.85em; color: #666; margin-top: 15px; margin-bottom: 0;">
-                                <i class="fa fa-info-circle"></i> managed automatically via synchronization.
-                            </p>
                         </div>
 
-                        <div th:if="${clanmemberRosterDto.discordId == null or clanmemberRosterDto.discordId.isEmpty()}"
-                             style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #ffeeba; text-align: center;">
-                            <strong>Manual Entry:</strong> This member is not linked to a Discord account.
+                        <h3 style="text-align: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">Account Linking</h3>
+
+                        <div class="form-group" style="max-width: 500px; margin: 0 auto 30px auto;">
+                            <label for="discordId">Discord User ID:</label>
+                            <input type="text" id="discordId" th:field="*{discordId}" style="font-family: monospace;" />
                         </div>
 
                         <h3 style="text-align: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">Roster Details</h3>
