@@ -9,6 +9,7 @@ import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.model.enums.AuditAction;
 import com.rsl.clansite.repository.ChampionRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.ListUtils;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -39,11 +40,24 @@ public class ChampionsService {
         return mapEntitiesToChampions(championRepository.findAll());
     }
 
+    public List<Champion> getChampionsByIds(List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+
+        List<ObjectId> objectIds = ids.stream()
+                .filter(ObjectId::isValid)
+                .map(ObjectId::new)
+                .toList();
+
+        List<ChampionEntity> entities = championRepository.findAllById(objectIds);
+        return mapEntitiesToChampions(entities);
+    }
+
     public void saveNewChampion(final ChampionEntryDTO dto, Authentication authentication) throws ChampionSaveException {
         saveNewChampion(dto, authentication, "Created new champion manually");
     }
 
-    // New overloaded method - accepts custom audit details
     public void saveNewChampion(final ChampionEntryDTO dto, Authentication authentication, String auditDetails) throws ChampionSaveException {
         if(!StringUtils.hasText(dto.getName())) {
             throw new ChampionSaveException("Champion name cannot be empty.");
@@ -62,7 +76,7 @@ public class ChampionsService {
                     authentication,
                     AuditAction.CHAMPION_ADD,
                     entity.getName(),
-                    auditDetails // Use the passed message
+                    auditDetails
             );
 
         } catch (Exception e) {

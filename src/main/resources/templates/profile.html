@@ -7,6 +7,19 @@
 	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
 	<script th:src="@{/styles/js/main.js}"></script>
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
+	<style>
+		/* Shared Button Style for consistency with Champions page */
+        .button-blue {
+            background: #0c2ccc !important;
+            color: white !important;
+            border: none;
+            box-shadow: none;
+        }
+        .button-blue:hover {
+            background-color: #0a25b0 !important;
+        }
+	</style>
 </head>
 <body>
 <div id="page-wrapper">
@@ -127,11 +140,159 @@
 
 				</div>
 			</section>
+
+			<section th:if="${champions != null}">
+				<div style="border-top: 2px solid #eee; margin-top: 40px; padding-top: 30px;">
+					<h3>My Champion Roster</h3>
+
+					<div style="text-align: center; margin-bottom: 20px;">
+						<div style="font-size: 1.1em; margin-bottom: 15px;">
+							Showing <strong id="visible-champion-count" th:text="${champions.size()}">0</strong> / <strong th:text="${champions.size()}">0</strong> Owned Champions
+						</div>
+
+						<button type="button" onclick="toggleFilter()"
+								class="button-blue"
+								style="display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold;">
+							<span id="filter-text">Show Filters & Sorting</span>
+							<span id="filter-arrow">▼</span>
+						</button>
+					</div>
+
+					<div id="filter-wrapper"
+						 style="max-height: 0; opacity: 0; overflow: hidden; transition: all 0.5s ease-in-out; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px solid transparent; margin-bottom: 0; padding: 0 20px;">
+						<form action="#"
+							  th:object="${filtersWrapper}"
+							  onsubmit="event.preventDefault(); return false;">
+
+							<input type="button" onclick="checkAll(true)" value="Check all">
+							<input type="button" onclick="checkAll(false)" value="Clear all">
+
+							<label for="champion-sort">Sort by:</label>
+							<select id="champion-sort" onchange="applyChampionFilters();">
+								<option value="name_asc">Name (A-Z)</option>
+								<option value="name_desc">Name (Z-A)</option>
+								<option value="score_desc">Arena Score (High to Low)</option>
+								<option value="score_asc">Arena Score (Low to High)</option>
+							</select>
+
+							<label for="champion-search" style="margin-left: 20px;">Search Name:</label>
+							<input type="text"
+								   id="champion-search"
+								   placeholder="Search within roster..."
+								   oninput="applyChampionFilters();"
+								   style="width: 250px; padding: 4px;"
+							/>
+
+							<table>
+								<thead>
+								<tr>
+									<th>Rarity</th>
+									<th>Type</th>
+									<th>Affinity</th>
+									<th>Faction</th>
+									<th>Alliance</th>
+								</tr>
+								</thead>
+								<tbody>
+								<tr>
+									<td style="vertical-align: text-top; padding-top:10px;">
+                                     <span th:each="item, stat : *{rarities}">
+                                        <input type="checkbox" class="filter-checkbox filter-rarity" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{rarities[__${stat.index}__].value}" />
+                                        <span th:text="${item.getName()}"></span><br />
+                                     </span>
+									</td>
+									<td style="vertical-align: text-top; padding-top:10px;">
+                                     <span th:each="item, stat : *{types}">
+                                        <input type="checkbox" class="filter-checkbox filter-type" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{types[__${stat.index}__].value}" />
+                                        <span th:text="${item.getName()}"></span><br />
+                                     </span>
+									</td>
+									<td style="vertical-align: text-top; padding-top:10px;">
+                                     <span th:each="item, stat : *{affinities}">
+                                        <input type="checkbox" class="filter-checkbox filter-affinity" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{affinities[__${stat.index}__].value}" />
+                                        <span th:text="${item.getName()}"></span><br />
+                                     </span>
+									</td>
+									<td style="vertical-align: text-top; padding-top:10px;">
+                                     <span th:each="item, stat : *{factions}">
+                                        <input type="checkbox" class="filter-checkbox filter-faction" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{factions[__${stat.index}__].value}" />
+                                        <span th:text="${item.getName()}"></span><br />
+                                     </span>
+									</td>
+									<td style="vertical-align: text-top; padding-top:10px;">
+                                     <span th:each="item, stat : *{alliances}">
+                                        <input type="checkbox" class="filter-checkbox filter-alliance" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{alliances[__${stat.index}__].value}" />
+                                        <span th:text="${item.getName()}"></span><br />
+                                     </span>
+									</td>
+								</tr>
+								</tbody>
+							</table>
+						</form>
+					</div>
+
+					<div th:if="${#lists.isEmpty(champions)}" style="text-align: center; padding: 40px; background: #f9f9f9; border-radius: 8px;">
+						<p style="font-size: 1.2em; color: #666;">No champions found in your roster yet.</p>
+						<a th:href="@{/champions}" class="button special small">Go to Champions Page to Add</a>
+					</div>
+
+					<div id="champion-grid-container" th:if="${!#lists.isEmpty(champions)}">
+						<div class="champion-card card-hidden"
+							 th:each="champion : ${champions}"
+							 th:data-rarity="${champion.rarity != null ? champion.rarity.getName() : ''}"
+							 th:data-type="${champion.type != null ? champion.type.getName() : ''}"
+							 th:data-affinity="${champion.affinity != null ? champion.affinity.getName() : ''}"
+							 th:data-faction="${champion.faction != null ? champion.faction.getName() : ''}"
+							 th:data-alliance="${champion.faction != null and champion.faction.alliance != null ? champion.faction.alliance.getName() : ''}"
+							 th:data-name="${champion.name}"
+							 th:data-score="${champion.arenaScore}">
+
+							<a th:href="@{/champions/{id}(id=${champion.id})}" style="text-decoration: none; border-bottom: none;">
+								<img th:src="${champion.imagename != null and !#strings.isEmpty(champion.imagename)} ? @{/images/champion-cards/{name}(name=${champion.imagename})} : @{/images/champion-cards/placeholder.png}"
+									 alt="Champion Image"
+									 style="width:140px;"
+									 class="champion-portrait"
+									 th:classappend="${champion.rarity != null} ? 'rarity-border-' + ${#strings.toLowerCase(champion.rarity)} : ''"
+									 loading="lazy"
+									 decoding="async" />
+							</a>
+							<div class="champion-rating-placeholder"></div>
+							<p class="champion-name" th:text="${champion.name}"></p>
+						</div>
+					</div>
+				</div>
+			</section>
 		</div>
 	</section>
 
 	<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
 	</div>
 </div>
+<button id="backToTopBtn" title="Go to top">
+	↑
+</button>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function() {
+        const images = document.querySelectorAll("img.champion-portrait");
+        const placeholder = "/images/champion-cards/placeholder.png";
+
+        images.forEach(function(img) {
+            img.onerror = function() {
+                this.onerror = null;
+                this.src = placeholder;
+            };
+
+            if (img.complete && img.naturalWidth === 0) {
+                img.src = placeholder;
+            }
+        });
+
+        // Ensure filters start checked
+        if (typeof checkAll === "function") {
+            checkAll(true);
+        }
+    });
+</script>
 </body>
 </html>
