@@ -54,7 +54,7 @@ public class ClanmemberService {
         this.siteAssetService = siteAssetService;
     }
 
-    public record AccountDetailDTO(String ingameName, String clanRank, ClanGroup clanGroup) {}
+    public record AccountDetailDTO(String ingameName, ClanRank clanRank, ClanGroup clanGroup) {}
 
     public record LoginHistoryDTO(
             String discordId,
@@ -288,7 +288,9 @@ public class ClanmemberService {
         newMember.setDiscordName(dto.getDiscordName());
         newMember.setPlayerNickname(dto.getPlayerNickname());
         newMember.setIngameName(dto.getIngameName());
-        newMember.setClanRank(dto.getClanRank() != null ? dto.getClanRank().name() : ClanRank.SOLDIER.name());
+
+        newMember.setClanRank(dto.getClanRank() != null ? dto.getClanRank() : ClanRank.SOLDIER);
+
         newMember.setClanGroup(dto.getClanGroup());
         newMember.setAvatarHash(dto.getAvatarHash());
         newMember.setDiscordRoles(dto.getDiscordRoles() != null ? dto.getDiscordRoles() : List.of());
@@ -383,9 +385,7 @@ public class ClanmemberService {
         dto.setPlayerNickname(entity.getPlayerNickname());
         dto.setIngameName(entity.getIngameName());
 
-        if (entity.getClanRank() != null) {
-            dto.setClanRank(ClanRank.valueOf(entity.getClanRank()));
-        }
+        dto.setClanRank(entity.getClanRank());
 
         dto.setClanGroup(entity.getClanGroup());
         dto.setAvatarHash(entity.getAvatarHash());
@@ -411,7 +411,9 @@ public class ClanmemberService {
         boolean discordIdChanged = !Objects.equals(oldDiscordId, newDiscordId);
 
         member.setIngameName(dto.getIngameName());
-        member.setClanRank(dto.getClanRank().name());
+
+        member.setClanRank(dto.getClanRank());
+
         member.setClanGroup(dto.getClanGroup());
         member.setDiscordId(newDiscordId);
 
@@ -676,7 +678,7 @@ public class ClanmemberService {
         if (m1.getClanRank() == null) return 1;
         if (m2.getClanRank() == null) return -1;
 
-        return ClanRank.valueOf(m1.getClanRank()).compareTo(ClanRank.valueOf(m2.getClanRank()));
+        return m1.getClanRank().compareTo(m2.getClanRank());
     }
 
     private List<String> resolveRoleNamesForUser(String discordId) {

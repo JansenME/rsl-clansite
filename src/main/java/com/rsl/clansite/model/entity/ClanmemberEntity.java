@@ -1,6 +1,7 @@
 package com.rsl.clansite.model.entity;
 
 import com.rsl.clansite.model.enums.ClanGroup;
+import com.rsl.clansite.model.enums.ClanRank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -34,7 +35,7 @@ public class ClanmemberEntity {
     @Indexed(unique = true)
     private String ingameName;
 
-    private String clanRank;
+    private ClanRank clanRank;
     private List<String> rosterChampionIds = new ArrayList<>();
 
     private LocalDateTime lastLogin;
