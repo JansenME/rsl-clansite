@@ -60,6 +60,7 @@ public class CommonsService {
         if (authentication != null && authentication.isAuthenticated()) {
             ClanmemberViewData viewData = clanmemberService.getUserViewData(authentication);
             model.addAttribute("clanmemberViewData", viewData);
+            model.addAttribute("navUserViewData", viewData);
 
             if (session != null) {
                 ClanmemberEntity activeMember = clanmemberService.getActiveClanmember(session, authentication);

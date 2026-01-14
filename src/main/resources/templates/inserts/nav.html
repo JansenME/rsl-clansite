@@ -12,7 +12,7 @@
         <a href="/profile"
            title="Profile"
            sec:authorize="isAuthenticated()"
-           th:text="${clanmemberViewData != null ? clanmemberViewData.discordUserName : 'Profile'}">
+           th:text="${navUserViewData != null ? navUserViewData.discordUserName : 'Profile'}">
             Profile
         </a>
 
