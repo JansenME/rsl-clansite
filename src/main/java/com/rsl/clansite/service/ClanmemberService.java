@@ -211,8 +211,6 @@ public class ClanmemberService {
     @Scheduled(cron = "0 */5 * * * *")
     @Transactional
     public void updateAllClanmemberDiscordRoles() {
-        log.info("Starting scheduled Discord role verification job.");
-
         siteAssetService.syncFavicon();
 
         List<ClanmemberEntity> allLinkedMembers = clanmemberRepository.findAllByDiscordIdIsNotNull();
@@ -232,9 +230,9 @@ public class ClanmemberService {
                 }
             }
         }
-
-        log.info("Completed scheduled role verification. Total members checked: {}, Updated: {}",
-                allLinkedMembers.size(), membersUpdated);
+        if (membersUpdated > 0) {
+            log.info("Scheduled Sync: Updated {} members based on Discord data.", membersUpdated);
+        }
     }
 
     public void linkClanmember(final String discordId, final String globalName, final String avatarHash, final List<String> currentDiscordRoles) {
