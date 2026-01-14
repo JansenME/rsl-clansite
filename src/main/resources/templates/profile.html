@@ -10,15 +10,15 @@
 
 	<style>
 		/* Shared Button Style for consistency with Champions page */
-        .button-blue {
-            background: #0c2ccc !important;
-            color: white !important;
-            border: none;
-            box-shadow: none;
-        }
-        .button-blue:hover {
-            background-color: #0a25b0 !important;
-        }
+         .button-blue {
+             background: #0c2ccc !important;
+             color: white !important;
+             border: none;
+             box-shadow: none;
+         }
+         .button-blue:hover {
+             background-color: #0a25b0 !important;
+         }
 	</style>
 </head>
 <body>
@@ -48,7 +48,7 @@
 										 style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
 								</div>
 								<div style="margin-left: 0; padding-left: 0;"><p style="margin: 0 0 10px 0; padding-left: 0;"><span th:text="${isOwnProfile ? 'Logged in as:' : 'Member:'}">User:</span><br /><strong th:text="${clanmemberViewData != null ? clanmemberViewData.discordUserName : 'User'}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong>
-									</p>
+								</p>
 
 									<p style="font-weight: bold; margin-bottom: 5px; margin-left: 0; padding-left: 0;">Roles:</p>
 
@@ -65,7 +65,7 @@
 								 style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
 
 								<h3>Linked Game Accounts</h3><p style="font-size: 0.9em; color: #666; margin-bottom: 1em;">Currently acting as: <strong style="color: #27ae60;" th:text="${activeMember != null ? activeMember.ingameName : 'Unknown'}">Name</strong>
-								</p>
+							</p>
 
 								<div class="table-wrapper">
 									<table class="alt">
@@ -143,7 +143,18 @@
 
 			<section th:if="${champions != null}">
 				<div style="border-top: 2px solid #eee; margin-top: 40px; padding-top: 30px;">
-					<h3>My Champion Roster</h3>
+
+					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+						<h3 th:text="${isOwnProfile ? 'My Champion Roster' : 'Champion Roster'}" style="margin: 0; text-align: center !important;">Champion Roster</h3>
+
+						<a th:if="${isOwnProfile or #authorization.expression('hasRole(''ROLE_COORDINATOR'')')}"
+						   th:href="@{/champions(editingMemberId=${member.id})}"
+						   class="button small button-blue"
+						   style="display: inline-flex; align-items: center; gap: 5px; text-decoration: none;">
+							<i class="fas fa-edit"></i>
+							<span th:text="${isOwnProfile ? 'Edit Personal Roster' : 'Edit Member Roster'}">Edit Roster</span>
+						</a>
+					</div>
 
 					<div th:if="${member.rosterLastUpdated != null}" style="text-align: center; color: #666; font-size: 0.9em; margin-bottom: 15px;">
 						<i class="fas fa-history"></i> Last updated:
@@ -239,7 +250,9 @@
 
 					<div th:if="${#lists.isEmpty(champions)}" style="text-align: center; padding: 40px; background: #f9f9f9; border-radius: 8px;">
 						<p style="font-size: 1.2em; color: #666;">No champions found in your roster yet.</p>
-						<a th:href="@{/champions}" class="button special small">Go to Champions Page to Add</a>
+						<a th:href="@{/champions(editingMemberId=${member.id})}" class="button special small">
+							<span th:text="${isOwnProfile ? 'Go to Champions Page to Add' : 'Manage Member Roster'}">Manage Roster</span>
+						</a>
 					</div>
 
 					<div id="champion-grid-container" th:if="${!#lists.isEmpty(champions)}">

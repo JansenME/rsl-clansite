@@ -50,15 +50,52 @@ public class ChampionsController {
     }
 
     @GetMapping(value={"", "/"})
-    public String getAllChampions(Model model, Authentication authentication, HttpSession session) {
+    public String getAllChampions(@RequestParam(required = false) String editingMemberId,
+                                  Model model,
+                                  Authentication authentication,
+                                  HttpSession session) {
         fillModel(model, authentication, session);
-
-        // Fetch the Active Member so we know which checkboxes to tick
         ClanmemberEntity activeMember = clanmemberService.getActiveClanmember(session, authentication);
-        if (activeMember != null) {
-            model.addAttribute("ownedChampionIds", activeMember.getRosterChampionIds());
-            model.addAttribute("activeMember", activeMember); // For the sticky footer name
+
+        ClanmemberEntity targetMember = activeMember;
+        boolean isManagementMode = false;
+        boolean autoOpenEditMode = false;
+
+        if (editingMemberId != null && authentication != null) {
+            if (activeMember.getId().toHexString().equals(editingMemberId)) {
+                autoOpenEditMode = true;
+            } else {
+                boolean isCoordinator = authentication.getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().equals("ROLE_COORDINATOR")
+                                || a.getAuthority().equals("ROLE_ADMIN")
+                                || a.getAuthority().equals("ROLE_OWNER"));
+
+                if (isCoordinator) {
+                    try {
+                        targetMember = clanmemberService.getMemberById(editingMemberId);
+                        if (!targetMember.getId().equals(activeMember.getId())) {
+                            isManagementMode = true;
+                            autoOpenEditMode = true;
+                        } else {
+                            autoOpenEditMode = true;
+                        }
+                    } catch (Exception e) {
+                        model.addAttribute("errorMessage", "Could not find requested member. Showing your own roster instead.");
+                    }
+                } else {
+                    model.addAttribute("errorMessage", "You do not have permission to manage other members' rosters.");
+                }
+            }
         }
+
+        if (targetMember != null) {
+            model.addAttribute("ownedChampionIds", targetMember.getRosterChampionIds());
+            model.addAttribute("targetMember", targetMember);
+        }
+
+        model.addAttribute("activeMember", activeMember);
+        model.addAttribute("isManagementMode", isManagementMode);
+        model.addAttribute("autoOpenEditMode", autoOpenEditMode);
 
         model.addAttribute("filtersWrapper", new CompleteChampionsFilter());
         model.addAttribute("champions", championsService.getAllChampions());
@@ -180,7 +217,6 @@ public class ChampionsController {
     private void fillModel(Model model, Authentication authentication, HttpSession session) {
         commonsService.fillModel(model, authentication, session);
 
-        // --- FIXED: Use Dynamic JSON data instead of Hardcode ---
         int totalAmountOfChampions = targetService.getTotalChampionCount();
 
         model.addAttribute("rarities", Rarity.values());

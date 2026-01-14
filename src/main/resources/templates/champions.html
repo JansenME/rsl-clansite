@@ -11,99 +11,99 @@
 	<style>
 		/* --- ROSTER EDIT MODE STYLES --- */
 
-        /* When editing, the whole card becomes a button */
-        body.roster-editing .champion-card {
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+         /* When editing, the whole card becomes a button */
+         body.roster-editing .champion-card {
+             cursor: pointer;
+             transition: all 0.2s ease;
+         }
 
-        /* Disable links while editing so we don't go to details page */
-        body.roster-editing .champion-card a {
-            pointer-events: none;
-        }
+         /* Disable links while editing so we don't go to details page */
+         body.roster-editing .champion-card a {
+             pointer-events: none;
+         }
 
-        /* Unselected State (While Editing): Dimmed & Grayscale */
-        body.roster-editing .champion-card:not(.selected) {
-            opacity: 0.4;
-            filter: grayscale(100%);
-            transform: scale(0.95);
-        }
+         /* Unselected State (While Editing): Dimmed & Grayscale */
+         body.roster-editing .champion-card:not(.selected) {
+             opacity: 0.4;
+             filter: grayscale(100%);
+             transform: scale(0.95);
+         }
 
-        /* Selected State (While Editing): Full Color & Pop */
-        body.roster-editing .champion-card.selected {
-            opacity: 1;
-            filter: none;
-            transform: scale(1.05);
-            z-index: 10;
-            box-shadow: 0 0 20px rgba(39, 174, 96, 0.6); /* Green Glow behind card */
-            border-radius: 8px; /* Smooth corners for the glow */
-        }
+         /* Selected State (While Editing): Full Color & Pop */
+         body.roster-editing .champion-card.selected {
+             opacity: 1;
+             filter: none;
+             transform: scale(1.05);
+             z-index: 10;
+             box-shadow: 0 0 20px rgba(39, 174, 96, 0.6); /* Green Glow behind card */
+             border-radius: 8px; /* Smooth corners for the glow */
+         }
 
-        /* Add a checkmark icon overlay on selected cards */
-        body.roster-editing .champion-card.selected::after {
-            content: '\f00c'; /* FontAwesome Check */
-            font-family: "Font Awesome 6 Free";
-            font-weight: 900;
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            background: #27ae60;
-            color: white;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            z-index: 11;
-        }
+         /* Add a checkmark icon overlay on selected cards */
+         body.roster-editing .champion-card.selected::after {
+             content: '\f00c'; /* FontAwesome Check */
+             font-family: "Font Awesome 6 Free";
+             font-weight: 900;
+             position: absolute;
+             top: -10px;
+             right: -10px;
+             background: #27ae60;
+             color: white;
+             width: 30px;
+             height: 30px;
+             border-radius: 50%;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+             z-index: 11;
+         }
 
-        /* Sticky Save Bar */
-        #save-roster-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background-color: #2c3e50;
-            color: white;
-            padding: 15px;
-            text-align: center;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
-            z-index: 1000;
-            display: flex; /* Flex is toggled via JS */
-            justify-content: center;
-            gap: 20px;
-            align-items: center;
-            transform: translateY(100%); /* Hidden by default */
-            transition: transform 0.3s ease-in-out;
-        }
+         /* Sticky Save Bar */
+         #save-roster-bar {
+             position: fixed;
+             bottom: 0;
+             left: 0;
+             width: 100%;
+             background-color: #2c3e50;
+             color: white;
+             padding: 15px;
+             text-align: center;
+             box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+             z-index: 1000;
+             display: flex; /* Flex is toggled via JS */
+             justify-content: center;
+             gap: 20px;
+             align-items: center;
+             transform: translateY(100%); /* Hidden by default */
+             transition: transform 0.3s ease-in-out;
+         }
 
-        #save-roster-bar.visible {
-            transform: translateY(0); /* Slide up */
-        }
+         #save-roster-bar.visible {
+             transform: translateY(0); /* Slide up */
+         }
 
-        /* High Contrast Cancel Button */
-        .button.cancel-btn {
-            background: transparent !important;
-            border: 1px solid #fff !important;
-            color: #fff !important;
-            box-shadow: none !important;
-        }
-        .button.cancel-btn:hover {
-            background: rgba(255,255,255,0.1) !important;
-        }
+         /* High Contrast Cancel Button */
+         .button.cancel-btn {
+             background: transparent !important;
+             border: 1px solid #fff !important;
+             color: #fff !important;
+             box-shadow: none !important;
+         }
+         .button.cancel-btn:hover {
+             background: rgba(255,255,255,0.1) !important;
+         }
 
-        /* Shared Button Style for Uniformity */
-        .button-blue {
-            background: #0c2ccc !important;
-            color: white !important;
-            border: none;
-            box-shadow: none;
-        }
-        .button-blue:hover {
-            background-color: #0a25b0 !important;
-        }
+         /* Shared Button Style for Uniformity */
+         .button-blue {
+             background: #0c2ccc !important;
+             color: white !important;
+             border: none;
+             box-shadow: none;
+         }
+         .button-blue:hover {
+             background-color: #0a25b0 !important;
+         }
 	</style>
 </head>
 <body>
@@ -116,6 +116,12 @@
 	<section id="content">
 		<div class="container">
 			<section>
+
+				<div th:if="${errorMessage != null}"
+					 style="background-color: #e74c3c; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: center;">
+					<i class="fas fa-exclamation-triangle"></i> <span th:text="${errorMessage}">Error</span>
+				</div>
+
 				<div style="text-align: center; margin-bottom: 20px;">
 					<div style="font-size: 1.1em; margin-bottom: 15px;">
 						Showing <strong id="visible-champion-count" th:text="${champions.size()}">0</strong> / <strong th:text="${champions.size()}">0</strong> Champions
@@ -157,15 +163,15 @@
 						/>
 
 						<span sec:authorize="isAuthenticated()" style="margin-left: 20px; display: inline-flex; gap: 15px; align-items: center;">
-							<label style="cursor:pointer; display:flex; align-items:center; gap:5px;">
-								<input type="checkbox" id="filter-roster-owned" checked onchange="applyChampionFilters()">
-								Owned
-							</label>
-							<label style="cursor:pointer; display:flex; align-items:center; gap:5px;">
-								<input type="checkbox" id="filter-roster-unowned" checked onchange="applyChampionFilters()">
-								Unowned
-							</label>
-						</span>
+                      <label style="cursor:pointer; display:flex; align-items:center; gap:5px;">
+                         <input type="checkbox" id="filter-roster-owned" checked onchange="applyChampionFilters()">
+                         Owned
+                      </label>
+                      <label style="cursor:pointer; display:flex; align-items:center; gap:5px;">
+                         <input type="checkbox" id="filter-roster-unowned" checked onchange="applyChampionFilters()">
+                         Unowned
+                      </label>
+                   </span>
 
 						<table>
 							<thead>
@@ -230,7 +236,7 @@
 								class="button small button-blue"
 								style="display: inline-block; background: #0c2ccc; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;"
 								onclick="toggleRosterMode()">
-							<i class="fas fa-edit"></i> Edit Personal Roster
+							<i class="fas fa-edit"></i> <span th:text="${isManagementMode ? 'Edit Member Roster' : 'Edit Personal Roster'}">Edit Roster</span>
 						</button>
 					</div>
 
@@ -284,13 +290,13 @@
 
 	<div id="save-roster-bar" th:if="${isLoggedIn}">
 		<div style="margin-right: 20px;">
-			Editing Roster for:
-			<strong th:text="${activeMember != null ? activeMember.ingameName : 'Unknown'}" style="color: #2ecc71;">User</strong>
+			<span th:text="${isManagementMode ? 'Managing Roster for:' : 'Editing Roster for:'}">Editing:</span>
+			<strong th:text="${targetMember != null ? targetMember.ingameName : 'Unknown'}" style="color: #2ecc71;">User</strong>
 			(<span id="selected-count" th:text="${ownedChampionIds != null ? ownedChampionIds.size() : 0}">0</span> selected)
 		</div>
 
 		<form id="roster-form" method="POST" th:action="@{/champions/roster-save}" onsubmit="prepareRosterSubmission()">
-			<input type="hidden" name="targetMemberId" th:value="${activeMember != null ? activeMember.id.toHexString() : ''}" />
+			<input type="hidden" name="targetMemberId" th:value="${targetMember != null ? targetMember.id.toHexString() : ''}" />
 			<input type="hidden" name="championIds" id="final-champion-ids" />
 
 			<button type="button" class="button small cancel-btn" onclick="toggleRosterMode()" style="margin-right: 10px;">Cancel</button>
@@ -308,6 +314,7 @@
 <script th:inline="javascript">
 	/*[+
        const initialOwned = [[${ownedChampionIds}]];
+       const autoOpenEditMode = [[${autoOpenEditMode}]];
     +]*/
 
     const selectedChampionIds = new Set(initialOwned || []);
@@ -374,6 +381,11 @@
                 img.src = placeholder;
             }
         });
+
+        // Story #7: Auto-open editing if requested by Controller (Self or Other)
+        if (autoOpenEditMode) {
+            toggleRosterMode();
+        }
     });
 </script>
 </body>
