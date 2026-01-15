@@ -3,6 +3,7 @@ package com.rsl.clansite.service;
 import com.rsl.clansite.client.DiscordApiClient;
 import com.rsl.clansite.exceptions.UnlinkedAccountException;
 import com.rsl.clansite.model.ClanmemberViewData;
+import com.rsl.clansite.model.Team;
 import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.dto.SyncStatusDTO;
@@ -577,7 +578,6 @@ public class ClanmemberService {
         return statusList;
     }
 
-    // ... (syncSingleMember, updateLastSeen, getFreshAuthorities remain unchanged) ...
     public void syncSingleMember(String id, Authentication authentication) {
         ClanmemberEntity member = getMemberById(id);
 
@@ -632,6 +632,28 @@ public class ClanmemberService {
                     Set<String> dbRoles = new HashSet<>(member.getDiscordRoles());
                     return discordRoleService.getAuthoritiesForRoles(dbRoles, discordId);
                 });
+    }
+
+    @Transactional
+    public void addKnownTeam(HttpSession session, Authentication authentication, Team team) {
+        ClanmemberEntity member = getActiveClanmember(session, authentication);
+
+        if (member == null) {
+            throw new UnlinkedAccountException("No active profile session found.");
+        }
+
+        if (!StringUtils.hasText(team.getTeamName())) {
+            throw new IllegalArgumentException("Team Name is required.");
+        }
+
+        if (member.getKnownTeams() == null) {
+            member.setKnownTeams(new ArrayList<>());
+        }
+
+        member.getKnownTeams().add(team);
+        clanmemberRepository.save(member);
+
+        log.info("Added new Known Team '{}' for member {}", team.getTeamName(), member.getIngameName());
     }
 
     private boolean shouldUpdateTimestamp(LocalDateTime lastDate) {

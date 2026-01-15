@@ -10,15 +10,62 @@
 
 	<style>
 		/* Shared Button Style for consistency with Champions page */
-         .button-blue {
-             background: #0c2ccc !important;
-             color: white !important;
-             border: none;
-             box-shadow: none;
-         }
-         .button-blue:hover {
-             background-color: #0a25b0 !important;
-         }
+          .button-blue {
+              background: #0c2ccc !important;
+              color: white !important;
+              border: none;
+              box-shadow: none;
+          }
+          .button-blue:hover {
+              background-color: #0a25b0 !important;
+          }
+
+          /* KNOWN TEAM STYLES */
+          .known-team-card {
+              background: #fff;
+              border: 1px solid #ddd;
+              border-radius: 8px;
+              padding: 15px;
+              margin-bottom: 20px;
+              box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+          }
+
+          .known-team-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 10px;
+              border-bottom: 1px solid #eee;
+              padding-bottom: 10px;
+          }
+
+          .team-condition-badge {
+              background-color: #f39c12;
+              color: white;
+              padding: 3px 8px;
+              border-radius: 4px;
+              font-size: 0.8em;
+              font-weight: bold;
+          }
+
+          .team-portraits {
+              display: flex;
+              gap: 10px;
+              justify-content: center; /* Center the team */
+          }
+
+          .team-mini-portrait {
+              width: 60px;
+              height: 60px;
+              border-radius: 4px;
+              border: 2px solid #ccc;
+              object-fit: cover;
+          }
+
+          .team-mini-portrait.leader {
+              border-color: #f1c40f;
+              box-shadow: 0 0 5px rgba(241, 196, 15, 0.5);
+          }
 	</style>
 </head>
 <body>
@@ -138,6 +185,29 @@
 						</ul>
 					</div>
 
+				</div>
+			</section>
+
+			<section th:if="${member != null and member.knownTeams != null and !member.knownTeams.isEmpty()}">
+				<div style="border-top: 2px solid #eee; margin-top: 40px; padding-top: 30px;">
+					<h3 style="text-align: center; margin-bottom: 20px;">Known Teams (Siege Ready)</h3>
+
+					<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+						<div th:each="team : ${member.knownTeams}" class="known-team-card">
+							<div class="known-team-header">
+								<strong th:text="${team.teamName}">Team Name</strong>
+								<span th:if="${team.siegeConditionId != null}" class="team-condition-badge">Specific Condition</span>
+							</div>
+
+							<div class="team-portraits">
+								<img th:src="@{/images/champion-cards/placeholder.png}"
+									 th:if="${team.leaderChampionId == null}" class="team-mini-portrait leader"/>
+								<div style="text-align:center; color:#ccc; font-size:0.8em; font-style:italic;">
+									(Champion Images will appear here after DTO mapping)
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
 			</section>
 
@@ -262,6 +332,49 @@
 					</div>
 				</div>
 			</section>
+		</div>
+	</section>
+
+	<section th:if="${knownTeams != null and !knownTeams.isEmpty()}">
+		<div style="border-top: 2px solid #eee; margin-top: 40px; padding-top: 30px;">
+			<h3 style="text-align: center; margin-bottom: 20px;">Known Teams (Siege Ready)</h3>
+
+			<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+				<div th:each="team : ${knownTeams}" class="known-team-card">
+					<div class="known-team-header">
+						<strong th:text="${team.teamName}">Team Name</strong>
+						<span th:if="${team.conditionLabel != null}"
+							  class="team-condition-badge"
+							  th:text="${team.conditionLabel}">Condition</span>
+					</div>
+
+					<div class="team-portraits">
+						<div class="team-mini-portrait leader-wrapper" style="position: relative;">
+							<img th:if="${team.leader != null}"
+								 th:src="${team.leader.imagename != null} ? @{/images/champion-cards/{name}(name=${team.leader.imagename})} : @{/images/champion-cards/placeholder.png}"
+								 class="team-mini-portrait leader"
+								 title="Leader" />
+							<img th:unless="${team.leader != null}" th:src="@{/images/champion-cards/placeholder.png}" class="team-mini-portrait leader" />
+							<i class="fas fa-crown" style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); color: #f1c40f; text-shadow: 0 1px 2px black; font-size: 12px;"></i>
+						</div>
+
+						<img th:if="${team.member2 != null}"
+							 th:src="${team.member2.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member2.imagename})} : @{/images/champion-cards/placeholder.png}"
+							 class="team-mini-portrait" />
+						<img th:unless="${team.member2 != null}" th:src="@{/images/champion-cards/placeholder.png}" class="team-mini-portrait" />
+
+						<img th:if="${team.member3 != null}"
+							 th:src="${team.member3.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member3.imagename})} : @{/images/champion-cards/placeholder.png}"
+							 class="team-mini-portrait" />
+						<img th:unless="${team.member3 != null}" th:src="@{/images/champion-cards/placeholder.png}" class="team-mini-portrait" />
+
+						<img th:if="${team.member4 != null}"
+							 th:src="${team.member4.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member4.imagename})} : @{/images/champion-cards/placeholder.png}"
+							 class="team-mini-portrait" />
+						<img th:unless="${team.member4 != null}" th:src="@{/images/champion-cards/placeholder.png}" class="team-mini-portrait" />
+					</div>
+				</div>
+			</div>
 		</div>
 	</section>
 

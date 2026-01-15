@@ -3,7 +3,9 @@ package com.rsl.clansite.controller;
 import com.rsl.clansite.model.Champion;
 import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.CompleteChampionsFilter;
+import com.rsl.clansite.model.Team;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.entity.SiegeConditionEntity;
 import com.rsl.clansite.model.enums.Affinity;
 import com.rsl.clansite.model.enums.Alliance;
 import com.rsl.clansite.model.enums.Faction;
@@ -12,7 +14,9 @@ import com.rsl.clansite.model.enums.Type;
 import com.rsl.clansite.service.ChampionsService;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
+import com.rsl.clansite.service.SiegeConditionService;
 import jakarta.servlet.http.HttpSession;
+import org.bson.types.ObjectId;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -26,7 +30,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/profile")
@@ -34,14 +39,27 @@ public class ProfileController {
     private final CommonsService commonsService;
     private final ClanmemberService clanmemberService;
     private final ChampionsService championsService;
+    private final SiegeConditionService siegeConditionService;
 
     public ProfileController(CommonsService commonsService,
                              ClanmemberService clanmemberService,
-                             ChampionsService championsService) {
+                             ChampionsService championsService,
+                             SiegeConditionService siegeConditionService) {
         this.commonsService = commonsService;
         this.clanmemberService = clanmemberService;
         this.championsService = championsService;
+        this.siegeConditionService = siegeConditionService;
     }
+
+    public record TeamViewDTO(
+            String id,
+            String teamName,
+            String conditionLabel,
+            Champion leader,
+            Champion member2,
+            Champion member3,
+            Champion member4
+    ) {}
 
     @GetMapping(value={"", "/"})
     @PreAuthorize("isAuthenticated()")
@@ -93,6 +111,9 @@ public class ProfileController {
         model.addAttribute("member", targetMember);
         model.addAttribute("isOwnProfile", isOwnProfile);
 
+        List<TeamViewDTO> knownTeamsView = buildKnownTeamsView(targetMember.getKnownTeams());
+        model.addAttribute("knownTeams", knownTeamsView);
+
         return "profile";
     }
 
@@ -106,6 +127,52 @@ public class ProfileController {
         clanmemberService.switchActiveMember(session, authentication, newActiveMemberId);
 
         return "redirect:/profile";
+    }
+
+    private List<TeamViewDTO> buildKnownTeamsView(List<Team> rawTeams) {
+        if (rawTeams == null || rawTeams.isEmpty()) {
+            return List.of();
+        }
+
+        Set<String> allChampionIds = new HashSet<>();
+        for (Team t : rawTeams) {
+            if (t.getLeaderChampionId() != null) allChampionIds.add(t.getLeaderChampionId());
+            if (t.getChampion2Id() != null) allChampionIds.add(t.getChampion2Id());
+            if (t.getChampion3Id() != null) allChampionIds.add(t.getChampion3Id());
+            if (t.getChampion4Id() != null) allChampionIds.add(t.getChampion4Id());
+        }
+
+        Map<String, Champion> championMap = championsService.getChampionsByIds(new ArrayList<>(allChampionIds))
+                .stream()
+                .collect(Collectors.toMap(Champion::getId, c -> c));
+
+        Map<ObjectId, SiegeConditionEntity> conditionMap = siegeConditionService.findAllConditions()
+                .stream()
+                .collect(Collectors.toMap(SiegeConditionEntity::getId, c -> c));
+
+        List<TeamViewDTO> viewList = new ArrayList<>();
+
+        for (Team t : rawTeams) {
+            String conditionLabel = null;
+            if (t.getSiegeConditionId() != null) {
+                SiegeConditionEntity cond = conditionMap.get(t.getSiegeConditionId());
+                if (cond != null) {
+                    conditionLabel = cond.getCategory().getDisplayName() + ": " + cond.getConditionKey();
+                }
+            }
+
+            viewList.add(new TeamViewDTO(
+                    t.getId(),
+                    t.getTeamName(),
+                    conditionLabel,
+                    championMap.get(t.getLeaderChampionId()),
+                    championMap.get(t.getChampion2Id()),
+                    championMap.get(t.getChampion3Id()),
+                    championMap.get(t.getChampion4Id())
+            ));
+        }
+
+        return viewList;
     }
 
     private void addFilterDataToModel(Model model) {

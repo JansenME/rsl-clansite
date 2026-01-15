@@ -1,5 +1,6 @@
 package com.rsl.clansite.model.entity;
 
+import com.rsl.clansite.model.Team;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.ClanRank;
 import com.rsl.clansite.model.enums.MemberStatus;
@@ -39,7 +40,8 @@ public class ClanmemberEntity {
     private ClanRank clanRank;
     private List<String> rosterChampionIds = new ArrayList<>();
 
-    // Story #14: Soft Delete Fields
+    private List<Team> knownTeams = new ArrayList<>();
+
     private MemberStatus status = MemberStatus.ACTIVE;
     private LocalDateTime statusChangedDate;
 

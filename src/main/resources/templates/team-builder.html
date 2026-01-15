@@ -1,0 +1,470 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Team Builder</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+    <script th:src="@{/styles/js/main.js}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
+    <style>
+        /* --- STICKY HEADER --- */
+        #team-sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: #2c3e50;
+            border-bottom: 4px solid #f39c12;
+            padding: 25px 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .builder-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+
+        /* --- THE 4 SLOTS --- */
+        .team-slots-wrapper {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .team-slot {
+            width: 150px;
+            height: 150px;
+            background-color: rgba(0,0,0,0.3);
+            border: 3px solid #555;
+            border-radius: 8px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .team-slot img {
+            width: auto;
+            height: 90%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .team-slot:hover {
+            border-color: #fff;
+            transform: scale(1.05);
+        }
+
+        .team-slot.selected {
+            border-color: #2ecc71;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.6);
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .team-slot.leader-slot {
+            border-color: #f1c40f;
+        }
+        .team-slot.leader-slot::after {
+            content: 'LEADER';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(241, 196, 15, 0.9);
+            color: #000;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            padding: 4px 0;
+        }
+
+        .slot-clear-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(231, 76, 60, 0.9);
+            color: white;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+        }
+
+        .team-slot.has-champion:hover .slot-clear-btn {
+            display: flex;
+        }
+
+        /* --- FORM INPUTS --- */
+        .team-meta-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 300px;
+        }
+
+        .team-meta-inputs input, .team-meta-inputs select {
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            width: 100%;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        #aura-warning {
+            color: #ffcccc;
+            font-weight: bold;
+            font-size: 0.9em;
+            display: none;
+            margin-top: 5px;
+            background: rgba(231, 76, 60, 0.3);
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #e74c3c;
+        }
+
+        .save-btn {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .save-btn:hover {
+            background-color: #2ecc71;
+        }
+
+        /* --- ROSTER SELECTION AREA --- */
+        .roster-selection-area {
+            padding-top: 20px;
+        }
+
+        /* Ensure cards in grid are clickable */
+        .champion-card {
+            cursor: pointer;
+            position: relative;
+            /* Ensure it respects container grid logic */
+            box-sizing: border-box;
+        }
+
+        /* Visual cue for picked cards */
+        .champion-card.picked {
+            opacity: 0.3;
+            filter: grayscale(100%);
+            pointer-events: none;
+        }
+
+        /* Re-apply hover zoom directly to image wrapper */
+        .champion-card:hover .champion-image-wrapper {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        .champion-image-wrapper {
+            transition: transform 0.2s ease;
+        }
+
+        /* Affinity Overlay Styles */
+        .affinity-overlay {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            width: 35px;
+            height: 35px;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 5;
+            transition: transform 0.2s ease;
+            pointer-events: none;
+        }
+        .champion-card:hover .affinity-overlay {
+            transform: translate3d(-4px, 4px, 0);
+        }
+        .affinity-overlay img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 2px;
+        }
+
+    </style>
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container">
+        </div>
+    </section>
+
+    <div id="team-sticky-header">
+        <form id="team-form" th:action="@{/teams/save}" th:object="${newTeam}" method="POST" class="builder-container">
+
+            <div class="team-meta-inputs">
+                <input type="text" th:field="*{teamName}" placeholder="Team Name (e.g. Speed Farm)" required />
+
+                <select th:field="*{siegeConditionId}">
+                    <option value="">-- No Condition (General) --</option>
+                    <option th:each="cond : ${siegeConditions}"
+                            th:value="${cond.id}"
+                            th:text="${cond.category.displayName + ': ' + cond.conditionKey}">
+                        Condition
+                    </option>
+                </select>
+
+                <div id="aura-warning">
+                    <i class="fas fa-exclamation-triangle"></i> <span id="aura-msg">Warning text</span>
+                </div>
+            </div>
+
+            <div class="team-slots-wrapper">
+                <div class="team-slot leader-slot" id="slot-0" onclick="handleSlotClick(0)">
+                    <img id="img-0" src="/images/leader-image.png" alt="Leader" />
+                    <input type="hidden" th:field="*{leaderChampionId}" id="input-0" />
+                    <div class="slot-clear-btn" onclick="clearSlot(0, event)"><i class="fas fa-times"></i></div>
+                </div>
+                <div class="team-slot" id="slot-1" onclick="handleSlotClick(1)">
+                    <img id="img-1" src="/images/teammember-image.png" alt="Member" />
+                    <input type="hidden" th:field="*{champion2Id}" id="input-1" />
+                    <div class="slot-clear-btn" onclick="clearSlot(1, event)"><i class="fas fa-times"></i></div>
+                </div>
+                <div class="team-slot" id="slot-2" onclick="handleSlotClick(2)">
+                    <img id="img-2" src="/images/teammember-image.png" alt="Member" />
+                    <input type="hidden" th:field="*{champion3Id}" id="input-2" />
+                    <div class="slot-clear-btn" onclick="clearSlot(2, event)"><i class="fas fa-times"></i></div>
+                </div>
+                <div class="team-slot" id="slot-3" onclick="handleSlotClick(3)">
+                    <img id="img-3" src="/images/teammember-image.png" alt="Member" />
+                    <input type="hidden" th:field="*{champion4Id}" id="input-3" />
+                    <div class="slot-clear-btn" onclick="clearSlot(3, event)"><i class="fas fa-times"></i></div>
+                </div>
+            </div>
+
+            <button type="submit" class="save-btn" id="save-btn">Save Team</button>
+        </form>
+    </div>
+
+    <section id="content">
+        <div class="container roster-selection-area">
+            <h2 style="text-align: center; margin-bottom: 20px;">Select Champions from your Roster</h2>
+
+            <div th:if="${#lists.isEmpty(champions)}" style="text-align: center;">
+                <p>You have no champions in your roster yet. Go to <a th:href="@{/champions}">My Roster</a> to add some!</p>
+            </div>
+
+            <div id="champion-grid-container" th:unless="${#lists.isEmpty(champions)}">
+
+                <div class="champion-card"
+                     th:each="champion : ${champions}"
+                     th:id="'roster-card-' + ${champion.id}"
+                     th:data-id="${champion.id}"
+                     th:data-img="${champion.imagename}"
+                     th:data-aura="${champion.aura != null ? champion.aura.location : 'NONE'}">
+
+                    <div class="champion-image-wrapper">
+                        <img th:src="${champion.imagename != null and !#strings.isEmpty(champion.imagename)} ? @{/images/champion-cards/{name}(name=${champion.imagename})} : @{/images/champion-cards/placeholder.png}"
+                             alt="Champion Image"
+                             style="width:140px;"
+                             class="champion-portrait"
+                             th:classappend="${champion.rarity != null} ? 'rarity-border-' + ${#strings.toLowerCase(champion.rarity)} : ''"
+                             loading="lazy" />
+
+                        <div class="affinity-overlay" th:if="${champion.affinity != null}">
+                            <img th:src="@{/images/affinity/{name}.png(name=${champion.affinity})}"
+                                 onerror="this.style.display='none'"
+                                 alt="Affinity" />
+                        </div>
+                    </div>
+                    <div class="champion-rating-placeholder"></div>
+                    <p class="champion-name" th:text="${champion.name}"></p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+    </div>
+</div>
+
+<script>
+    console.log("TEAM BUILDER SCRIPT STARTING...");
+
+    let selectedSlotIndex = null;
+    const LEADER_PLACEHOLDER = '/images/leader-image.png';
+    const MEMBER_PLACEHOLDER = '/images/teammember-image.png';
+
+    // GLOBAL CLICK LISTENER (Delegation)
+    document.addEventListener("click", function(e) {
+        // Find the closest .champion-card (walking up from image/div)
+        const cardDiv = e.target.closest('.champion-card');
+
+        // Ensure the card is actually inside our grid (safety check)
+        const grid = document.getElementById('champion-grid-container');
+
+        if (cardDiv && grid.contains(cardDiv)) {
+            console.log(">> Champion Card Clicked!");
+            pickChampion(cardDiv);
+        }
+    });
+
+    function handleSlotClick(index) {
+        const slotDiv = document.getElementById(`slot-${index}`);
+
+        if (selectedSlotIndex === index) {
+            deselectAll();
+            return;
+        }
+        if (selectedSlotIndex !== null) {
+            swapSlots(selectedSlotIndex, index);
+            deselectAll();
+            return;
+        }
+        deselectAll();
+        selectedSlotIndex = index;
+        slotDiv.classList.add('selected');
+    }
+
+    function pickChampion(cardDiv) {
+        // Read data attributes directly
+        const champId = cardDiv.getAttribute('data-id');
+        const champImgName = cardDiv.getAttribute('data-img');
+        const auraLoc = cardDiv.getAttribute('data-aura');
+
+        console.log("Picking ID: " + champId);
+
+        let fullImgUrl = '/images/champion-cards/placeholder.png';
+        if (champImgName && champImgName !== 'null') {
+            fullImgUrl = `/images/champion-cards/${champImgName}`;
+        }
+
+        let targetIndex = -1;
+        if (selectedSlotIndex !== null) {
+            targetIndex = selectedSlotIndex;
+        } else {
+            for (let i = 0; i < 4; i++) {
+                const inputVal = document.getElementById(`input-${i}`).value;
+                if (!inputVal) {
+                    targetIndex = i;
+                    break;
+                }
+            }
+        }
+
+        if (targetIndex === -1) {
+            alert("Team is full! Please select a slot to replace, or clear a slot first.");
+            return;
+        }
+
+        fillSlot(targetIndex, champId, fullImgUrl, auraLoc);
+        deselectAll();
+
+        // Visually mark as picked
+        cardDiv.classList.add('picked');
+    }
+
+    function fillSlot(index, id, imgUrl, auraLoc) {
+        document.getElementById(`input-${index}`).value = id;
+        document.getElementById(`img-${index}`).src = imgUrl;
+        document.getElementById(`slot-${index}`).setAttribute('data-aura', auraLoc);
+
+        document.getElementById(`slot-${index}`).classList.add('has-champion');
+        if (index === 0) checkLeaderAura(auraLoc);
+    }
+
+    function clearSlot(index, event) {
+        if (event) event.stopPropagation();
+
+        const oldId = document.getElementById(`input-${index}`).value;
+        if (oldId) {
+            // Find the card by ID suffix to un-pick it
+            const rosterCard = document.getElementById(`roster-card-${oldId}`);
+            if (rosterCard) rosterCard.classList.remove('picked');
+        }
+
+        document.getElementById(`input-${index}`).value = '';
+        document.getElementById(`img-${index}`).src = (index === 0) ? LEADER_PLACEHOLDER : MEMBER_PLACEHOLDER;
+        document.getElementById(`slot-${index}`).removeAttribute('data-aura');
+        document.getElementById(`slot-${index}`).classList.remove('has-champion');
+
+        if (index === 0) hideAuraWarning();
+        if (selectedSlotIndex === index) deselectAll();
+    }
+
+    function swapSlots(indexA, indexB) {
+        const idA = document.getElementById(`input-${indexA}`).value;
+        const imgA = document.getElementById(`img-${indexA}`).src;
+        const auraA = document.getElementById(`slot-${indexA}`).getAttribute('data-aura');
+        const hasA = !!idA;
+
+        const idB = document.getElementById(`input-${indexB}`).value;
+        const imgB = document.getElementById(`img-${indexB}`).src;
+        const auraB = document.getElementById(`slot-${indexB}`).getAttribute('data-aura');
+        const hasB = !!idB;
+
+        if (hasA) fillSlot(indexB, idA, imgA, auraA);
+        else clearSlot(indexB);
+
+        if (hasB) fillSlot(indexA, idB, imgB, auraB);
+        else clearSlot(indexA);
+
+        const newLeaderAura = document.getElementById(`slot-0`).getAttribute('data-aura');
+        checkLeaderAura(newLeaderAura);
+    }
+
+    function deselectAll() {
+        selectedSlotIndex = null;
+        document.querySelectorAll('.team-slot').forEach(el => el.classList.remove('selected'));
+    }
+
+    function checkLeaderAura(auraLoc) {
+        const warningDiv = document.getElementById('aura-warning');
+        const warningText = document.getElementById('aura-msg');
+        const leaderId = document.getElementById('input-0').value;
+
+        if (!leaderId) {
+            hideAuraWarning();
+            return;
+        }
+
+        if (!auraLoc || auraLoc === 'NONE') {
+            warningDiv.style.display = 'block';
+            warningText.innerText = 'Leader has no Aura.';
+            return;
+        }
+
+        if (auraLoc !== 'ALL_BATTLES') {
+            warningDiv.style.display = 'block';
+            warningText.innerText = "Warning: Only 'All Battles' Auras work in Siege.";
+        } else {
+            warningDiv.style.display = 'none';
+        }
+    }
+
+    function hideAuraWarning() {
+        document.getElementById('aura-warning').style.display = 'none';
+    }
+</script>
+</body>
+</html>
