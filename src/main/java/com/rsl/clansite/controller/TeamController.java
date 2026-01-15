@@ -47,7 +47,8 @@ public class TeamController {
 
     @GetMapping("/builder")
     @PreAuthorize("hasRole('MEMBER')")
-    public String builder(Model model, Authentication authentication, HttpSession session) {
+    public String builder(@RequestParam(required = false) String editTeamId,
+                          Model model, Authentication authentication, HttpSession session) {
         commonsService.fillModel(model, authentication);
 
         ClanmemberEntity activeMember = clanmemberService.getActiveClanmember(session, authentication);
@@ -79,7 +80,16 @@ public class TeamController {
         }
 
         model.addAttribute("siegeConditions", dropdownItems);
-        model.addAttribute("newTeam", new Team());
+
+        Team formTeam = new Team();
+        if (editTeamId != null && activeMember.getKnownTeams() != null) {
+            formTeam = activeMember.getKnownTeams().stream()
+                    .filter(t -> t.getId().equals(editTeamId))
+                    .findFirst()
+                    .orElse(new Team());
+        }
+
+        model.addAttribute("newTeam", formTeam);
 
         return "team-builder";
     }
@@ -88,7 +98,7 @@ public class TeamController {
     @PreAuthorize("hasRole('MEMBER')")
     public String saveTeam(@ModelAttribute Team team, Authentication authentication, HttpSession session, RedirectAttributes redirectAttributes) {
         try {
-            clanmemberService.addKnownTeam(session, authentication, team);
+            clanmemberService.saveKnownTeam(session, authentication, team);
             redirectAttributes.addFlashAttribute("successMessage", "Team saved successfully!");
             return "redirect:/profile";
         } catch (Exception e) {
@@ -97,7 +107,6 @@ public class TeamController {
         }
     }
 
-    // NEW: Delete Endpoint
     @PostMapping("/delete/{teamId}")
     @PreAuthorize("hasRole('MEMBER')")
     public String deleteTeam(@PathVariable String teamId, Authentication authentication, HttpSession session, RedirectAttributes redirectAttributes) {

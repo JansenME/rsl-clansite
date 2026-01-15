@@ -328,6 +328,38 @@
     const LEADER_PLACEHOLDER = '/images/leader-image.png';
     const MEMBER_PLACEHOLDER = '/images/teammember-image.png';
 
+// 1. STARTUP LOGIC: Load existing team data if present
+    document.addEventListener("DOMContentLoaded", function() {
+        console.log("Checking for existing team data...");
+
+        // Loop through the 4 slots (0 to 3)
+        for (let i = 0; i < 4; i++) {
+            const input = document.getElementById(`input-${i}`);
+            if (input && input.value) {
+                const champId = input.value;
+                const cardDiv = document.getElementById(`roster-card-${champId}`);
+
+                if (cardDiv) {
+                    console.log(`Auto-filling slot ${i} with champion ${champId}`);
+
+                    // Extract data manually since we can't use 'this' here
+                    const imgName = cardDiv.getAttribute('data-img');
+                    const auraLoc = cardDiv.getAttribute('data-aura');
+                    const auraDesc = cardDiv.getAttribute('data-aura-desc');
+
+                    let fullImgUrl = '/images/champion-cards/placeholder.png';
+                    if (imgName && imgName !== 'null') {
+                        fullImgUrl = `/images/champion-cards/${imgName}`;
+                    }
+
+                    // Manually fill the slot without triggering alerts
+                    fillSlot(i, champId, fullImgUrl, auraLoc, auraDesc);
+                    cardDiv.classList.add('picked');
+                }
+            }
+        }
+    });
+
     // GLOBAL CLICK LISTENER
     document.addEventListener("click", function(e) {
         const cardDiv = e.target.closest('.champion-card');

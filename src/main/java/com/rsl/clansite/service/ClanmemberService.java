@@ -655,7 +655,7 @@ public class ClanmemberService {
     }
 
     @Transactional
-    public void addKnownTeam(HttpSession session, Authentication authentication, Team team) {
+    public void saveKnownTeam(HttpSession session, Authentication authentication, Team team) {
         ClanmemberEntity member = getActiveClanmember(session, authentication);
 
         if (member == null) {
@@ -670,10 +670,21 @@ public class ClanmemberService {
             member.setKnownTeams(new ArrayList<>());
         }
 
-        member.getKnownTeams().add(team);
-        clanmemberRepository.save(member);
+        boolean replaced = false;
+        for (int i = 0; i < member.getKnownTeams().size(); i++) {
+            if (member.getKnownTeams().get(i).getId().equals(team.getId())) {
+                member.getKnownTeams().set(i, team);
+                replaced = true;
+                break;
+            }
+        }
 
-        log.info("Added new Known Team '{}' for member {}", team.getTeamName(), member.getIngameName());
+        if (!replaced) {
+            member.getKnownTeams().add(team);
+        }
+
+        clanmemberRepository.save(member);
+        log.info("Saved (Upsert) Known Team '{}' for member {}", team.getTeamName(), member.getIngameName());
     }
 
     private boolean shouldUpdateTimestamp(LocalDateTime lastDate) {

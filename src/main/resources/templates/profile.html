@@ -68,19 +68,27 @@
                box-shadow: 0 0 5px rgba(241, 196, 15, 0.5);
            }
 
-           /* Delete Button on Team Card */
-           .team-delete-btn {
-               color: #e74c3c;
+           /* Action Buttons on Team Card */
+           .team-actions {
+               display: flex;
+               gap: 10px;
+           }
+
+           .team-action-btn {
                background: none;
                border: none;
                cursor: pointer;
                font-size: 1.1em;
                padding: 0 5px;
                transition: color 0.2s;
+               text-decoration: none; /* For the link */
            }
-           .team-delete-btn:hover {
-               color: #c0392b;
-           }
+
+           .btn-edit { color: #3498db; }
+           .btn-edit:hover { color: #2980b9; }
+
+           .btn-delete { color: #e74c3c; }
+           .btn-delete:hover { color: #c0392b; }
 	</style>
 </head>
 <body>
@@ -346,10 +354,15 @@
 										  th:text="${team.conditionLabel}">Condition</span>
 								</div>
 
-								<div th:if="${isOwnProfile}">
+								<div th:if="${isOwnProfile}" class="team-actions">
+
+									<a th:href="@{/teams/builder(editTeamId=${team.id})}" class="team-action-btn btn-edit" title="Edit Team">
+										<i class="fas fa-edit"></i>
+									</a>
+
 									<form th:action="@{/teams/delete/{id}(id=${team.id})}" method="POST" style="margin:0;"
 										  onsubmit="return confirm('Are you sure you want to delete this team?');">
-										<button type="submit" class="team-delete-btn" title="Delete Team">
+										<button type="submit" class="team-action-btn btn-delete" title="Delete Team">
 											<i class="fas fa-trash-alt"></i>
 										</button>
 									</form>
@@ -397,7 +410,6 @@
 
 <script>
 	document.addEventListener("DOMContentLoaded", function() {
-        // ... (Keep existing script logic for images/UTC time) ...
         const images = document.querySelectorAll("img.champion-portrait");
         const placeholder = "/images/champion-cards/placeholder.png";
 
