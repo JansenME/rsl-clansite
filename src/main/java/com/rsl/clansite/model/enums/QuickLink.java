@@ -9,7 +9,8 @@ public enum QuickLink {
     ADD_CHAMPION("Add Champion", "/champions/new", "ROLE_OWNER"),
     AUDIT_LOG("Audit Log", "/audit-log", "ROLE_ADMIN"),
     LOGIN_HISTORY("Login History", "/clanmembers/admin/login-history", "ROLE_ADMIN"),
-    DATA_HEALTH("Discord Data Health", "/clanmembers/admin/data-health", "ROLE_ADMIN");
+    DATA_HEALTH("Discord Data Health", "/clanmembers/admin/data-health", "ROLE_ADMIN"),
+    SIEGE_CONDITIONS("Siege Conditions", "/admin/siege-conditions", "ROLE_COORDINATOR");
 
     private final String label;
     private final String url;

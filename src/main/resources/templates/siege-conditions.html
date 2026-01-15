@@ -1,0 +1,91 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Siege Conditions Management</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+    <script th:src="@{/styles/js/main.js}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container">
+        </div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <section>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>Siege Conditions Configuration</h2>
+
+                    <div th:if="${successMessage}" class="alert alert-success" style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-right: 20px;">
+                        <span th:text="${successMessage}"></span>
+                    </div>
+                    <div th:if="${errorMessage}" class="alert alert-error" style="background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin-right: 20px;">
+                        <span th:text="${errorMessage}"></span>
+                    </div>
+
+                    <form th:action="@{/admin/siege-conditions/sync}" method="POST" style="margin: 0;">
+                        <button type="submit" class="button small" style="background-color: #3498db; color: white;">
+                            <i class="fas fa-sync"></i> Scan for new possible conditions
+                        </button>
+                    </form>
+                </div>
+
+                <p>Manage the list of active Siege Conditions available for players to select on their profiles.</p>
+
+                <table style="width: 100%;">
+                    <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Condition Name</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="condition : ${conditions}"
+                        th:style="${!condition.isActive} ? 'opacity: 0.6; background: #f9f9f9;' : ''">
+
+                        <td style="font-weight: bold; color: #555;">
+                            <span th:text="${condition.category.displayName}">Category</span>
+                        </td>
+
+                        <td th:text="${condition.conditionKey}">Key</td>
+
+                        <td>
+                       <span th:if="${condition.isActive}" style="color: #27ae60; font-weight: bold;">
+                           <i class="fas fa-check-circle"></i> Active
+                       </span>
+                            <span th:unless="${condition.isActive}" style="color: #7f8c8d;">
+                           <i class="fas fa-ban"></i> Inactive
+                       </span>
+                        </td>
+
+                        <td>
+                            <form th:action="@{/admin/siege-conditions/{id}/toggle(id=${condition.id})}" method="POST" style="margin: 0;">
+                                <button type="submit" class="button small"
+                                        th:style="${condition.isActive} ? 'background-color: #e74c3c; color: white;' : 'background-color: #27ae60; color: white;'">
+                                    <span th:text="${condition.isActive} ? 'Deactivate' : 'Activate'">Toggle</span>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <div th:if="${conditions.isEmpty()}">
+                    <p>No conditions found. Please click "Scan for New Enums" to populate the database.</p>
+                </div>
+            </section>
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+    </div>
+</div>
+</body>
+</html>
