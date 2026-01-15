@@ -66,6 +66,26 @@ public class ClanmemberService {
             List<AccountDetailDTO> accounts
     ) {}
 
+    @Transactional
+    public void deleteKnownTeam(HttpSession session, Authentication authentication, String teamId) {
+        ClanmemberEntity member = getActiveClanmember(session, authentication);
+
+        if (member == null) {
+            throw new UnlinkedAccountException("No active profile found.");
+        }
+
+        if (member.getKnownTeams() != null) {
+            boolean removed = member.getKnownTeams().removeIf(t -> t.getId().equals(teamId));
+
+            if (removed) {
+                clanmemberRepository.save(member);
+                log.info("Deleted Known Team {} for member {}", teamId, member.getIngameName());
+            } else {
+                throw new IllegalArgumentException("Team not found in your profile.");
+            }
+        }
+    }
+
     public List<LoginHistoryDTO> getDeduplicatedLoginHistory() {
         List<ClanmemberEntity> allLogins = clanmemberRepository.findAll().stream()
                 .filter(m -> m.getLastLogin() != null)

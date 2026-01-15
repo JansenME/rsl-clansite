@@ -13,12 +13,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.beans.PropertyEditorSupport;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,6 +43,8 @@ public class TeamController {
         this.siegeConditionService = siegeConditionService;
     }
 
+    public record ConditionDropdownItem(String id, String label) {}
+
     @GetMapping("/builder")
     @PreAuthorize("hasRole('MEMBER')")
     public String builder(Model model, Authentication authentication, HttpSession session) {
@@ -62,11 +66,19 @@ public class TeamController {
             model.addAttribute("champions", List.of());
         }
 
-        List<SiegeConditionEntity> activeConditions = siegeConditionService.findAllConditions().stream()
+        List<SiegeConditionEntity> activeEntities = siegeConditionService.findAllConditions().stream()
                 .filter(SiegeConditionEntity::isActive)
-                .collect(Collectors.toList());
-        model.addAttribute("siegeConditions", activeConditions);
+                .toList();
 
+        List<ConditionDropdownItem> dropdownItems = new ArrayList<>();
+
+        for (SiegeConditionEntity entity : activeEntities) {
+            String readableName = resolveEnumName(entity);
+            String label = entity.getCategory().getDisplayName() + ": " + readableName;
+            dropdownItems.add(new ConditionDropdownItem(entity.getId().toHexString(), label));
+        }
+
+        model.addAttribute("siegeConditions", dropdownItems);
         model.addAttribute("newTeam", new Team());
 
         return "team-builder";
@@ -83,5 +95,47 @@ public class TeamController {
             redirectAttributes.addFlashAttribute("errorMessage", "Error saving team: " + e.getMessage());
             return "redirect:/teams/builder";
         }
+    }
+
+    // NEW: Delete Endpoint
+    @PostMapping("/delete/{teamId}")
+    @PreAuthorize("hasRole('MEMBER')")
+    public String deleteTeam(@PathVariable String teamId, Authentication authentication, HttpSession session, RedirectAttributes redirectAttributes) {
+        try {
+            clanmemberService.deleteKnownTeam(session, authentication, teamId);
+            redirectAttributes.addFlashAttribute("successMessage", "Team deleted successfully.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Error deleting team: " + e.getMessage());
+        }
+        return "redirect:/profile";
+    }
+
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        binder.registerCustomEditor(ObjectId.class, new PropertyEditorSupport() {
+            @Override
+            public void setAsText(String text) throws IllegalArgumentException {
+                if (StringUtils.hasText(text)) {
+                    setValue(new ObjectId(text));
+                } else {
+                    setValue(null);
+                }
+            }
+        });
+    }
+
+    private String resolveEnumName(SiegeConditionEntity entity) {
+        try {
+            Class<? extends Enum<?>> enumClass = entity.getCategory().getEnumClass();
+            for (Enum<?> constant : enumClass.getEnumConstants()) {
+                if (constant.name().equals(entity.getConditionKey())) {
+                    Method getNameMethod = constant.getClass().getMethod("getName");
+                    return (String) getNameMethod.invoke(constant);
+                }
+            }
+        } catch (Exception e) {
+            return entity.getConditionKey();
+        }
+        return entity.getConditionKey();
     }
 }
