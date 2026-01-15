@@ -52,6 +52,7 @@ public class ClanmemberController {
         model.addAttribute("linkedMembers", clanmemberService.getLinkedClanmembers(authentication != null ? authentication.getName() : null));
         model.addAttribute("activeMemberId", activeMemberId);
         model.addAttribute("clanmembers", clanmemberService.findAllClanmemberEntities());
+        model.addAttribute("inactiveMembers", clanmemberService.findInactiveClanmemberEntities());
 
         return "clanmembers";
     }
@@ -194,8 +195,21 @@ public class ClanmemberController {
 
     @PostMapping("/{id}/delete")
     @PreAuthorize("hasRole('ADMIN')")
-    public String deleteClanmember(@PathVariable String id, HttpSession session, Authentication authentication) {
+    public String deleteClanmember(@PathVariable String id, HttpSession session, Authentication authentication, RedirectAttributes redirectAttributes) {
         clanmemberService.deleteById(id, session, authentication);
+        redirectAttributes.addFlashAttribute("successMessage", "Member deactivated and moved to archive.");
+        return "redirect:/clanmembers";
+    }
+
+    @PostMapping("/{id}/restore")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String restoreClanmember(@PathVariable String id, Authentication authentication, RedirectAttributes redirectAttributes) {
+        try {
+            clanmemberService.reactivateMember(id, authentication);
+            redirectAttributes.addFlashAttribute("successMessage", "Member successfully restored to active roster.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Failed to restore member: " + e.getMessage());
+        }
         return "redirect:/clanmembers";
     }
 

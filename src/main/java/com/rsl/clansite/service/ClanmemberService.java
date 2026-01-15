@@ -11,6 +11,7 @@ import com.rsl.clansite.model.entity.VisitorLogEntity;
 import com.rsl.clansite.model.enums.AuditAction;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.ClanRank;
+import com.rsl.clansite.model.enums.MemberStatus;
 import com.rsl.clansite.repository.ClanmemberRepository;
 import com.rsl.clansite.repository.VisitorLogRepository;
 import jakarta.servlet.http.HttpSession;
@@ -65,11 +66,11 @@ public class ClanmemberService {
     ) {}
 
     public List<LoginHistoryDTO> getDeduplicatedLoginHistory() {
-        List<ClanmemberEntity> activeMembers = clanmemberRepository.findAll().stream()
+        List<ClanmemberEntity> allLogins = clanmemberRepository.findAll().stream()
                 .filter(m -> m.getLastLogin() != null)
                 .toList();
 
-        Map<String, List<ClanmemberEntity>> groupedByDiscord = activeMembers.stream()
+        Map<String, List<ClanmemberEntity>> groupedByDiscord = allLogins.stream()
                 .filter(m -> StringUtils.hasText(m.getDiscordId()))
                 .collect(Collectors.groupingBy(ClanmemberEntity::getDiscordId));
 
@@ -77,9 +78,16 @@ public class ClanmemberService {
 
         for (Map.Entry<String, List<ClanmemberEntity>> entry : groupedByDiscord.entrySet()) {
             String discordId = entry.getKey();
-            List<ClanmemberEntity> accounts = entry.getValue();
+            List<ClanmemberEntity> allAccounts = entry.getValue();
 
-            LocalDateTime latestLogin = accounts.stream()
+            boolean hasActiveAccount = allAccounts.stream()
+                    .anyMatch(m -> m.getStatus() == MemberStatus.ACTIVE);
+
+            if (!hasActiveAccount) {
+                continue;
+            }
+
+            LocalDateTime latestLogin = allAccounts.stream()
                     .map(ClanmemberEntity::getLastLogin)
                     .filter(Objects::nonNull)
                     .max(LocalDateTime::compareTo)
@@ -87,12 +95,13 @@ public class ClanmemberService {
 
             if (latestLogin == null) continue;
 
-            List<AccountDetailDTO> accountDetails = accounts.stream()
+            List<AccountDetailDTO> activeAccountDetails = allAccounts.stream()
+                    .filter(m -> m.getStatus() == MemberStatus.ACTIVE)
                     .sorted(this::compareAccountsForHistory)
                     .map(m -> new AccountDetailDTO(m.getIngameName(), m.getClanRank(), m.getClanGroup()))
                     .toList();
 
-            ClanmemberEntity primary = accounts.get(0);
+            ClanmemberEntity primary = allAccounts.get(0);
             String avatarUrl = buildAvatarUrl(discordId, primary.getAvatarHash());
 
             historyList.add(new LoginHistoryDTO(
@@ -100,7 +109,7 @@ public class ClanmemberService {
                     primary.getDiscordName(),
                     avatarUrl,
                     latestLogin,
-                    accountDetails
+                    activeAccountDetails
             ));
         }
 
@@ -148,8 +157,10 @@ public class ClanmemberService {
                 return activeEntity.get();
             }
         }
-
-        return linkedMembers.get(0);
+        return linkedMembers.stream()
+                .filter(m -> m.getStatus() == MemberStatus.ACTIVE)
+                .findFirst()
+                .orElse(linkedMembers.get(0));
     }
 
     public String manageActiveMemberSession(HttpSession session, Authentication authentication) {
@@ -162,7 +173,12 @@ public class ClanmemberService {
         String activeMemberId = (String) session.getAttribute("ACTIVE_MEMBER_ID");
 
         if (activeMemberId == null && !linkedMembers.isEmpty()) {
-            activeMemberId = linkedMembers.get(0).getId().toHexString();
+            ClanmemberEntity defaultMember = linkedMembers.stream()
+                    .filter(m -> m.getStatus() == MemberStatus.ACTIVE)
+                    .findFirst()
+                    .orElse(linkedMembers.get(0));
+
+            activeMemberId = defaultMember.getId().toHexString();
             session.setAttribute("ACTIVE_MEMBER_ID", activeMemberId);
         }
         return activeMemberId;
@@ -213,7 +229,9 @@ public class ClanmemberService {
     public void updateAllClanmemberDiscordRoles() {
         siteAssetService.syncFavicon();
 
-        List<ClanmemberEntity> allLinkedMembers = clanmemberRepository.findAllByDiscordIdIsNotNull();
+        List<ClanmemberEntity> allLinkedMembers = clanmemberRepository.findAllByDiscordIdIsNotNull().stream()
+                .filter(m -> m.getStatus() == MemberStatus.ACTIVE)
+                .toList();
 
         Map<String, List<ClanmemberEntity>> membersByDiscordId = allLinkedMembers.stream()
                 .collect(Collectors.groupingBy(ClanmemberEntity::getDiscordId));
@@ -259,8 +277,27 @@ public class ClanmemberService {
     }
 
     public List<ClanmemberEntity> findAllClanmemberEntities() {
-        List<ClanmemberEntity> members = clanmemberRepository.findAll();
+        List<ClanmemberEntity> members = clanmemberRepository.findAll().stream()
+                .filter(m -> m.getStatus() == MemberStatus.ACTIVE)
+                .collect(Collectors.toList());
+
         members.sort(this::compareClanRanks);
+        return members;
+    }
+
+    public List<ClanmemberEntity> findInactiveClanmemberEntities() {
+        List<ClanmemberEntity> members = clanmemberRepository.findAll().stream()
+                .filter(m -> m.getStatus() == MemberStatus.INACTIVE)
+                .collect(Collectors.toList());
+
+        members.sort((m1, m2) -> {
+            LocalDateTime d1 = m1.getStatusChangedDate();
+            LocalDateTime d2 = m2.getStatusChangedDate();
+            if (d1 == null && d2 == null) return 0;
+            if (d1 == null) return 1;
+            if (d2 == null) return -1;
+            return d2.compareTo(d1);
+        });
         return members;
     }
 
@@ -337,21 +374,48 @@ public class ClanmemberService {
     }
 
     public void deleteById(String id, HttpSession session, Authentication authentication) {
-        String activeId = (String) session.getAttribute("ACTIVE_MEMBER_ID");
-        if (id.equals(activeId)) {
-            session.removeAttribute("ACTIVE_MEMBER_ID");
-        }
+        Optional<ClanmemberEntity> memberOpt = clanmemberRepository.findById(new ObjectId(id));
+        if (memberOpt.isEmpty()) return;
 
-        Optional<ClanmemberEntity> memberToDelete = clanmemberRepository.findById(new ObjectId(id));
-        String targetName = memberToDelete.map(ClanmemberEntity::getIngameName).orElse("Unknown ID: " + id);
+        ClanmemberEntity member = memberOpt.get();
+        String targetName = member.getIngameName();
 
-        clanmemberRepository.deleteById(new ObjectId(id));
+        member.setStatus(MemberStatus.INACTIVE);
+        member.setStatusChangedDate(LocalDateTime.now());
+        clanmemberRepository.save(member);
 
         auditLogService.logAction(
                 authentication,
                 AuditAction.MEMBER_DELETE,
                 targetName,
-                "Deleted from Roster List"
+                "Member Deactivated (Soft Delete)"
+        );
+    }
+
+    public void reactivateMember(String id, Authentication authentication) {
+        Optional<ClanmemberEntity> memberOpt = clanmemberRepository.findById(new ObjectId(id));
+        if (memberOpt.isEmpty()) return;
+
+        ClanmemberEntity member = memberOpt.get();
+        member.setStatus(MemberStatus.ACTIVE);
+        member.setStatusChangedDate(LocalDateTime.now());
+
+        if (member.getDiscordId() != null) {
+            try {
+                boolean isMultiAccount = clanmemberRepository.findAllByDiscordId(member.getDiscordId()).size() > 1;
+                tryUpdateMemberRoles(member, isMultiAccount);
+            } catch (Exception e) {
+                log.warn("Auto-sync failed during reactivation for {}", member.getIngameName());
+            }
+        }
+
+        clanmemberRepository.save(member);
+
+        auditLogService.logAction(
+                authentication,
+                AuditAction.MEMBER_ADD,
+                member.getIngameName(),
+                "Member Re-activated from Archive"
         );
     }
 
@@ -441,7 +505,10 @@ public class ClanmemberService {
     }
 
     public List<SyncStatusDTO> getMemberSyncStatus() {
-        List<ClanmemberEntity> members = clanmemberRepository.findAll();
+        List<ClanmemberEntity> members = clanmemberRepository.findAll().stream()
+                .filter(m -> m.getStatus() == MemberStatus.ACTIVE)
+                .toList();
+
         List<SyncStatusDTO> statusList = new ArrayList<>();
 
         for (ClanmemberEntity member : members) {
@@ -510,7 +577,7 @@ public class ClanmemberService {
         return statusList;
     }
 
-    @Transactional
+    // ... (syncSingleMember, updateLastSeen, getFreshAuthorities remain unchanged) ...
     public void syncSingleMember(String id, Authentication authentication) {
         ClanmemberEntity member = getMemberById(id);
 
