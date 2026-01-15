@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Team Builder</title>
+    <title>Siege Team Builder</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
@@ -279,7 +279,7 @@
 
     <section id="content">
         <div class="container roster-selection-area">
-            <h2 style="text-align: center; margin-bottom: 20px;">Select Champions from your Roster</h2>
+            <h2 style="text-align: center; margin-bottom: 20px;">Select Champions for Siege Defense</h2>
 
             <div th:if="${#lists.isEmpty(champions)}" style="text-align: center;">
                 <p>You have no champions in your roster yet. Go to <a th:href="@{/champions}">My Roster</a> to add some!</p>
