@@ -55,6 +55,25 @@
             overflow: hidden;
         }
 
+        /* INVALID STATE (Red Border) */
+        .team-slot.invalid-slot {
+            border-color: #e74c3c !important;
+            box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+        }
+
+        .team-slot.invalid-slot::before {
+            content: 'INVALID';
+            position: absolute;
+            top: 0;
+            width: 100%;
+            background: rgba(231, 76, 60, 0.9);
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 5;
+        }
+
         .team-slot img {
             width: auto;
             height: 90%;
@@ -134,13 +153,25 @@
             padding: 8px;
             border-radius: 4px;
             font-size: 0.9em;
-            display: none; /* Hidden by default */
+            display: none;
             align-items: center;
             gap: 8px;
             border: 1px solid rgba(255,255,255,0.3);
         }
 
         #aura-warning {
+            color: #ffcccc;
+            font-weight: bold;
+            font-size: 0.9em;
+            display: none;
+            margin-top: 5px;
+            background: rgba(231, 76, 60, 0.3);
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #e74c3c;
+        }
+
+        #condition-warning {
             color: #ffcccc;
             font-weight: bold;
             font-size: 0.9em;
@@ -167,6 +198,12 @@
             background-color: #2ecc71;
         }
 
+        .save-btn:disabled {
+            background-color: #7f8c8d;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
         /* --- ROSTER SELECTION --- */
         .roster-selection-area {
             padding-top: 20px;
@@ -182,6 +219,10 @@
             opacity: 0.3;
             filter: grayscale(100%);
             pointer-events: none;
+        }
+
+        .champion-card.filtered-out {
+            display: none;
         }
 
         .champion-card:hover .champion-image-wrapper {
@@ -225,17 +266,25 @@
         </div>
     </section>
 
+    <div class="container" th:if="${errorMessage}" style="margin: 10px auto; max-width: 1200px;">
+        <div class="alert alert-error" style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; border: 1px solid #f5c6cb; text-align: center; font-weight: bold;">
+            <i class="fas fa-exclamation-circle"></i> <span th:text="${errorMessage}"></span>
+        </div>
+    </div>
+
     <div id="team-sticky-header">
         <form id="team-form" th:action="@{/teams/save}" th:object="${newTeam}" method="POST" class="builder-container">
 
             <div class="team-meta-inputs">
                 <input type="text" th:field="*{teamName}" placeholder="Team Name (e.g. Speed Farm)" required />
 
-                <select th:field="*{siegeConditionId}">
-                    <option value="">-- No Condition (General) --</option>
+                <select th:field="*{siegeConditionId}" id="siege-condition-selector" onchange="applyConditionFilter()">
+                    <option value="" data-category="NONE">-- No Condition (General) --</option>
                     <option th:each="item : ${siegeConditions}"
                             th:value="${item.id}"
-                            th:text="${item.label}">
+                            th:text="${item.label}"
+                            th:data-category="${item.category}"
+                            th:data-value="${item.value}">
                         Condition
                     </option>
                 </select>
@@ -247,6 +296,10 @@
 
                 <div id="aura-warning">
                     <i class="fas fa-exclamation-triangle"></i> <span id="aura-msg">Warning text</span>
+                </div>
+
+                <div id="condition-warning">
+                    <i class="fas fa-ban"></i> Invalid Champions for Condition!
                 </div>
             </div>
 
@@ -293,7 +346,12 @@
                      th:data-id="${champion.id}"
                      th:data-img="${champion.imagename}"
                      th:data-aura="${champion.aura != null ? champion.aura.location : 'NONE'}"
-                     th:data-aura-desc="${champion.aura != null} ? |${champion.aura.stat.getName()} ${champion.aura.amount}${champion.aura.isPercentage ? '%' : ''} in ${champion.aura.location.getName()}| : 'No Aura'">
+                     th:data-aura-desc="${champion.aura != null} ? |${champion.aura.stat.getName()} ${champion.aura.amount}${champion.aura.isPercentage ? '%' : ''} in ${champion.aura.location.getName()}| : 'No Aura'"
+
+                     th:data-faction="${champion.faction}"
+                     th:data-rarity="${champion.rarity}"
+                     th:data-type="${champion.type}"
+                     th:data-affinity="${champion.affinity}">
 
                     <div class="champion-image-wrapper">
                         <img th:src="${champion.imagename != null and !#strings.isEmpty(champion.imagename)} ? @{/images/champion-cards/{name}(name=${champion.imagename})} : @{/images/champion-cards/placeholder.png}"
@@ -328,11 +386,10 @@
     const LEADER_PLACEHOLDER = '/images/leader-image.png';
     const MEMBER_PLACEHOLDER = '/images/teammember-image.png';
 
-// 1. STARTUP LOGIC: Load existing team data if present
+    // 1. STARTUP LOGIC
     document.addEventListener("DOMContentLoaded", function() {
         console.log("Checking for existing team data...");
 
-        // Loop through the 4 slots (0 to 3)
         for (let i = 0; i < 4; i++) {
             const input = document.getElementById(`input-${i}`);
             if (input && input.value) {
@@ -340,9 +397,6 @@
                 const cardDiv = document.getElementById(`roster-card-${champId}`);
 
                 if (cardDiv) {
-                    console.log(`Auto-filling slot ${i} with champion ${champId}`);
-
-                    // Extract data manually since we can't use 'this' here
                     const imgName = cardDiv.getAttribute('data-img');
                     const auraLoc = cardDiv.getAttribute('data-aura');
                     const auraDesc = cardDiv.getAttribute('data-aura-desc');
@@ -352,15 +406,91 @@
                         fullImgUrl = `/images/champion-cards/${imgName}`;
                     }
 
-                    // Manually fill the slot without triggering alerts
                     fillSlot(i, champId, fullImgUrl, auraLoc, auraDesc);
                     cardDiv.classList.add('picked');
                 }
             }
         }
+
+        applyConditionFilter();
     });
 
-    // GLOBAL CLICK LISTENER
+    // 2. CONDITION FILTER LOGIC
+    function applyConditionFilter() {
+        const selector = document.getElementById('siege-condition-selector');
+        const selectedOption = selector.options[selector.selectedIndex];
+
+        const category = selectedOption.getAttribute('data-category');
+        const conditionValue = selectedOption.getAttribute('data-value');
+
+        const allCards = document.querySelectorAll('.champion-card');
+        let hasInvalidSlot = false;
+
+        // A. Filter Roster
+        allCards.forEach(card => {
+            if (!category || category === 'NONE') {
+                card.classList.remove('filtered-out');
+            } else {
+                let cardValue = '';
+                if (category === 'FACTION') cardValue = card.getAttribute('data-faction');
+                if (category === 'RARITY') cardValue = card.getAttribute('data-rarity');
+                if (category === 'TYPE') cardValue = card.getAttribute('data-type');
+                if (category === 'AFFINITY') cardValue = card.getAttribute('data-affinity');
+
+                if (cardValue === conditionValue) {
+                    card.classList.remove('filtered-out');
+                } else {
+                    card.classList.add('filtered-out');
+                }
+            }
+        });
+
+        // B. Validate Current Slots
+        for (let i = 0; i < 4; i++) {
+            const input = document.getElementById(`input-${i}`);
+            const slotDiv = document.getElementById(`slot-${i}`);
+
+            if (input && input.value) {
+                const champId = input.value;
+                const rosterCard = document.getElementById(`roster-card-${champId}`);
+
+                if (rosterCard) {
+                    if (category && category !== 'NONE') {
+                        let cardValue = '';
+                        if (category === 'FACTION') cardValue = rosterCard.getAttribute('data-faction');
+                        if (category === 'RARITY') cardValue = rosterCard.getAttribute('data-rarity');
+                        if (category === 'TYPE') cardValue = rosterCard.getAttribute('data-type');
+                        if (category === 'AFFINITY') cardValue = rosterCard.getAttribute('data-affinity');
+
+                        if (cardValue !== conditionValue) {
+                            slotDiv.classList.add('invalid-slot');
+                            hasInvalidSlot = true;
+                        } else {
+                            slotDiv.classList.remove('invalid-slot');
+                        }
+                    } else {
+                        slotDiv.classList.remove('invalid-slot');
+                    }
+                }
+            } else {
+                slotDiv.classList.remove('invalid-slot');
+            }
+        }
+
+        // C. Update UI State
+        const saveBtn = document.getElementById('save-btn');
+        const warnDiv = document.getElementById('condition-warning');
+
+        if (hasInvalidSlot) {
+            saveBtn.disabled = true;
+            warnDiv.style.display = 'block';
+        } else {
+            saveBtn.disabled = false;
+            warnDiv.style.display = 'none';
+        }
+    }
+
+    // 3. GLOBAL CLICK LISTENER
     document.addEventListener("click", function(e) {
         const cardDiv = e.target.closest('.champion-card');
         const grid = document.getElementById('champion-grid-container');
@@ -402,7 +532,6 @@
         if (selectedSlotIndex !== null) {
             targetIndex = selectedSlotIndex;
         } else {
-            // Priority: First empty slot
             for (let i = 0; i < 4; i++) {
                 const inputVal = document.getElementById(`input-${i}`).value;
                 if (!inputVal) {
@@ -417,7 +546,25 @@
             return;
         }
 
-        // RE-ENABLE PREVIOUS
+        // PREVENT INVALID PICK
+        const selector = document.getElementById('siege-condition-selector');
+        const selectedOption = selector.options[selector.selectedIndex];
+        const category = selectedOption.getAttribute('data-category');
+        const conditionValue = selectedOption.getAttribute('data-value');
+
+        if (category && category !== 'NONE') {
+             let cardValue = '';
+             if (category === 'FACTION') cardValue = cardDiv.getAttribute('data-faction');
+             if (category === 'RARITY') cardValue = cardDiv.getAttribute('data-rarity');
+             if (category === 'TYPE') cardValue = cardDiv.getAttribute('data-type');
+             if (category === 'AFFINITY') cardValue = cardDiv.getAttribute('data-affinity');
+
+             if (cardValue !== conditionValue) {
+                 alert("This champion does not match the selected Siege Condition!");
+                 return;
+             }
+        }
+
         const currentInput = document.getElementById(`input-${targetIndex}`);
         if (currentInput.value) {
             const oldId = currentInput.value;
@@ -430,6 +577,8 @@
         fillSlot(targetIndex, champId, fullImgUrl, auraLoc, auraDesc);
         deselectAll();
         cardDiv.classList.add('picked');
+
+        applyConditionFilter();
     }
 
     function fillSlot(index, id, imgUrl, auraLoc, auraDesc) {
@@ -460,9 +609,12 @@
         slotDiv.removeAttribute('data-aura');
         slotDiv.removeAttribute('data-aura-desc');
         slotDiv.classList.remove('has-champion');
+        slotDiv.classList.remove('invalid-slot');
 
         if (index === 0) hideAuraInfo();
         if (selectedSlotIndex === index) deselectAll();
+
+        applyConditionFilter();
     }
 
     function swapSlots(indexA, indexB) {
@@ -490,6 +642,8 @@
         const newLeaderAura = newLeaderSlot.getAttribute('data-aura');
         const newLeaderDesc = newLeaderSlot.getAttribute('data-aura-desc');
         checkLeaderAura(newLeaderAura, newLeaderDesc);
+
+        applyConditionFilter();
     }
 
     function deselectAll() {
@@ -510,7 +664,6 @@
             return;
         }
 
-        // Show info if present
         if (auraDesc && auraDesc !== 'No Aura') {
             infoDiv.style.display = 'flex';
             infoText.innerText = auraDesc;
@@ -518,11 +671,10 @@
             infoDiv.style.display = 'none';
         }
 
-        // Show warning if needed
         if (!auraLoc || auraLoc === 'NONE') {
             warningDiv.style.display = 'block';
             warningText.innerText = 'Leader has no Aura.';
-            infoDiv.style.display = 'none'; // Hide good info if it's missing
+            infoDiv.style.display = 'none';
             return;
         }
 

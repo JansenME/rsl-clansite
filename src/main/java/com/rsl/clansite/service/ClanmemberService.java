@@ -7,12 +7,15 @@ import com.rsl.clansite.model.Team;
 import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.dto.SyncStatusDTO;
+import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.entity.SiegeConditionEntity;
 import com.rsl.clansite.model.entity.VisitorLogEntity;
 import com.rsl.clansite.model.enums.AuditAction;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.ClanRank;
 import com.rsl.clansite.model.enums.MemberStatus;
+import com.rsl.clansite.repository.ChampionRepository;
 import com.rsl.clansite.repository.ClanmemberRepository;
 import com.rsl.clansite.repository.VisitorLogRepository;
 import jakarta.servlet.http.HttpSession;
@@ -27,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -40,6 +44,8 @@ public class ClanmemberService {
     private final AuditLogService auditLogService;
     private final DiscordApiClient discordApiClient;
     private final SiteAssetService siteAssetService;
+    private final ChampionRepository championRepository;
+    private final SiegeConditionService siegeConditionService;
 
     @Autowired
     public ClanmemberService(final ClanmemberRepository clanmemberRepository,
@@ -47,13 +53,17 @@ public class ClanmemberService {
                              final DiscordRoleService discordRoleService,
                              final AuditLogService auditLogService,
                              final DiscordApiClient discordApiClient,
-                             final SiteAssetService siteAssetService) {
+                             final SiteAssetService siteAssetService,
+                             final ChampionRepository championRepository,
+                             final SiegeConditionService siegeConditionService) {
         this.clanmemberRepository = clanmemberRepository;
         this.visitorLogRepository = visitorLogRepository;
         this.discordRoleService = discordRoleService;
         this.auditLogService = auditLogService;
         this.discordApiClient = discordApiClient;
         this.siteAssetService = siteAssetService;
+        this.championRepository = championRepository;
+        this.siegeConditionService = siegeConditionService;
     }
 
     public record AccountDetailDTO(String ingameName, ClanRank clanRank, ClanGroup clanGroup) {}
@@ -666,6 +676,10 @@ public class ClanmemberService {
             throw new IllegalArgumentException("Team Name is required.");
         }
 
+        if (team.getSiegeConditionId() != null) {
+            validateTeamAgainstCondition(team);
+        }
+
         if (member.getKnownTeams() == null) {
             member.setKnownTeams(new ArrayList<>());
         }
@@ -685,6 +699,55 @@ public class ClanmemberService {
 
         clanmemberRepository.save(member);
         log.info("Saved (Upsert) Known Team '{}' for member {}", team.getTeamName(), member.getIngameName());
+    }
+
+    private void validateTeamAgainstCondition(Team team) {
+        SiegeConditionEntity condition = siegeConditionService.getConditionById(team.getSiegeConditionId());
+
+        List<String> championIds = new ArrayList<>();
+        if (team.getLeaderChampionId() != null) championIds.add(team.getLeaderChampionId());
+        if (team.getChampion2Id() != null) championIds.add(team.getChampion2Id());
+        if (team.getChampion3Id() != null) championIds.add(team.getChampion3Id());
+        if (team.getChampion4Id() != null) championIds.add(team.getChampion4Id());
+
+        if (championIds.isEmpty()) return;
+
+        List<ObjectId> objectIds = championIds.stream()
+                .filter(ObjectId::isValid)
+                .map(ObjectId::new)
+                .collect(Collectors.toList());
+
+        List<ChampionEntity> champions = championRepository.findAllById(objectIds);
+
+        for (ChampionEntity champ : champions) {
+            boolean isValid = checkChampionCondition(champ, condition);
+            if (!isValid) {
+                throw new IllegalArgumentException("Validation Failed: Champion " + champ.getName() + " does not meet the Siege Condition: " + condition.getCategory() + " = " + condition.getConditionKey());
+            }
+        }
+    }
+
+    private boolean checkChampionCondition(ChampionEntity champ, SiegeConditionEntity condition) {
+        try {
+            String getterName = "get" + capitalize(condition.getCategory().name());
+            Method method = ChampionEntity.class.getMethod(getterName);
+
+            Object value = method.invoke(champ);
+
+            if (value instanceof Enum<?>) {
+                String enumName = ((Enum<?>) value).name();
+                return enumName.equals(condition.getConditionKey());
+            }
+            return false;
+        } catch (Exception e) {
+            log.error("Reflection error during validation", e);
+            return false;
+        }
+    }
+
+    private String capitalize(String str) {
+        if (str == null || str.isEmpty()) return str;
+        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
     }
 
     private boolean shouldUpdateTimestamp(LocalDateTime lastDate) {

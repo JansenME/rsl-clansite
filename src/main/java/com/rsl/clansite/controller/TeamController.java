@@ -15,7 +15,13 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.beans.PropertyEditorSupport;
@@ -43,7 +49,7 @@ public class TeamController {
         this.siegeConditionService = siegeConditionService;
     }
 
-    public record ConditionDropdownItem(String id, String label) {}
+    public record ConditionDropdownItem(String id, String label, String category, String value) {}
 
     @GetMapping("/builder")
     @PreAuthorize("hasRole('MEMBER')")
@@ -76,7 +82,13 @@ public class TeamController {
         for (SiegeConditionEntity entity : activeEntities) {
             String readableName = resolveEnumName(entity);
             String label = entity.getCategory().getDisplayName() + ": " + readableName;
-            dropdownItems.add(new ConditionDropdownItem(entity.getId().toHexString(), label));
+
+            dropdownItems.add(new ConditionDropdownItem(
+                    entity.getId().toHexString(),
+                    label,
+                    entity.getCategory().name(),
+                    entity.getConditionKey()
+            ));
         }
 
         model.addAttribute("siegeConditions", dropdownItems);

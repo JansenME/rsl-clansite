@@ -79,4 +79,12 @@ public class SiegeConditionService {
             log.info("Siege Condition '{}' ({}) toggled to: {}", condition.getConditionKey(), condition.getCategory(), newState);
         });
     }
+
+    public SiegeConditionEntity getConditionById(ObjectId id) {
+        if (id == null) {
+            return null;
+        }
+        return siegeConditionRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Siege Condition not found with ID: " + id));
+    }
 }
