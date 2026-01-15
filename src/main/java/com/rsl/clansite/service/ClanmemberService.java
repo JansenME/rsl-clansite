@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -77,23 +78,37 @@ public class ClanmemberService {
     ) {}
 
     @Transactional
-    public void deleteKnownTeam(HttpSession session, Authentication authentication, String teamId) {
-        ClanmemberEntity member = getActiveClanmember(session, authentication);
+    public void deleteKnownTeam(HttpSession session, Authentication authentication, String teamId, String targetMemberId) {
+        ClanmemberEntity targetMember;
 
-        if (member == null) {
+        if (StringUtils.hasText(targetMemberId)) {
+            if (!canManageOthers(authentication)) {
+                throw new AccessDeniedException("You do not have permission to delete teams for other members.");
+            }
+            targetMember = getMemberById(targetMemberId);
+        } else {
+            targetMember = getActiveClanmember(session, authentication);
+        }
+
+        if (targetMember == null) {
             throw new UnlinkedAccountException("No active profile found.");
         }
 
-        if (member.getKnownTeams() != null) {
-            boolean removed = member.getKnownTeams().removeIf(t -> t.getId().equals(teamId));
+        if (targetMember.getKnownTeams() != null) {
+            boolean removed = targetMember.getKnownTeams().removeIf(t -> t.getId().equals(teamId));
 
             if (removed) {
-                clanmemberRepository.save(member);
-                log.info("Deleted Known Team {} for member {}", teamId, member.getIngameName());
+                clanmemberRepository.save(targetMember);
+                log.info("Deleted Known Team {} for member {}", teamId, targetMember.getIngameName());
             } else {
-                throw new IllegalArgumentException("Team not found in your profile.");
+                throw new IllegalArgumentException("Team not found in profile.");
             }
         }
+    }
+
+    private boolean canManageOthers(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_COORDINATOR"));
     }
 
     public List<LoginHistoryDTO> getDeduplicatedLoginHistory() {
@@ -665,10 +680,21 @@ public class ClanmemberService {
     }
 
     @Transactional
-    public void saveKnownTeam(HttpSession session, Authentication authentication, Team team) {
-        ClanmemberEntity member = getActiveClanmember(session, authentication);
+    public void saveKnownTeam(HttpSession session, Authentication authentication, Team team, String targetMemberId) {
+        ClanmemberEntity targetMember;
 
-        if (member == null) {
+        if (StringUtils.hasText(targetMemberId)) {
+            // Coordinator editing another member's profile
+            if (!canManageOthers(authentication)) {
+                throw new AccessDeniedException("You do not have permission to manage teams for other members.");
+            }
+            targetMember = getMemberById(targetMemberId);
+        } else {
+            // Standard User editing their own profile
+            targetMember = getActiveClanmember(session, authentication);
+        }
+
+        if (targetMember == null) {
             throw new UnlinkedAccountException("No active profile session found.");
         }
 
@@ -680,25 +706,31 @@ public class ClanmemberService {
             validateTeamAgainstCondition(team);
         }
 
-        if (member.getKnownTeams() == null) {
-            member.setKnownTeams(new ArrayList<>());
+        if (targetMember.getKnownTeams() == null) {
+            targetMember.setKnownTeams(new ArrayList<>());
         }
 
         boolean replaced = false;
-        for (int i = 0; i < member.getKnownTeams().size(); i++) {
-            if (member.getKnownTeams().get(i).getId().equals(team.getId())) {
-                member.getKnownTeams().set(i, team);
+        for (int i = 0; i < targetMember.getKnownTeams().size(); i++) {
+            if (targetMember.getKnownTeams().get(i).getId().equals(team.getId())) {
+                targetMember.getKnownTeams().set(i, team);
                 replaced = true;
                 break;
             }
         }
 
         if (!replaced) {
-            member.getKnownTeams().add(team);
+            targetMember.getKnownTeams().add(team);
         }
 
-        clanmemberRepository.save(member);
-        log.info("Saved (Upsert) Known Team '{}' for member {}", team.getTeamName(), member.getIngameName());
+        clanmemberRepository.save(targetMember);
+
+        String actorName = authentication.getName();
+        if (StringUtils.hasText(targetMemberId)) {
+            log.info("Coordinator (DiscordID: {}) Saved Team '{}' for member {}", actorName, team.getTeamName(), targetMember.getIngameName());
+        } else {
+            log.info("Saved (Upsert) Known Team '{}' for member {}", team.getTeamName(), targetMember.getIngameName());
+        }
     }
 
     private void validateTeamAgainstCondition(Team team) {

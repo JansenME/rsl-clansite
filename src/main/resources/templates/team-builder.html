@@ -275,6 +275,8 @@
     <div id="team-sticky-header">
         <form id="team-form" th:action="@{/teams/save}" th:object="${newTeam}" method="POST" class="builder-container">
 
+            <input type="hidden" name="targetMemberId" th:value="${targetMemberId}" />
+
             <div class="team-meta-inputs">
                 <input type="text" th:field="*{teamName}" placeholder="Team Name (e.g. Speed Farm)" required />
 

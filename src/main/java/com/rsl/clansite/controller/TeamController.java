@@ -54,13 +54,25 @@ public class TeamController {
     @GetMapping("/builder")
     @PreAuthorize("hasRole('MEMBER')")
     public String builder(@RequestParam(required = false) String editTeamId,
+                          @RequestParam(required = false) String targetMemberId,
                           Model model, Authentication authentication, HttpSession session) {
         commonsService.fillModel(model, authentication);
 
-        ClanmemberEntity activeMember = clanmemberService.getActiveClanmember(session, authentication);
+        ClanmemberEntity activeMember;
+
+        // 1. Determine Context: Are we editing for ourselves or someone else?
+        // Hierarchy Check: ROLE_COORDINATOR is sufficient as it includes ADMIN/OWNER
+        if (StringUtils.hasText(targetMemberId) && canManageOthers(authentication)) {
+            activeMember = clanmemberService.getMemberById(targetMemberId);
+        } else {
+            activeMember = clanmemberService.getActiveClanmember(session, authentication);
+        }
+
         if (activeMember == null) {
             return "redirect:/";
         }
+
+        model.addAttribute("targetMemberId", activeMember.getId().toHexString());
 
         List<String> rosterIds = activeMember.getRosterChampionIds();
         if (rosterIds != null && !rosterIds.isEmpty()) {
@@ -108,25 +120,42 @@ public class TeamController {
 
     @PostMapping("/save")
     @PreAuthorize("hasRole('MEMBER')")
-    public String saveTeam(@ModelAttribute Team team, Authentication authentication, HttpSession session, RedirectAttributes redirectAttributes) {
+    public String saveTeam(@ModelAttribute Team team,
+                           @RequestParam(required = false) String targetMemberId,
+                           Authentication authentication, HttpSession session, RedirectAttributes redirectAttributes) {
         try {
-            clanmemberService.saveKnownTeam(session, authentication, team);
+            // Updated service call to include targetMemberId
+            clanmemberService.saveKnownTeam(session, authentication, team, targetMemberId);
             redirectAttributes.addFlashAttribute("successMessage", "Team saved successfully!");
+
+            if (StringUtils.hasText(targetMemberId)) {
+                return "redirect:/profile/" + targetMemberId;
+            }
             return "redirect:/profile";
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Error saving team: " + e.getMessage());
+            if (StringUtils.hasText(targetMemberId)) {
+                return "redirect:/teams/builder?targetMemberId=" + targetMemberId;
+            }
             return "redirect:/teams/builder";
         }
     }
 
     @PostMapping("/delete/{teamId}")
     @PreAuthorize("hasRole('MEMBER')")
-    public String deleteTeam(@PathVariable String teamId, Authentication authentication, HttpSession session, RedirectAttributes redirectAttributes) {
+    public String deleteTeam(@PathVariable String teamId,
+                             @RequestParam(required = false) String targetMemberId,
+                             Authentication authentication, HttpSession session, RedirectAttributes redirectAttributes) {
         try {
-            clanmemberService.deleteKnownTeam(session, authentication, teamId);
+            // Updated service call to include targetMemberId
+            clanmemberService.deleteKnownTeam(session, authentication, teamId, targetMemberId);
             redirectAttributes.addFlashAttribute("successMessage", "Team deleted successfully.");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Error deleting team: " + e.getMessage());
+        }
+
+        if (StringUtils.hasText(targetMemberId)) {
+            return "redirect:/profile/" + targetMemberId;
         }
         return "redirect:/profile";
     }
@@ -158,5 +187,10 @@ public class TeamController {
             return entity.getConditionKey();
         }
         return entity.getConditionKey();
+    }
+
+    private boolean canManageOthers(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_COORDINATOR"));
     }
 }
