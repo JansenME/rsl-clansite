@@ -50,6 +50,30 @@ public class SiegeEntity {
         this.lastModified = LocalDateTime.now();
     }
 
+    public int getCurrentDefensePoints() {
+        return defensiveStructures.stream()
+                .filter(s -> !s.isCleared())
+                .mapToInt(SiegeStructure::getDefensePoints)
+                .sum();
+    }
+
+    public int getCurrentAttackPoints() {
+        return targetStructures.stream()
+                .filter(SiegeStructure::isCleared)
+                .mapToInt(SiegeStructure::getAttackPoints)
+                .sum();
+    }
+
+    public int getTotalPoints() {
+        return getCurrentDefensePoints() + getCurrentAttackPoints();
+    }
+
+    public int getMaxPossiblePoints() {
+        int defMax = defensiveStructures.stream().mapToInt(SiegeStructure::getDefensePoints).sum();
+        int atkMax = targetStructures.stream().mapToInt(SiegeStructure::getAttackPoints).sum();
+        return defMax + atkMax;
+    }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

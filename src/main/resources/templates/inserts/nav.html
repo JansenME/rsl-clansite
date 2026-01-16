@@ -9,6 +9,12 @@
         <a href="/champions">Champions</a>
         <a href="/clanmembers">Clanmembers</a>
 
+        <a href="/siege"
+           title="Siege Management"
+           sec:authorize="isAuthenticated()">
+            Siege
+        </a>
+
         <a href="/profile"
            title="Profile"
            sec:authorize="isAuthenticated()"

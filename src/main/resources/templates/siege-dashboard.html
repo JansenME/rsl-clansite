@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <title>Siege Dashboard</title>
     <meta charset="utf-8" />
@@ -14,7 +14,9 @@
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 40px;
+            margin-top: 25px; /* Added spacing for the badge */
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            position: relative; /* Ensure badge is relative to this */
         }
         .siege-header {
             display: flex;
@@ -22,12 +24,13 @@
             align-items: center;
             border-bottom: 2px solid #f4f4f4;
             padding-bottom: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .siege-title {
             margin: 0;
             font-size: 1.5em;
             color: #333;
+            margin-top: 10px; /* Push title down slightly */
         }
         .siege-status {
             padding: 5px 12px;
@@ -41,6 +44,24 @@
         .status-MATCHMAKING { background-color: #3498db; }
         .status-BATTLE { background-color: #e74c3c; }
         .status-FINISHED { background-color: #95a5a6; }
+
+        /* Points Ribbon */
+        .siege-stats-ribbon {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #eee;
+        }
+        .stat-box {
+            text-align: center;
+        }
+        .stat-label { font-size: 0.75em; color: #777; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-value { font-size: 1.2em; font-weight: bold; color: #333; }
+        .stat-total { color: #2980b9; }
 
         /* Grid for Map Tables */
         .map-grid {
@@ -73,6 +94,7 @@
             border: 1px solid #eee;
             padding: 8px;
             text-align: center;
+            vertical-align: middle;
         }
         table.siege-table th {
             background-color: #fcfcfc;
@@ -83,6 +105,8 @@
         .structure-cleared {
             background-color: #ffebee; /* Red tint for destroyed/cleared */
             color: #c0392b;
+        }
+        .structure-cleared .name-cell {
             text-decoration: line-through;
         }
         .structure-ok {
@@ -91,19 +115,32 @@
 
         .primary-highlight {
             border: 2px solid #3498db;
-            position: relative;
         }
         .primary-badge {
             position: absolute;
-            top: -10px;
+            top: -12px;
             left: 20px;
             background: #3498db;
             color: white;
-            padding: 2px 10px;
-            font-size: 0.7em;
+            padding: 3px 12px;
+            font-size: 0.75em;
             border-radius: 4px;
             font-weight: bold;
+            z-index: 10;
         }
+
+        /* Action Buttons */
+        .btn-action {
+            border: none;
+            background: none;
+            cursor: pointer;
+            padding: 5px;
+            transition: transform 0.2s;
+        }
+        .btn-action:hover { transform: scale(1.1); }
+        .btn-destroy { color: #e74c3c; }
+        .btn-restore { color: #27ae60; }
+        .btn-capture { color: #2980b9; }
     </style>
 </head>
 <body>
@@ -139,6 +176,21 @@
                     </div>
                 </div>
 
+                <div class="siege-stats-ribbon">
+                    <div class="stat-box">
+                        <div class="stat-label">Defense Points</div>
+                        <div class="stat-value" th:text="${siege.currentDefensePoints}">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Attack Points</div>
+                        <div class="stat-value" th:text="${siege.currentAttackPoints}">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Total Score</div>
+                        <div class="stat-value stat-total" th:text="${siege.totalPoints}">0</div>
+                    </div>
+                </div>
+
                 <div class="map-grid">
                     <div class="map-box">
                         <h3 class="def-header"><i class="fas fa-shield-alt"></i> Defense Map (Our Base)</h3>
@@ -146,23 +198,38 @@
                             <thead>
                             <tr>
                                 <th>Structure</th>
-                                <th>Slots</th>
-                                <th>Pts (Def)</th>
+                                <th>Pts</th>
                                 <th>Status</th>
                             </tr>
                             </thead>
                             <tbody>
                             <tr th:each="struct : ${siege.defensiveStructures}"
                                 th:classappend="${struct.isCleared} ? 'structure-cleared' : ''">
-                                <td th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
-                                <td>
-                                    <span th:text="${struct.slots.size()}">0</span>
-                                    <span style="font-size: 0.8em; color: #999;">Slots</span>
-                                </td>
+                                <td class="name-cell" th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
                                 <td th:text="${struct.defensePoints}">0</td>
                                 <td>
-                                    <span th:if="${!struct.isCleared}" class="structure-ok"><i class="fas fa-check-circle"></i> Intact</span>
-                                    <span th:if="${struct.isCleared}"><i class="fas fa-skull"></i> Destroyed</span>
+                                    <div sec:authorize="hasRole('COORDINATOR') or hasRole('ADMIN') or hasRole('OWNER')">
+                                        <form method="POST" th:action="@{/siege/structure/update}">
+                                            <input type="hidden" name="siegeId" th:value="${siege.id}" />
+                                            <input type="hidden" name="structureId" th:value="${struct.id}" />
+                                            <input type="hidden" name="mapType" value="DEFENSE" />
+
+                                            <input th:if="${!struct.isCleared}" type="hidden" name="isCleared" value="true" />
+                                            <button th:if="${!struct.isCleared}" type="submit" class="btn-action btn-destroy" title="Mark as Destroyed">
+                                                <i class="fas fa-bomb"></i> Destroy
+                                            </button>
+
+                                            <input th:if="${struct.isCleared}" type="hidden" name="isCleared" value="false" />
+                                            <button th:if="${struct.isCleared}" type="submit" class="btn-action btn-restore" title="Mark as Intact">
+                                                <i class="fas fa-undo"></i> Restore
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    <div sec:authorize="!hasRole('COORDINATOR') and !hasRole('ADMIN') and !hasRole('OWNER')">
+                                        <span th:if="${!struct.isCleared}" class="structure-ok"><i class="fas fa-check-circle"></i> Intact</span>
+                                        <span th:if="${struct.isCleared}"><i class="fas fa-skull"></i> Destroyed</span>
+                                    </div>
                                 </td>
                             </tr>
                             </tbody>
@@ -175,28 +242,43 @@
                             <thead>
                             <tr>
                                 <th>Structure</th>
-                                <th>Pts (Atk)</th>
+                                <th>Pts</th>
                                 <th>Status</th>
                             </tr>
                             </thead>
                             <tbody>
                             <tr th:each="struct : ${siege.targetStructures}"
                                 th:classappend="${struct.isCleared} ? 'structure-cleared' : ''">
-                                <td th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
+                                <td class="name-cell" th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
                                 <td th:text="${struct.attackPoints}">0</td>
                                 <td>
-                                    <span th:if="${!struct.isCleared}" style="color: #e74c3c;">Active</span>
-                                    <span th:if="${struct.isCleared}" class="structure-ok"><i class="fas fa-flag"></i> Captured</span>
+                                    <div sec:authorize="hasRole('COORDINATOR') or hasRole('ADMIN') or hasRole('OWNER')">
+                                        <form method="POST" th:action="@{/siege/structure/update}">
+                                            <input type="hidden" name="siegeId" th:value="${siege.id}" />
+                                            <input type="hidden" name="structureId" th:value="${struct.id}" />
+                                            <input type="hidden" name="mapType" value="TARGET" />
+
+                                            <input th:if="${!struct.isCleared}" type="hidden" name="isCleared" value="true" />
+                                            <button th:if="${!struct.isCleared}" type="submit" class="btn-action btn-capture" title="Mark as Captured">
+                                                <i class="fas fa-flag"></i> Capture
+                                            </button>
+
+                                            <input th:if="${struct.isCleared}" type="hidden" name="isCleared" value="false" />
+                                            <button th:if="${struct.isCleared}" type="submit" class="btn-action btn-restore" title="Undo Capture">
+                                                <i class="fas fa-undo"></i> Restore
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    <div sec:authorize="!hasRole('COORDINATOR') and !hasRole('ADMIN') and !hasRole('OWNER')">
+                                        <span th:if="${!struct.isCleared}" style="color: #e74c3c;">Active</span>
+                                        <span th:if="${struct.isCleared}" class="structure-ok"><i class="fas fa-flag"></i> Captured</span>
+                                    </div>
                                 </td>
                             </tr>
                             </tbody>
                         </table>
                     </div>
-                </div>
-
-                <div style="text-align: right; margin-top: 15px;">
-                    <a href="#" class="button small disabled" title="Coming in V1.1">View Member Stats</a>
-                    <a href="#" class="button small disabled" title="Coming in V1.1">Edit Map</a>
                 </div>
             </div>
 
