@@ -5,11 +5,12 @@ import com.rsl.clansite.model.Aura;
 import com.rsl.clansite.model.BaseStats;
 import com.rsl.clansite.model.Champion;
 import com.rsl.clansite.model.dto.ChampionEntryDTO;
+import com.rsl.clansite.model.dto.DataHealthDTO;
 import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.model.enums.AuditAction;
+import com.rsl.clansite.model.enums.Rarity;
 import com.rsl.clansite.repository.ChampionRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections4.ListUtils;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -18,7 +19,9 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -28,12 +31,17 @@ public class ChampionsService {
     private final ChampionRepository championRepository;
     private final CommonsService commonsService;
     private final AuditLogService auditLogService;
+    private final TargetService targetService;
 
     @Autowired
-    public ChampionsService(final ChampionRepository championRepository, final CommonsService commonsService, final AuditLogService auditLogService) {
+    public ChampionsService(final ChampionRepository championRepository,
+                            final CommonsService commonsService,
+                            final AuditLogService auditLogService,
+                            final TargetService targetService) {
         this.championRepository = championRepository;
         this.commonsService = commonsService;
         this.auditLogService = auditLogService;
+        this.targetService = targetService;
     }
 
     public List<Champion> getAllChampions() {
@@ -52,6 +60,27 @@ public class ChampionsService {
 
         List<ChampionEntity> entities = championRepository.findAllById(objectIds);
         return mapEntitiesToChampions(entities);
+    }
+
+    public DataHealthDTO getDataHealth() {
+        Map<Rarity, Integer> missingPerRarity = new HashMap<>();
+        int totalMissing = 0;
+
+        for (Rarity rarity : Rarity.values()) {
+            int target = targetService.getGlobalTargetForRarity(rarity);
+            if (target <= 0) continue;
+
+            int current = championRepository.countByRarity(rarity);
+            int diff = target - current;
+
+            if (diff > 0) {
+                missingPerRarity.put(rarity, diff);
+                totalMissing += diff;
+            }
+        }
+
+        boolean isHealthy = totalMissing == 0;
+        return new DataHealthDTO(isHealthy, totalMissing, missingPerRarity);
     }
 
     public void saveNewChampion(final ChampionEntryDTO dto, Authentication authentication) throws ChampionSaveException {

@@ -30,6 +30,21 @@
         }
         .border-left-thick { border-left: 2px solid #ccc !important; }
         .text-left { text-align: left !important; }
+
+        /* Inline Input Styles */
+        input.target-input {
+            width: 50px;
+            padding: 2px;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 1em;
+        }
+        input.target-input:focus {
+            border-color: #0c2ccc;
+            outline: none;
+            background-color: #f0f8ff;
+        }
     </style>
 </head>
 <body>
@@ -42,75 +57,98 @@
         <div class="container">
             <section>
                 <h2>Champion Data Integrity Dashboard</h2>
-                <p>Compare your target data (JSON) against your Database. <br/>
-                    <small>The "Check" button only appears if HellHades has newer data than your database.</small>
+                <p>Compare your target data (Database) against your Champions Collection.<br/>
+                    <small>Update the "Tgt" columns to match the in-game index, then click Save.</small>
                 </p>
 
                 <div th:replace="~{inserts/alerts :: alerts}"></div>
 
-                <div style="overflow-x: auto; margin-top: 2em;">
-                    <table class="dashboard-table">
-                        <thead>
-                        <tr>
-                            <th rowspan="2">Faction</th>
-                            <th th:each="rarity : ${rarities}" colspan="3" class="border-left-thick" th:text="${rarity.name}">
-                                RARITY
-                            </th>
-                            <th rowspan="2" class="border-left-thick">Action</th>
-                        </tr>
-                        <tr>
-                            <th:block th:each="rarity : ${rarities}">
-                                <th class="border-left-thick" title="My Target (Json)">Tgt</th>
-                                <th title="In Database">DB</th>
-                                <th>Diff</th>
-                            </th:block>
-                        </tr>
-                        </thead>
+                <form method="POST" th:action="@{/admin/scraper/targets/update}">
 
-                        <th:block th:each="group : ${allianceGroups}">
-                            <tbody>
-                            <tr style="background-color: #e0e0e0; border-top: 2px solid #999;">
-                                <td colspan="100%" style="text-align: center; padding-left: 15px; font-weight: bold; color: #333;">
-                                    <span th:text="${group.alliance.name}">Alliance Name</span>
-                                    <span style="font-weight: normal; margin-left: 10px; font-size: 0.9em;">
-                                            (<span th:text="${group.totalChampions}">0</span> champions)
-                                        </span>
-                                </td>
+                    <div style="text-align: right; margin-bottom: 10px;">
+                        <button type="submit" class="button small button-blue">
+                            <i class="fas fa-save"></i> Save All Targets
+                        </button>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table class="dashboard-table">
+                            <thead>
+                            <tr>
+                                <th rowspan="2">Faction</th>
+                                <th th:each="rarity : ${rarities}" colspan="3" class="border-left-thick" th:text="${rarity.name}">
+                                    RARITY
+                                </th>
+                                <th rowspan="2" class="border-left-thick">Action</th>
                             </tr>
-
-                            <tr th:each="row : ${group.rows}">
-                                <td class="text-left" style="font-weight: bold; padding-left: 2em;" th:text="${row.faction.name}">
-                                    Faction Name
-                                </td>
-
+                            <tr>
                                 <th:block th:each="rarity : ${rarities}">
-                                    <td class="border-left-thick" th:text="${row.targets.get(rarity)}">0</td>
-                                    <td th:text="${row.database.get(rarity)}">0</td>
-                                    <td th:with="diff=${row.getDiff(rarity)}"
-                                        th:text="${diff}"
-                                        th:classappend="${diff > 0} ? 'diff-error' : 'diff-ok'">
-                                        0
-                                    </td>
+                                    <th class="border-left-thick" title="My Target (Database)">Tgt</th>
+                                    <th title="In Database">DB</th>
+                                    <th>Diff</th>
                                 </th:block>
-
-                                <td class="border-left-thick">
-                                    <span th:if="${row.isComplete()}" class="diff-ok"><i class="fas fa-check"></i></span>
-
-                                    <form th:if="${!row.isComplete() and row.isUpdateAvailable()}"
-                                          method="post"
-                                          th:action="@{/admin/scraper/faction/{name}/execute(name=${#strings.replace(row.faction.name, ' ', '-')})}"
-                                          th:data-faction="${row.faction.name}"
-                                          onsubmit="showLoading('Importing ' + this.getAttribute('data-faction') + '...')">
-                                        <button type="submit" class="button primary small fit">Check</button>
-                                    </form>
-
-                                    <span th:if="${!row.isComplete() and !row.isUpdateAvailable()}" class="diff-error"><i class="fas fa-times"></i></span>
-                                </td>
                             </tr>
-                            </tbody>
-                        </th:block>
-                    </table>
-                </div>
+                            </thead>
+
+                            <th:block th:each="group : ${allianceGroups}">
+                                <tbody>
+                                <tr style="background-color: #e0e0e0; border-top: 2px solid #999;">
+                                    <td colspan="100%" style="text-align: center; padding-left: 15px; font-weight: bold; color: #333;">
+                                        <span th:text="${group.alliance.name}">Alliance Name</span>
+                                        <span style="font-weight: normal; margin-left: 10px; font-size: 0.9em;">
+                                                (<span th:text="${group.totalChampions}">0</span> / <span th:text="${group.totalTargets}">0</span> champions)
+                                            </span>
+                                    </td>
+                                </tr>
+
+                                <tr th:each="row : ${group.rows}">
+                                    <td class="text-left" style="font-weight: bold; padding-left: 2em;" th:text="${row.faction.name}">
+                                        Faction Name
+                                    </td>
+
+                                    <th:block th:each="rarity : ${rarities}">
+                                        <td class="border-left-thick">
+                                            <input type="number"
+                                                   class="target-input"
+                                                   th:name="${row.faction.name} + '_' + ${rarity.name}"
+                                                   th:value="${row.targets.get(rarity)}"
+                                                   min="0" />
+                                        </td>
+
+                                        <td th:text="${row.database.get(rarity)}">0</td>
+
+                                        <td th:with="diff=${row.getDiff(rarity)}"
+                                            th:text="${diff}"
+                                            th:classappend="${diff > 0} ? 'diff-error' : 'diff-ok'">
+                                            0
+                                        </td>
+                                    </th:block>
+
+                                    <td class="border-left-thick">
+                                        <span th:if="${row.isComplete()}" class="diff-ok"><i class="fas fa-check"></i></span>
+
+                                        <button th:if="${!row.isComplete() and row.isUpdateAvailable()}"
+                                                type="submit"
+                                                class="button primary small fit"
+                                                th:formaction="@{/admin/scraper/faction/{name}/execute(name=${#strings.replace(row.faction.name, ' ', '-')})}"
+                                                onclick="showLoading('Importing...')">
+                                            Check
+                                        </button>
+
+                                        <span th:if="${!row.isComplete() and !row.isUpdateAvailable()}" class="diff-error"><i class="fas fa-times"></i></span>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </th:block>
+                        </table>
+                    </div>
+
+                    <div style="text-align: right; margin-top: 10px;">
+                        <button type="submit" class="button small button-blue">
+                            <i class="fas fa-save"></i> Save All Targets
+                        </button>
+                    </div>
+                </form>
 
                 <div style="text-align: center; margin-top: 20px;">
                     <a th:href="@{/admin/data-health}" class="button primary" style="margin-right: 10px;">

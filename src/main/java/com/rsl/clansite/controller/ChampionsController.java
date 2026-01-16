@@ -3,6 +3,7 @@ package com.rsl.clansite.controller;
 import com.rsl.clansite.exceptions.ChampionSaveException;
 import com.rsl.clansite.model.CompleteChampionsFilter;
 import com.rsl.clansite.model.dto.ChampionEntryDTO;
+import com.rsl.clansite.model.dto.DataHealthDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.enums.Affinity;
 import com.rsl.clansite.model.enums.Alliance;
@@ -11,11 +12,11 @@ import com.rsl.clansite.model.enums.AuraStat;
 import com.rsl.clansite.model.enums.Faction;
 import com.rsl.clansite.model.enums.Rarity;
 import com.rsl.clansite.model.enums.Type;
+import com.rsl.clansite.repository.ChampionRepository;
 import com.rsl.clansite.service.ChampionsService;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
 import com.rsl.clansite.service.RosterService;
-import com.rsl.clansite.service.TargetService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,18 +36,18 @@ public class ChampionsController {
     private final ChampionsService championsService;
     private final ClanmemberService clanmemberService;
     private final RosterService rosterService;
-    private final TargetService targetService;
+    private final ChampionRepository championRepository;
 
     public ChampionsController(final CommonsService commonsService,
                                final ChampionsService championsService,
                                final ClanmemberService clanmemberService,
                                final RosterService rosterService,
-                               final TargetService targetService) {
+                               final ChampionRepository championRepository) {
         this.commonsService = commonsService;
         this.championsService = championsService;
         this.clanmemberService = clanmemberService;
         this.rosterService = rosterService;
-        this.targetService = targetService;
+        this.championRepository = championRepository;
     }
 
     @GetMapping(value={"", "/"})
@@ -217,7 +218,8 @@ public class ChampionsController {
     private void fillModel(Model model, Authentication authentication, HttpSession session) {
         commonsService.fillModel(model, authentication, session);
 
-        int totalAmountOfChampions = targetService.getTotalChampionCount();
+        DataHealthDTO health = championsService.getDataHealth();
+        model.addAttribute("dataHealth", health);
 
         model.addAttribute("rarities", Rarity.values());
         model.addAttribute("types", Type.values());
@@ -227,7 +229,9 @@ public class ChampionsController {
         model.addAttribute("auraStats", AuraStat.values());
         model.addAttribute("auraLocations", AuraLocation.values());
 
+        long totalAmountOfChampions = championRepository.count();
         model.addAttribute("amountOfChampions", totalAmountOfChampions);
-        model.addAttribute("championsToGo", totalAmountOfChampions - championsService.getAllChampions().size());
+
+        model.addAttribute("championsToGo", health.totalMissing());
     }
 }

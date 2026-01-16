@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.nio.file.Files;
@@ -46,26 +47,22 @@ public class ScraperController {
     }
 
     @GetMapping("/scraper")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public String scraperDashboard(Model model) {
-        // 1. Fetch all champions once
         List<ChampionEntity> allChampions = championRepository.findAll();
 
-        // 2. Create a list to hold our Groups
         List<AllianceGroup> allianceGroups = new ArrayList<>();
 
-        // 3. Iterate over Alliances (Telerian, Gaellen, etc.)
         for (Alliance alliance : Alliance.values()) {
             List<DashboardRow> allianceRows = new ArrayList<>();
-            int allianceTotalDb = 0; // Counter for the header
+            int allianceTotalDb = 0;
+            int allianceTotalTargets = 0; // NEW: Track total targets
 
-            // Find factions that belong to this alliance
             for (Faction faction : Faction.values()) {
                 if (faction.getAlliance() == alliance) {
 
-                    // --- EXISTING LOGIC FOR ROW CREATION ---
                     Map<Rarity, Integer> targets = new HashMap<>();
-                    int myTotal = targetService.getMyTotalForFaction(faction);
+                    int myTotal = targetService.getMyTotalForFaction(faction); // Total Targets for this faction
                     Map<Rarity, Integer> database = new HashMap<>();
 
                     List<ChampionEntity> factionChampions = allChampions.stream()
@@ -80,29 +77,68 @@ public class ScraperController {
 
                     Map<Rarity, Integer> online = scraperService.getOnlineCounts(faction);
                     DashboardRow row = new DashboardRow(faction, targets, database, online, myTotal);
-                    // ---------------------------------------
 
                     allianceRows.add(row);
 
-                    // Sum up for the Alliance Header
                     allianceTotalDb += row.getDatabase().values().stream().mapToInt(Integer::intValue).sum();
+                    allianceTotalTargets += myTotal; // Add to alliance sum
                 }
             }
 
-            // Only add the group if it has factions (which they all do)
             if (!allianceRows.isEmpty()) {
-                allianceGroups.add(new AllianceGroup(alliance, allianceRows, allianceTotalDb));
+                allianceGroups.add(new AllianceGroup(alliance, allianceRows, allianceTotalDb, allianceTotalTargets));
             }
         }
 
-        model.addAttribute("allianceGroups", allianceGroups); // Send groups, not raw rows
+        model.addAttribute("allianceGroups", allianceGroups);
         model.addAttribute("rarities", Rarity.values());
 
         return "scraper-dashboard";
     }
 
+    @PostMapping("/scraper/targets/update")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String updateFactionTargets(@RequestParam Map<String, String> allParams, RedirectAttributes redirectAttributes) {
+        int updatedCount = 0;
+
+        for (Map.Entry<String, String> entry : allParams.entrySet()) {
+            if (entry.getKey().contains("_")) {
+                try {
+                    String[] parts = entry.getKey().split("_");
+                    if (parts.length != 2) continue;
+
+                    String factionName = parts[0];
+                    String rarityName = parts[1];
+
+                    Faction faction = Faction.getFactionByName(factionName);
+                    Rarity rarity = Rarity.valueOf(rarityName);
+
+                    int count = Integer.parseInt(entry.getValue());
+
+                    int current = targetService.getTargetCount(faction, rarity);
+                    if (current != count) {
+                        targetService.updateTarget(faction, rarity, count);
+                        updatedCount++;
+                    }
+                } catch (Exception e) {
+                    // Ignore invalid inputs
+                }
+            }
+        }
+
+        if (updatedCount > 0) {
+            redirectAttributes.addFlashAttribute("message", "Successfully updated targets for " + updatedCount + " faction/rarity combinations.");
+            redirectAttributes.addFlashAttribute("alertClass", "alert-success");
+        } else {
+            redirectAttributes.addFlashAttribute("message", "No changes detected.");
+            redirectAttributes.addFlashAttribute("alertClass", "alert-info");
+        }
+
+        return "redirect:/admin/scraper";
+    }
+
     @PostMapping("/scraper/faction/{factionName}/execute")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public String executeScrape(@PathVariable String factionName,
                                 @org.springframework.web.bind.annotation.RequestHeader(value = "Referer", required = false) String referer,
                                 Authentication authentication,
@@ -114,18 +150,14 @@ public class ScraperController {
             return "redirect:/admin/scraper";
         }
 
-        // 1. Determine Strategy based on where the user clicked
-        // If coming from "data-health", we are fixing data -> Force Refresh
         boolean forceRefresh = (referer != null && referer.contains("data-health"));
 
-        // 2. Scan (using the new service signature)
         var contexts = scraperService.scanForChampions(faction, forceRefresh);
 
         if (contexts.isEmpty()) {
             redirectAttributes.addFlashAttribute("message", "No champions found for " + faction.getName());
             redirectAttributes.addFlashAttribute("alertClass", "alert-info");
         } else {
-            // 3. Import (Upsert logic in service handles updates vs inserts)
             scraperService.importChampions(contexts, faction, authentication);
 
             String actionType = forceRefresh ? "Refreshed/Updated" : "imported";
@@ -133,7 +165,6 @@ public class ScraperController {
             redirectAttributes.addFlashAttribute("alertClass", "alert-success");
         }
 
-        // 4. Smart Redirect
         if (forceRefresh) {
             return "redirect:/admin/data-health";
         }
@@ -142,7 +173,7 @@ public class ScraperController {
     }
 
     @GetMapping("/data-health")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public String showDataHealth(Model model) {
         List<ChampionEntity> allChampions = championRepository.findAll();
         List<ProblemRow> problems = new ArrayList<>();
@@ -150,25 +181,21 @@ public class ScraperController {
         for (ChampionEntity c : allChampions) {
             List<String> issues = new ArrayList<>();
 
-            // 1. Check Data Integrity
             if (c.getType() == null) issues.add("Missing Type");
             if (c.getAffinity() == null) issues.add("Missing Affinity");
             if (c.getRarity() == null) issues.add("Missing Rarity");
             if (c.getFaction() == null) issues.add("Missing Faction");
             if (c.getBaseStats() == null) issues.add("Missing Stats");
 
-            // 2. Check Image Reference
             if (c.getImagename() == null || c.getImagename().isEmpty()) {
                 issues.add("No Image Name in DB");
             } else {
-                // 3. Check Physical File
                 Path path = Paths.get(imageStorageLocation, c.getImagename());
                 if (!Files.exists(path)) {
                     issues.add("File Missing on Disk");
                 }
             }
 
-            // Only add to list if there are actual issues
             if (!issues.isEmpty()) {
                 problems.add(new ProblemRow(c, issues));
             }
@@ -191,5 +218,6 @@ public class ScraperController {
         private Alliance alliance;
         private List<DashboardRow> rows;
         private int totalChampions;
+        private int totalTargets;
     }
 }

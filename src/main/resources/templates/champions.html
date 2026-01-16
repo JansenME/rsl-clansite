@@ -122,9 +122,17 @@
 					<i class="fas fa-exclamation-triangle"></i> <span th:text="${errorMessage}">Error</span>
 				</div>
 
+				<div th:if="${dataHealth != null and !dataHealth.isHealthy}"
+					 style="background-color: #e67e22; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+					<i class="fas fa-database"></i>
+					<strong>Notice:</strong> The champion database is missing <strong th:text="${dataHealth.totalMissing}">X</strong> champions compared to known targets.
+					<br/>
+					<span style="font-size: 0.9em;">Please contact a Deputy or higher and tell them to do some work!</span>
+				</div>
+
 				<div style="text-align: center; margin-bottom: 20px;">
 					<div style="font-size: 1.1em; margin-bottom: 15px;">
-						Showing <strong id="visible-champion-count" th:text="${champions.size()}">0</strong> / <strong th:text="${champions.size()}">0</strong> Champions
+						Showing <strong id="visible-champion-count" th:text="${champions.size()}">0</strong> / <strong th:text="${amountOfChampions}">0</strong> Champions
 					</div>
 
 					<button type="button" onclick="toggleFilter()"
