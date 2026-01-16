@@ -2,6 +2,7 @@ package com.rsl.clansite.service;
 
 import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.enums.QuickLink;
+import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.info.BuildProperties;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.ui.Model;
@@ -39,6 +41,9 @@ class CommonsServiceTest {
     private Model model;
 
     @Mock
+    private HttpSession session;
+
+    @Mock
     private Authentication authentication;
 
     @InjectMocks
@@ -60,9 +65,7 @@ class CommonsServiceTest {
     @Test
     @DisplayName("fillModel should fallback when BuildProperties is missing (simulating null injection)")
     void fillModel_ShouldFallback_WhenPropertiesNull() {
-        CommonsService localService = new CommonsService(clanmemberService, null);
-
-        localService.fillModel(model, null);
+        commonsService.fillModel(model, null);
 
         verify(model).addAttribute("versionNumber", "dev-local");
         verify(model).addAttribute("applicationDate", "Unknown Date");
@@ -139,7 +142,7 @@ class CommonsServiceTest {
         // Owner has ROLE_OWNER (and usually implicitly functions as Admin)
         when(auth.getAuthorities()).thenReturn((List) List.of(new SimpleGrantedAuthority("ROLE_OWNER")));
 
-        List<QuickLink> links = commonsService.getVisibleQuickLinks(auth);
+        List<CommonsService.VisibleQuickLink> links = commonsService.getVisibleQuickLinks(auth, session);
 
         assertTrue(links.contains(QuickLink.ADD_CHAMPION), "Owner should see Add Champion");
         assertTrue(links.contains(QuickLink.ADD_CLANMEMBER), "Owner should see Add Clanmember");
@@ -153,7 +156,7 @@ class CommonsServiceTest {
         when(auth.isAuthenticated()).thenReturn(true);
         when(auth.getAuthorities()).thenReturn((List) List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
 
-        List<QuickLink> links = commonsService.getVisibleQuickLinks(auth);
+        List<CommonsService.VisibleQuickLink> links = commonsService.getVisibleQuickLinks(auth, session);
 
         assertTrue(links.contains(QuickLink.ADD_CLANMEMBER));
         assertTrue(links.contains(QuickLink.AUDIT_LOG));
@@ -168,7 +171,7 @@ class CommonsServiceTest {
         when(auth.isAuthenticated()).thenReturn(true);
         when(auth.getAuthorities()).thenReturn((List) List.of(new SimpleGrantedAuthority("ROLE_MEMBER")));
 
-        List<QuickLink> links = commonsService.getVisibleQuickLinks(auth);
+        List<CommonsService.VisibleQuickLink> links = commonsService.getVisibleQuickLinks(auth, session);
 
         assertTrue(links.isEmpty(), "Member should have 0 quick links");
     }
@@ -176,12 +179,12 @@ class CommonsServiceTest {
     @Test
     @DisplayName("Anonymous/Null user should return empty list")
     void getVisibleQuickLinks_Anonymous_ShouldReturnEmpty() {
-        List<QuickLink> linksNull = commonsService.getVisibleQuickLinks(null);
+        List<CommonsService.VisibleQuickLink> linksNull = commonsService.getVisibleQuickLinks(null, session);
         assertTrue(linksNull.isEmpty());
 
         Authentication auth = mock(Authentication.class);
         when(auth.isAuthenticated()).thenReturn(false);
-        List<QuickLink> linksAnon = commonsService.getVisibleQuickLinks(auth);
+        List<CommonsService.VisibleQuickLink> linksAnon = commonsService.getVisibleQuickLinks(auth, session);
         assertTrue(linksAnon.isEmpty());
     }
 }

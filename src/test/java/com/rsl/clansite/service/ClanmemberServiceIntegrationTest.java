@@ -123,7 +123,7 @@ class ClanmemberServiceIntegrationTest {
     private ClanmemberEntity createAndSaveMember(String name, ClanRank rank) {
         ClanmemberEntity entity = new ClanmemberEntity();
         entity.setIngameName(name);
-        entity.setClanRank(rank.name());
+        entity.setClanRank(ClanRank.valueOf(rank.name()));
         return clanmemberRepository.save(entity);
     }
 }

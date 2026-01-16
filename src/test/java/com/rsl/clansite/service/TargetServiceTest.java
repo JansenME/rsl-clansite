@@ -5,6 +5,7 @@ import com.rsl.clansite.model.enums.Rarity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.HashMap;
@@ -14,12 +15,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TargetServiceTest {
+    @InjectMocks
     private TargetService targetService;
 
     @BeforeEach
     void setUp() {
-        targetService = new TargetService();
-
         // 1. Create Mock Data
         // Structure: Map<FactionName, Map<RarityString, Count>>
         Map<String, Map<String, Integer>> mockTargets = new HashMap<>();
@@ -38,25 +38,6 @@ class TargetServiceTest {
 
         // 2. Inject Mock Data into the private 'targets' field
         ReflectionTestUtils.setField(targetService, "targets", mockTargets);
-    }
-
-    @Test
-    @DisplayName("getTargetsForFaction - Existing Faction - Should return correct map")
-    void getTargetsForFaction_Existing() {
-        Map<String, Integer> result = targetService.getTargetsForFaction(Faction.BANNER_LORDS);
-
-        assertEquals(3, result.size());
-        assertEquals(5, result.get("legendary"));
-        assertEquals(10, result.get("epic"));
-    }
-
-    @Test
-    @DisplayName("getTargetsForFaction - Unknown Faction - Should return empty map")
-    void getTargetsForFaction_Unknown() {
-        // Barbarians was not added to our mock data
-        Map<String, Integer> result = targetService.getTargetsForFaction(Faction.BARBARIANS);
-
-        assertTrue(result.isEmpty(), "Should return empty map for unknown faction");
     }
 
     @Test

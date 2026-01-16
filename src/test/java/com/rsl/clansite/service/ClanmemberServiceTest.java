@@ -76,17 +76,17 @@ class ClanmemberServiceTest {
         leader = new ClanmemberEntity();
         leader.setId(ObjectId.get());
         leader.setIngameName("LeaderUser");
-        leader.setClanRank(ClanRank.LEADER.name());
+        leader.setClanRank(ClanRank.LEADER);
 
         deputy = new ClanmemberEntity();
         deputy.setId(ObjectId.get());
         deputy.setIngameName("DeputyUser");
-        deputy.setClanRank(ClanRank.DEPUTY.name());
+        deputy.setClanRank(ClanRank.DEPUTY);
 
         soldier = new ClanmemberEntity();
         soldier.setId(ObjectId.get());
         soldier.setIngameName("SoldierUser");
-        soldier.setClanRank(ClanRank.SOLDIER.name());
+        soldier.setClanRank(ClanRank.SOLDIER);
 
         lenient().when(discordRoleService.getT1RoleId()).thenReturn("test-t1-id");
         lenient().when(discordRoleService.getT2RoleId()).thenReturn("test-t2-id");
@@ -757,7 +757,7 @@ class ClanmemberServiceTest {
         entity.setDiscordName("User");
         entity.setPlayerNickname("Nick");
         entity.setIngameName("GameName");
-        entity.setClanRank("SOLDIER");
+        entity.setClanRank(ClanRank.SOLDIER);
         entity.setClanGroup(ClanGroup.T1);
         entity.setAvatarHash("hash123");
         entity.setDiscordRoles(java.util.List.of("Role1"));

@@ -9,6 +9,7 @@ import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.ui.Model;
@@ -53,8 +54,8 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
                 model.addAttribute("clanmemberViewData", clanmemberService.getUserViewData(auth));
                 model.addAttribute("isLoggedIn", true);
 
-                CommonsService tempService = new CommonsService(null, null);
-                List<QuickLink> links = tempService.getVisibleQuickLinks(auth);
+                MockHttpSession mockSession = new MockHttpSession();
+                List<CommonsService.VisibleQuickLink> links = commonsService.getVisibleQuickLinks(auth, mockSession);
                 model.addAttribute("quickLinks", links);
             } else {
                 model.addAttribute("isLoggedIn", false);
