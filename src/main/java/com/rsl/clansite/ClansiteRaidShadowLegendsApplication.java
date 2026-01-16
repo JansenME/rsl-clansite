@@ -3,13 +3,14 @@ package com.rsl.clansite;
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.util.TimeZone;
 
 @SpringBootApplication
 @EnableScheduling
-public class ClansiteRaidShadowLegendsApplication {
+public class ClansiteRaidShadowLegendsApplication extends SpringBootServletInitializer {
 
 	public static void main(String[] args) {
 		SpringApplication.run(ClansiteRaidShadowLegendsApplication.class, args);

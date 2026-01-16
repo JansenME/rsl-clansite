@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 	<head>
 		<title>Raid Shadow Legends Fan Site</title>
 		<meta charset="utf-8" />
@@ -20,6 +20,20 @@
 				</section>
 
 				<section id="content">
+					<div class="container">
+						<div sec:authorize="isAuthenticated() and !hasRole('ROLE_COORDINATOR')"
+							 style="background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 20px; border-radius: 8px; margin-bottom: 30px; text-align: center;">
+							<i class="fas fa-lock" style="font-size: 2em; margin-bottom: 10px;"></i>
+							<h3>Closed Beta Access</h3>
+							<p>Welcome, <strong th:text="${navUserViewData.discordUserName}">User</strong>! The website is currently in a <strong>Closed Beta</strong> phase for leadership. Access for all clan members will be opened soon.</p>
+						</div>
+
+						<div sec:authorize="hasRole('ROLE_COORDINATOR')"
+							 style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 8px; margin-bottom: 30px; text-align: center;">
+							<i class="fas fa-check-circle"></i>
+							<strong>Alpha Access Active:</strong> You have full access to the Siege and Member management tools. I guess Kloep decided you are important enough! Now give him a cookie.
+						</div>
+					</div>
 				</section>
 
 				<div th:insert="~{inserts/copyright :: copyright}" id="copyright">

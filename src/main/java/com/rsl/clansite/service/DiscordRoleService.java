@@ -122,10 +122,10 @@ public class DiscordRoleService {
             authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
         }
 
-        if (userDiscordRoles.contains(getT1RoleId()) ||
+        /*if (userDiscordRoles.contains(getT1RoleId()) ||
                 userDiscordRoles.contains(getT2RoleId())) {
             authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
-        }
+        }*/
 
         if (kloepDiscordId.equals(userId)) {
             authorities.add(new SimpleGrantedAuthority("ROLE_OWNER"));

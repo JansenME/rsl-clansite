@@ -16,7 +16,7 @@ discord:
 spring:
   data:
     mongodb:
-      uri: ${MONGODB_URI}
+      uri: mongodb://localhost:27017
       database: raidshadowlegends
       auto-index-creation: true
   session:
@@ -44,6 +44,7 @@ spring:
   application:
     name: Clansite Raid Shadow Legends
 server:
+  forward-headers-strategy: native
   servlet:
     session:
       timeout: 31536000
