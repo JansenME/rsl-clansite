@@ -227,9 +227,11 @@ function applyChampionFilters() {
     allFilteredCards = allPassedCards;
 
     const countElement = document.getElementById('visible-champion-count');
-        if (countElement) {
-            countElement.innerText = allFilteredCards.length;
-        }
+    if (countElement) {
+        const currentCount = parseInt(countElement.innerText.replace(/,/g, '')) || 0;
+        const newCount = allFilteredCards.length;
+        animateValue('visible-champion-count', currentCount, newCount, 400);
+    }
 
     visibleCount = 0;
 
@@ -246,6 +248,34 @@ function applyChampionFilters() {
     const endTime = performance.now();
     const duration = (endTime - startTime).toFixed(3);
     console.log(`✅ Filter/Sort Logic Duration (${championCards.length} total, ${allPassedCards.length} displayed): ${duration} ms`);
+}
+
+function animateValue(id, start, end, duration) {
+    const obj = document.getElementById(id);
+    if (!obj) return;
+
+    if (start === end) {
+        obj.innerText = end;
+        return;
+    }
+
+    const startTime = performance.now();
+
+    const step = (currentTime) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        const current = Math.floor(progress * (end - start) + start);
+        obj.innerText = current;
+
+        if (progress < 1) {
+            window.requestAnimationFrame(step);
+        } else {
+            obj.innerText = end;
+        }
+    };
+
+    window.requestAnimationFrame(step);
 }
 
 function createStarHtml(score) {
