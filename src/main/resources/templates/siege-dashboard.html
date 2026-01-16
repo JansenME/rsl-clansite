@@ -1,0 +1,212 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Siege Dashboard</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+    <script th:src="@{/styles/js/main.js}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <style>
+        .siege-section {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 40px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .siege-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #f4f4f4;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .siege-title {
+            margin: 0;
+            font-size: 1.5em;
+            color: #333;
+        }
+        .siege-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: white;
+            text-transform: uppercase;
+        }
+        .status-PREP { background-color: #f39c12; }
+        .status-MATCHMAKING { background-color: #3498db; }
+        .status-BATTLE { background-color: #e74c3c; }
+        .status-FINISHED { background-color: #95a5a6; }
+
+        /* Grid for Map Tables */
+        .map-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media screen and (max-width: 980px) {
+            .map-grid { grid-template-columns: 1fr; }
+        }
+
+        .map-box h3 {
+            text-align: center;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #eee;
+            margin-bottom: 0;
+            font-size: 1.1em;
+        }
+        .def-header { border-bottom: 3px solid #3498db !important; color: #2c3e50; }
+        .atk-header { border-bottom: 3px solid #e74c3c !important; color: #c0392b; }
+
+        table.siege-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+            margin-bottom: 0;
+        }
+        table.siege-table th, table.siege-table td {
+            border: 1px solid #eee;
+            padding: 8px;
+            text-align: center;
+        }
+        table.siege-table th {
+            background-color: #fcfcfc;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .structure-cleared {
+            background-color: #ffebee; /* Red tint for destroyed/cleared */
+            color: #c0392b;
+            text-decoration: line-through;
+        }
+        .structure-ok {
+            color: #27ae60;
+        }
+
+        .primary-highlight {
+            border: 2px solid #3498db;
+            position: relative;
+        }
+        .primary-badge {
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            background: #3498db;
+            color: white;
+            padding: 2px 10px;
+            font-size: 0.7em;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container"></div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <h2><i class="fas fa-chess-rook"></i> Siege Management Dashboard</h2>
+            <p>Overview of current Siege Status, Map Layouts, and Structure Points.</p>
+
+            <div th:each="siege, iterStat : ${siegeList}"
+                 class="siege-section"
+                 th:classappend="${siege.clanGroup == primaryGroup} ? 'primary-highlight' : ''">
+
+                <div th:if="${siege.clanGroup == primaryGroup}" class="primary-badge">YOUR ACTIVE CLAN</div>
+
+                <div class="siege-header">
+                    <h3 class="siege-title">
+                        <span th:text="${siege.clanGroup.name}">T1/T2</span>
+                        <span style="color: #ccc; margin: 0 10px;">vs</span>
+                        <span th:text="${siege.opponentClanName}">Opponent</span>
+                    </h3>
+                    <div>
+                        <span class="siege-status"
+                              th:classappend="'status-' + ${siege.status}"
+                              th:text="${siege.status.displayName}">STATUS</span>
+                        <small style="margin-left: 10px; color: #777;">
+                            Started: <span th:text="${#temporals.format(siege.startDate, 'dd MMM')}">Date</span>
+                        </small>
+                    </div>
+                </div>
+
+                <div class="map-grid">
+                    <div class="map-box">
+                        <h3 class="def-header"><i class="fas fa-shield-alt"></i> Defense Map (Our Base)</h3>
+                        <table class="siege-table">
+                            <thead>
+                            <tr>
+                                <th>Structure</th>
+                                <th>Slots</th>
+                                <th>Pts (Def)</th>
+                                <th>Status</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="struct : ${siege.defensiveStructures}"
+                                th:classappend="${struct.isCleared} ? 'structure-cleared' : ''">
+                                <td th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
+                                <td>
+                                    <span th:text="${struct.slots.size()}">0</span>
+                                    <span style="font-size: 0.8em; color: #999;">Slots</span>
+                                </td>
+                                <td th:text="${struct.defensePoints}">0</td>
+                                <td>
+                                    <span th:if="${!struct.isCleared}" class="structure-ok"><i class="fas fa-check-circle"></i> Intact</span>
+                                    <span th:if="${struct.isCleared}"><i class="fas fa-skull"></i> Destroyed</span>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="map-box">
+                        <h3 class="atk-header"><i class="fas fa-crosshairs"></i> Target Map (Enemy Base)</h3>
+                        <table class="siege-table">
+                            <thead>
+                            <tr>
+                                <th>Structure</th>
+                                <th>Pts (Atk)</th>
+                                <th>Status</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="struct : ${siege.targetStructures}"
+                                th:classappend="${struct.isCleared} ? 'structure-cleared' : ''">
+                                <td th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
+                                <td th:text="${struct.attackPoints}">0</td>
+                                <td>
+                                    <span th:if="${!struct.isCleared}" style="color: #e74c3c;">Active</span>
+                                    <span th:if="${struct.isCleared}" class="structure-ok"><i class="fas fa-flag"></i> Captured</span>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div style="text-align: right; margin-top: 15px;">
+                    <a href="#" class="button small disabled" title="Coming in V1.1">View Member Stats</a>
+                    <a href="#" class="button small disabled" title="Coming in V1.1">Edit Map</a>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 2em;">
+                <a th:href="@{/}" class="button">Back to Home</a>
+            </div>
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright"></div>
+</div>
+</body>
+</html>
