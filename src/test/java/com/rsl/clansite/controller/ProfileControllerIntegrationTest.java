@@ -129,6 +129,14 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
         String myId = "676000000000000000000001";
         setupMockForOwnProfile(myId, "ROLE_OWNER");
 
+        stubFillModelWithLinks(List.of(
+                QuickLink.ADD_CLANMEMBER,
+                QuickLink.AUDIT_LOG,
+                QuickLink.ADD_CHAMPION,
+                QuickLink.LOGIN_HISTORY,
+                QuickLink.DATA_HEALTH
+        ));
+
         mockMvc.perform(get("/profile/" + myId)
                         .with(oauth2User("ROLE_OWNER", myId)))
                 .andExpect(status().isOk())
@@ -147,6 +155,14 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
     void viewProfile_AsAdmin_ShouldSeeAdminLinksOnly() throws Exception {
         String myId = "676000000000000000000001";
         setupMockForOwnProfile(myId, "ROLE_ADMIN");
+
+        when(commonsService.getVisibleQuickLinks(any(), any()))
+                .thenReturn(List.of(
+                        new CommonsService.VisibleQuickLink(QuickLink.ADD_CLANMEMBER.getLabel(), QuickLink.ADD_CLANMEMBER.getUrl()),
+                        new CommonsService.VisibleQuickLink(QuickLink.AUDIT_LOG.getLabel(), QuickLink.AUDIT_LOG.getUrl()),
+                        new CommonsService.VisibleQuickLink(QuickLink.LOGIN_HISTORY.getLabel(), QuickLink.LOGIN_HISTORY.getUrl()),
+                        new CommonsService.VisibleQuickLink(QuickLink.DATA_HEALTH.getLabel(), QuickLink.DATA_HEALTH.getUrl())
+                ));
 
         mockMvc.perform(get("/profile/" + myId)
                         .with(oauth2User("ROLE_ADMIN", myId)))
@@ -229,5 +245,23 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
                 .collect(Collectors.toSet());
 
         when(clanmemberService.getFreshAuthorities(eq(id))).thenReturn(Optional.of(authorities));
+    }
+
+    protected void stubFillModelWithLinks(List<QuickLink> links) {
+        doAnswer(invocation -> {
+            Model model = invocation.getArgument(0);
+
+            // Convert our Enums to the Record type Thymeleaf expects
+            List<CommonsService.VisibleQuickLink> mockLinks = links.stream()
+                    .map(link -> new CommonsService.VisibleQuickLink(link.getLabel(), link.getUrl()))
+                    .collect(Collectors.toList());
+
+            // Manually simulate what the real service does
+            model.addAttribute("quickLinks", mockLinks);
+            model.addAttribute("isLoggedIn", true);
+            model.addAttribute("versionNumber", "test-version");
+
+            return null;
+        }).when(commonsService).fillModel(any(Model.class), any(), any());
     }
 }

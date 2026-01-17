@@ -4,17 +4,20 @@ import com.rsl.clansite.backup.BackupService;
 import com.rsl.clansite.exceptions.ChampionSaveException;
 import com.rsl.clansite.model.BaseStats;
 import com.rsl.clansite.model.dto.ChampionEntryDTO;
+import com.rsl.clansite.model.dto.DataHealthDTO;
 import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.model.enums.Affinity;
 import com.rsl.clansite.model.enums.Faction;
 import com.rsl.clansite.model.enums.Rarity;
 import com.rsl.clansite.model.enums.Type;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 
@@ -40,6 +43,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ChampionsControllerIntegrationTest extends BaseControllerTest {
     @MockitoBean
     private BackupService backupService;
+
+    @BeforeEach
+    void setup() {
+        DataHealthDTO dummyHealth = new DataHealthDTO(true, 0, null);
+
+        when(championsService.getDataHealth()).thenReturn(dummyHealth);
+        when(championsService.getAllChampions()).thenReturn(Collections.emptyList());
+    }
 
     @Test
     @DisplayName("GET /champions - OWNER should see 'Add new Champion' button")

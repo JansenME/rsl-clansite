@@ -13,11 +13,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.ui.Model;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,6 +47,9 @@ class CommonsServiceTest {
     private HttpSession session;
 
     @Mock
+    private RoleHierarchy roleHierarchy;
+
+    @Mock
     private Authentication authentication;
 
     @InjectMocks
@@ -65,7 +71,9 @@ class CommonsServiceTest {
     @Test
     @DisplayName("fillModel should fallback when BuildProperties is missing (simulating null injection)")
     void fillModel_ShouldFallback_WhenPropertiesNull() {
-        commonsService.fillModel(model, null);
+        CommonsService serviceWithNullProps = new CommonsService(clanmemberService, null, roleHierarchy);
+
+        serviceWithNullProps.fillModel(model, null);
 
         verify(model).addAttribute("versionNumber", "dev-local");
         verify(model).addAttribute("applicationDate", "Unknown Date");
@@ -137,31 +145,52 @@ class CommonsServiceTest {
     @Test
     @DisplayName("OWNER should see ALL links (Admin + Owner specific)")
     void getVisibleQuickLinks_Owner_ShouldSeeAll() {
+        SimpleGrantedAuthority ownerAuth = new SimpleGrantedAuthority("ROLE_OWNER");
+        List<GrantedAuthority> authList = List.of(ownerAuth);
+
         Authentication auth = mock(Authentication.class);
         when(auth.isAuthenticated()).thenReturn(true);
-        // Owner has ROLE_OWNER (and usually implicitly functions as Admin)
-        when(auth.getAuthorities()).thenReturn((List) List.of(new SimpleGrantedAuthority("ROLE_OWNER")));
+        when(auth.getAuthorities()).thenReturn((Collection) authList);
+
+        when(roleHierarchy.getReachableGrantedAuthorities(authList))
+                .thenReturn((Collection) List.of(
+                        new SimpleGrantedAuthority("ROLE_OWNER"),
+                        new SimpleGrantedAuthority("ROLE_ADMIN"),
+                        new SimpleGrantedAuthority("ROLE_MEMBER")
+                ));
 
         List<CommonsService.VisibleQuickLink> links = commonsService.getVisibleQuickLinks(auth, session);
 
-        assertTrue(links.contains(QuickLink.ADD_CHAMPION), "Owner should see Add Champion");
-        assertTrue(links.contains(QuickLink.ADD_CLANMEMBER), "Owner should see Add Clanmember");
-        assertTrue(links.contains(QuickLink.DATA_HEALTH), "Owner should see Data Health");
+        assertTrue(links.stream().anyMatch(l -> l.label().equals(QuickLink.ADD_CHAMPION.getLabel())),
+                "Owner should see Add Champion");
+        assertTrue(links.stream().anyMatch(l -> l.label().equals(QuickLink.ADD_CLANMEMBER.getLabel())),
+                "Owner should see Add Clanmember");
+        assertTrue(links.stream().anyMatch(l -> l.label().equals(QuickLink.DATA_HEALTH.getLabel())),
+                "Owner should see Data Health");
     }
 
     @Test
     @DisplayName("ADMIN should see Admin links but NOT Owner links")
     void getVisibleQuickLinks_Admin_ShouldSeeAdminOnly() {
+        SimpleGrantedAuthority adminAuth = new SimpleGrantedAuthority("ROLE_ADMIN");
+        List<GrantedAuthority> authList = List.of(adminAuth);
+
         Authentication auth = mock(Authentication.class);
         when(auth.isAuthenticated()).thenReturn(true);
-        when(auth.getAuthorities()).thenReturn((List) List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        when(auth.getAuthorities()).thenReturn((Collection) authList);
+
+        when(roleHierarchy.getReachableGrantedAuthorities(authList))
+                .thenReturn((Collection) authList);
 
         List<CommonsService.VisibleQuickLink> links = commonsService.getVisibleQuickLinks(auth, session);
 
-        assertTrue(links.contains(QuickLink.ADD_CLANMEMBER));
-        assertTrue(links.contains(QuickLink.AUDIT_LOG));
+        assertTrue(links.stream().anyMatch(l -> l.label().equals(QuickLink.ADD_CLANMEMBER.getLabel())),
+                "Should contain Add Clanmember");
+        assertTrue(links.stream().anyMatch(l -> l.label().equals(QuickLink.AUDIT_LOG.getLabel())),
+                "Should contain Audit Log");
 
-        assertFalse(links.contains(QuickLink.ADD_CHAMPION), "Admin should NOT see Add Champion");
+        assertFalse(links.stream().anyMatch(l -> l.label().equals(QuickLink.ADD_CHAMPION.getLabel())),
+                "Admin should NOT see Add Champion");
     }
 
     @Test

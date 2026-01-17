@@ -105,16 +105,15 @@ class ScraperControllerIntegrationTest extends BaseControllerTest {
     }
 
     @Test
-    @DisplayName("Security - Access Denied for Non-Owners")
+    @DisplayName("Security - Access Denied for Non-Admins")
     void showDashboard_WhenNotOwner_ShouldReturnForbidden() throws Exception {
-        String adminId = "admin-user";
+        String coordinatorId = "Coordinator-user";
 
-        // FIX: User exists, but is NOT Owner -> 403 (instead of Kick)
-        when(clanmemberService.getFreshAuthorities(eq(adminId)))
-                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+        when(clanmemberService.getFreshAuthorities(eq(coordinatorId)))
+                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_COORDINATOR"))));
 
         mockMvc.perform(get("/admin/scraper")
-                        .with(oauth2User("ROLE_ADMIN", adminId)))
+                        .with(oauth2User("ROLE_COORDINATOR", coordinatorId)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/error/403"));
     }

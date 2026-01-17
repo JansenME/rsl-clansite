@@ -1,10 +1,12 @@
 package com.rsl.clansite.controller;
 
+import com.rsl.clansite.model.DashboardRow;
 import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.entity.VisitorLogEntity;
 import com.rsl.clansite.model.enums.ClanGroup;
+import com.rsl.clansite.service.ClanmemberService;
 import jakarta.servlet.http.HttpSession;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
@@ -456,7 +458,7 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
     @Test
     @DisplayName("Access as ADMIN - Should return 200 and show MEMBER history (but NOT Visitor audit)")
     void getLoginHistory_AsAdmin_ShouldSucceed() throws Exception {
-        String adminId = "admin_id"; // Defined explicit ID
+        String adminId = "admin_id";
         ClanmemberEntity member = new ClanmemberEntity();
         member.setDiscordId("mem1");
         member.setDiscordName("MemName");
@@ -468,22 +470,21 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
         VisitorLogEntity visitor = new VisitorLogEntity("v1", "VisitorOne", "hash");
         visitor.setLastLogin(LocalDateTime.now());
 
+        ClanmemberService.LoginHistoryDTO loginHistoryDTO = new ClanmemberService.LoginHistoryDTO(adminId, "ActiveMember", "", LocalDateTime.now(), null);
+
+        when(clanmemberService.getDeduplicatedLoginHistory()).thenReturn(List.of(loginHistoryDTO));
+
         when(visitorLogRepository.findAll()).thenReturn(List.of(visitor));
-
-        // Create the Mock User
-        OAuth2User adminUser = createMockUser(adminId, "AdminUser", "ROLE_ADMIN");
-
-        // FIX: Verify "admin_id" in the filter
         when(clanmemberService.getFreshAuthorities(eq(adminId)))
                 .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
 
         mockMvc.perform(get("/clanmembers/admin/login-history")
-                        .with(oauth2User("ROLE_ADMIN", adminId))) // Use Helper
+                        .with(oauth2User("ROLE_ADMIN", adminId)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("login-history"))
                 .andExpect(content().string(containsString("Login History")))
-                .andExpect(content().string(containsString("ActiveMember"))) // Should find this
-                .andExpect(content().string(not(containsString("VisitorOne")))); // Should NOT find this
+                .andExpect(content().string(containsString("ActiveMember")))
+                .andExpect(content().string(not(containsString("VisitorOne"))));
     }
 
     @Test

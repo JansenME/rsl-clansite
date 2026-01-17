@@ -10,6 +10,7 @@ import com.rsl.clansite.model.entity.VisitorLogEntity;
 import com.rsl.clansite.model.enums.AuditAction;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.ClanRank;
+import com.rsl.clansite.model.enums.MemberStatus;
 import com.rsl.clansite.repository.ClanmemberRepository;
 import com.rsl.clansite.repository.VisitorLogRepository;
 import jakarta.servlet.http.HttpSession;
@@ -39,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -123,9 +125,9 @@ class ClanmemberServiceTest {
         List<ClanmemberEntity> result = clanmemberService.findAllClanmemberEntities();
 
         assertEquals(3, result.size());
-        assertEquals(ClanRank.LEADER.name(), result.get(0).getClanRank());
-        assertEquals(ClanRank.DEPUTY.name(), result.get(1).getClanRank());
-        assertEquals(ClanRank.SOLDIER.name(), result.get(2).getClanRank());
+        assertEquals(ClanRank.LEADER, result.get(0).getClanRank());
+        assertEquals(ClanRank.DEPUTY, result.get(1).getClanRank());
+        assertEquals(ClanRank.SOLDIER, result.get(2).getClanRank());
     }
 
     @Test
@@ -166,7 +168,12 @@ class ClanmemberServiceTest {
 
         clanmemberService.deleteById(targetId, session, authentication);
 
-        verify(clanmemberRepository).deleteById(leader.getId());
+        verify(clanmemberRepository, never()).deleteById(any(ObjectId.class));
+
+        verify(clanmemberRepository).save(argThat(member ->
+                member.getStatus() == MemberStatus.INACTIVE &&
+                        member.getIngameName().equals("LeaderUser")
+        ));
 
         verify(auditLogService).logAction(
                 eq(authentication),
@@ -693,7 +700,7 @@ class ClanmemberServiceTest {
         clanmemberService.updateClanmember(id, dto, authentication);
 
         assertEquals("NewName", existingMember.getIngameName());
-        assertEquals("SOLDIER", existingMember.getClanRank());
+        assertEquals(ClanRank.SOLDIER, existingMember.getClanRank());
         assertEquals(ClanGroup.T1, existingMember.getClanGroup());
 
         verify(clanmemberRepository).save(existingMember);

@@ -1,43 +1,51 @@
 package com.rsl.clansite.service;
 
+import com.rsl.clansite.model.entity.FactionTargetEntity;
 import com.rsl.clansite.model.enums.Faction;
 import com.rsl.clansite.model.enums.Rarity;
+import com.rsl.clansite.repository.FactionTargetRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class TargetServiceTest {
+    @Mock
+    private FactionTargetRepository factionTargetRepository;
+
     @InjectMocks
     private TargetService targetService;
 
     @BeforeEach
     void setUp() {
-        // 1. Create Mock Data
-        // Structure: Map<FactionName, Map<RarityString, Count>>
-        Map<String, Map<String, Integer>> mockTargets = new HashMap<>();
+        FactionTargetEntity bannerLords = new FactionTargetEntity(Faction.BANNER_LORDS);
+        bannerLords.getRarityTargets().put(Rarity.LEGENDARY, 5);
+        bannerLords.getRarityTargets().put(Rarity.EPIC, 10);
+        bannerLords.getRarityTargets().put(Rarity.RARE, 20);
 
-        // Data for Banner Lords
-        Map<String, Integer> bannerLordsCounts = new HashMap<>();
-        bannerLordsCounts.put("legendary", 5);
-        bannerLordsCounts.put("epic", 10);
-        bannerLordsCounts.put("rare", 20);
-        mockTargets.put(Faction.BANNER_LORDS.getName(), bannerLordsCounts);
+        FactionTargetEntity highElves = new FactionTargetEntity(Faction.HIGH_ELVES);
+        highElves.getRarityTargets().put(Rarity.LEGENDARY, 2);
 
-        // Data for High Elves (Empty/Partial)
-        Map<String, Integer> highElvesCounts = new HashMap<>();
-        highElvesCounts.put("legendary", 2);
-        mockTargets.put(Faction.HIGH_ELVES.getName(), highElvesCounts);
+        when(factionTargetRepository.findByFaction(Faction.BANNER_LORDS))
+                .thenReturn(Optional.of(bannerLords));
 
-        // 2. Inject Mock Data into the private 'targets' field
-        ReflectionTestUtils.setField(targetService, "targets", mockTargets);
+        when(factionTargetRepository.findByFaction(Faction.HIGH_ELVES))
+                .thenReturn(Optional.of(highElves));
+
+        when(factionTargetRepository.findByFaction(Faction.BARBARIANS))
+                .thenReturn(Optional.empty());
     }
 
     @Test

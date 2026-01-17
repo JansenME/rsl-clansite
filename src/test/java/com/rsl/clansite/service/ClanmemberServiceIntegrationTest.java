@@ -6,8 +6,10 @@ import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.enums.AuditAction;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.ClanRank;
+import com.rsl.clansite.model.enums.MemberStatus;
 import com.rsl.clansite.repository.AuditLogRepository;
 import com.rsl.clansite.repository.ClanmemberRepository;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,6 +30,11 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -84,27 +91,35 @@ class ClanmemberServiceIntegrationTest {
         List<ClanmemberEntity> result = clanmemberService.findAllClanmemberEntities();
 
         assertEquals(3, result.size());
-        assertEquals(ClanRank.LEADER.name(), result.get(0).getClanRank());
-        assertEquals(ClanRank.DEPUTY.name(), result.get(1).getClanRank());
-        assertEquals(ClanRank.SOLDIER.name(), result.get(2).getClanRank());
+        assertEquals(ClanRank.LEADER, result.get(0).getClanRank());
+        assertEquals(ClanRank.DEPUTY, result.get(1).getClanRank());
+        assertEquals(ClanRank.SOLDIER, result.get(2).getClanRank());
     }
 
     @Test
     @DisplayName("Integration: Delete should remove from DB and Log")
     void testDeleteFlow() {
-        ClanmemberEntity saved = createAndSaveMember("ToBeDeleted", ClanRank.SOLDIER);
-        Authentication mockAuth = createMockAuthentication("AdminUser");
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setDiscordName("ToBeDeleted");
+        member.setClanRank(ClanRank.SOLDIER);
+        ClanmemberEntity saved = clanmemberRepository.save(member);
+        String savedId = saved.getId().toHexString();
 
+        auditLogRepository.deleteAll();
+
+        Authentication mockAuth = createMockAuthentication("AdminUser");
         MockHttpSession mockSession = new MockHttpSession();
 
-        clanmemberService.deleteById(saved.getId().toHexString(), mockSession, mockAuth);
+        clanmemberService.deleteById(savedId, mockSession, mockAuth);
 
-        assertFalse(clanmemberRepository.existsById(saved.getId()));
+        assertTrue(clanmemberRepository.existsById(new ObjectId(savedId)));
+
+        ClanmemberEntity memberFromDB = clanmemberRepository.findAllByDiscordId(member.getDiscordId()).get(0);
+        assertEquals(MemberStatus.INACTIVE, memberFromDB.getStatus());
 
         List<AuditLogEntity> logs = auditLogRepository.findAll();
-        assertEquals(1, logs.size());
+        assertEquals(1, logs.size(), "One audit log should have been created");
         assertEquals(AuditAction.MEMBER_DELETE, logs.get(0).getAction());
-        assertEquals("ToBeDeleted", logs.get(0).getTarget());
     }
 
     private Authentication createMockAuthentication(String username) {

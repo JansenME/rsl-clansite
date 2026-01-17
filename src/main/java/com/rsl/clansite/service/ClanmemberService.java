@@ -436,6 +436,13 @@ public class ClanmemberService {
                 targetName,
                 "Member Deactivated (Soft Delete)"
         );
+
+        if (session != null) {
+            String activeId = (String) session.getAttribute("ACTIVE_MEMBER_ID");
+            if (id.equals(activeId)) {
+                session.removeAttribute("ACTIVE_MEMBER_ID");
+            }
+        }
     }
 
     public void reactivateMember(String id, Authentication authentication) {
