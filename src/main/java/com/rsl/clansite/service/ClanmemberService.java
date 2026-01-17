@@ -919,10 +919,23 @@ public class ClanmemberService {
                 .toList();
     }
 
-    private String buildAvatarUrl(String discordId, String avatarHash) {
-        if (discordId != null && avatarHash != null) {
+    public String buildAvatarUrl(String discordId, String avatarHash) {
+        boolean hasValidHash = StringUtils.hasText(avatarHash) && !"null".equalsIgnoreCase(avatarHash);
+
+        if (StringUtils.hasText(discordId) && hasValidHash) {
             return "https://cdn.discordapp.com/avatars/" + discordId + "/" + avatarHash + ".png";
         }
-        return null;
+
+        if (StringUtils.hasText(discordId)) {
+            try {
+                long id = Long.parseLong(discordId);
+                long index = (id >> 22) % 6;
+                return "https://cdn.discordapp.com/embed/avatars/" + index + ".png";
+            } catch (NumberFormatException e) {
+                log.debug("Could not parse Discord ID {} for default avatar generation.", discordId);
+            }
+        }
+
+        return "/images/placeholder.png";
     }
 }

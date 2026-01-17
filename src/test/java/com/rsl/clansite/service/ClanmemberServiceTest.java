@@ -406,9 +406,10 @@ class ClanmemberServiceTest {
     }
 
     @Test
-    @DisplayName("getUserViewData should return null avatar URL if hash is missing")
-    void getUserViewData_ShouldReturnNullUrl_WhenAvatarMissing() {
-        String discordId = "123";
+    @DisplayName("getUserViewData should return Default Avatar URL if hash is missing")
+    void getUserViewData_ShouldReturnDefaultAvatar_WhenHashIsNull_And_DiscordIdExists() {
+        String discordId = "123456789";
+        String expectedDefaultUrl = "https://cdn.discordapp.com/embed/avatars/5.png";
 
         OAuth2User oauth2User = mock(OAuth2User.class);
         when(oauth2User.getAttribute("id")).thenReturn(discordId);
@@ -418,9 +419,13 @@ class ClanmemberServiceTest {
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(oauth2User);
 
+        ClanmemberEntity member = new ClanmemberEntity();
+        member.setDiscordId(discordId);
+        when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of(member));
+
         var result = clanmemberService.getUserViewData(auth);
 
-        assertNull(result.getDiscordAvatarUrl());
+        assertEquals(expectedDefaultUrl, result.getDiscordAvatarUrl());
     }
 
     @Test

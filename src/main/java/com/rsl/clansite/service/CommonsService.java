@@ -13,6 +13,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 
 import java.time.Year;
 import java.time.ZoneId;
@@ -46,6 +47,10 @@ public class CommonsService {
         String cleanName = championName.toLowerCase().replaceAll("[^a-z0-9\\s]", "");
 
         return cleanName.replaceAll("\\s+", " ").trim().replace(" ", "-") + ".png";
+    }
+
+    public String getDiscordAvatarUrl(String discordId, String avatarHash) {
+        return clanmemberService.buildAvatarUrl(discordId, avatarHash);
     }
 
     public void fillModel(Model model, Authentication authentication) {

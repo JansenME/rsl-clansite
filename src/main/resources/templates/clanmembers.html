@@ -51,13 +51,8 @@
 						th:style="${!#authorization.expression('hasRole(''MEMBER'')')} ? 'cursor: default;' : ''">
 
 						<td sec:authorize="isAuthenticated()">
-							<div th:if="${member.discordId != null and !member.discordId.isEmpty() and member.avatarHash != null}">
-								<img th:src="'https://cdn.discordapp.com/avatars/' + ${member.discordId} + '/' + ${member.avatarHash} + '.png'"
-									 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
-							</div>
-							<div th:unless="${member.discordId != null and !member.discordId.isEmpty()}">
-								<i class="fa fa-user" style="font-size: 20px; color: #ccc;"></i>
-							</div>
+							<img th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
+								 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
 						</td>
 						<td sec:authorize="isAuthenticated()" th:text="${member.discordName}">Global Name</td>
 						<td sec:authorize="isAuthenticated()" th:text="${member.playerNickname}">Server Nickname</td>
@@ -101,13 +96,8 @@
 						th:style="${!#authorization.expression('hasRole(''MEMBER'')')} ? 'cursor: default;' : ''">
 
 						<td sec:authorize="isAuthenticated()">
-							<div th:if="${member.discordId != null and !member.discordId.isEmpty() and member.avatarHash != null}">
-								<img th:src="'https://cdn.discordapp.com/avatars/' + ${member.discordId} + '/' + ${member.avatarHash} + '.png'"
-									 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
-							</div>
-							<div th:unless="${member.discordId != null and !member.discordId.isEmpty()}">
-								<i class="fa fa-user" style="font-size: 20px; color: #ccc;"></i>
-							</div>
+							<img th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
+								 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
 						</td>
 						<td sec:authorize="isAuthenticated()" th:text="${member.discordName}">Global Name</td>
 						<td sec:authorize="isAuthenticated()" th:text="${member.playerNickname}">Server Nickname</td>
@@ -156,10 +146,8 @@
 						<tbody>
 						<tr th:each="member : ${inactiveMembers}">
 							<td>
-								<div th:if="${member.discordId != null and !member.discordId.isEmpty() and member.avatarHash != null}">
-									<img th:src="'https://cdn.discordapp.com/avatars/' + ${member.discordId} + '/' + ${member.avatarHash} + '.png'"
-										 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; filter: grayscale(100%);" />
-								</div>
+								<img th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
+									 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; filter: grayscale(100%);" />
 							</td>
 							<td th:text="${member.discordName}">Global Name</td>
 							<td th:text="${member.ingameName}">IGN</td>
