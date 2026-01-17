@@ -54,6 +54,9 @@ server:
       enabled: false
     path: /error
 logging:
+  level:
+    root: INFO
+    com.rsl.clansite: INFO
   file:
     name: /logs/rsl-clansite.log
   pattern:
