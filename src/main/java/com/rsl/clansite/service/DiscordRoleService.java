@@ -113,22 +113,16 @@ public class DiscordRoleService {
 
         if (userDiscordRoles == null) return authorities;
 
-        if (userDiscordRoles.contains(getClanLeaderRoleId()) ||
-                userDiscordRoles.contains(getDeputyRoleId())) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
-        }
-
-        if (userDiscordRoles.contains(getSiegeCoordinatorRoleId())) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
-        }
-
-        if (userDiscordRoles.contains(getT1RoleId()) ||
-                userDiscordRoles.contains(getT2RoleId())) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
-        }
-
         if (kloepDiscordId.equals(userId)) {
             authorities.add(new SimpleGrantedAuthority("ROLE_OWNER"));
+        } else if (userDiscordRoles.contains(getClanLeaderRoleId()) ||
+                userDiscordRoles.contains(getDeputyRoleId())) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        } else if (userDiscordRoles.contains(getSiegeCoordinatorRoleId())) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
+        } else if (userDiscordRoles.contains(getT1RoleId()) ||
+                userDiscordRoles.contains(getT2RoleId())) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
         }
 
         //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
