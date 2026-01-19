@@ -17,8 +17,8 @@
     <section id="content">
         <div class="container">
             <section>
-               <h2>Data Health & Sync Dashboard</h2>
-               <a th:href="@{/clanmembers}" class="btn-primary" style="text-decoration: none; padding: 8px 16px;">Back to Roster</a>
+                <h2>Data Health & Sync Dashboard</h2>
+                <a th:href="@{/clanmembers}" class="btn-primary" style="text-decoration: none; padding: 8px 16px;">Back to Roster</a>
 
 
                 <div th:if="${successMessage}" style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
@@ -36,7 +36,7 @@
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
                             <tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; color: #666">
-                                <th style="padding: 12px; text-align: left;">Member (DB)</th>
+                                <th style="padding: 12px; text-align: left;">Discord Identity</th>
                                 <th style="padding: 12px; text-align: center;">Avatar</th>
                                 <th style="padding: 12px; text-align: center;">Roles</th>
                                 <th style="padding: 12px; text-align: left;">Nickname Sync</th>
@@ -47,9 +47,13 @@
                             <tr th:each="row : ${statusList}" style="border-bottom: 1px solid #eee;">
 
                                 <td style="padding: 10px;">
-                                    <span th:text="${row.ingameName}" style="font-weight: bold;">Name</span>
+                                    <span th:text="${row.discordName}"
+                                          th:style="${row.discordName == 'NOT FOUND' or row.discordName == 'Unknown'} ? 'color: #dc3545; font-weight: bold;' : 'font-weight: bold;'">
+                                        Discord Name
+                                    </span>
+
                                     <div style="font-size: 0.75rem; color: #888;" th:text="${row.discordId}">ID</div>
-                                    <div th:if="${row.statusMessage}" style="color: red; font-size: 0.75rem;" th:text="${row.statusMessage}">Error</div>
+                                    <div th:if="${row.statusMessage}" style="color: #dc3545; font-size: 0.75rem;" th:text="${row.statusMessage}">Error</div>
                                 </td>
 
                                 <td style="padding: 10px; text-align: center;">
@@ -67,10 +71,8 @@
                                         ✓ Synced
                                     </div>
                                     <div th:unless="${row.nicknameSynced}">
-                                        <span class="status-bad">✗ Mismatch</span><br/>
-                                        <span style="font-size: 0.8rem; color: #666;">
-                                              Discord: <strong th:text="${row.discordNickname}"></strong>
-                                         </span>
+                                        <span class="status-bad">✗ Mismatch</span>
+                                        <div style="font-size: 0.7rem; color: #888;">DB value differs</div>
                                     </div>
                                 </td>
 

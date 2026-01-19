@@ -608,6 +608,7 @@ public class ClanmemberService {
                 status.setNicknameSynced(false);
                 status.setRolesSynced(false);
                 status.setAvatarSynced(false);
+                status.setDiscordName("NOT FOUND");
                 statusList.add(status);
                 continue;
             }
@@ -620,15 +621,22 @@ public class ClanmemberService {
                     status.setNicknameSynced(false);
                     status.setRolesSynced(false);
                     status.setAvatarSynced(false);
-                    status.setDiscordNickname("NOT FOUND");
+                    status.setDiscordName("NOT FOUND");
                 } else {
                     NewClanmemberDTO liveData = apiResult.get();
 
                     String liveNick = liveData.getPlayerNickname();
-                    String displayNick = (liveNick != null) ? liveNick : liveData.getDiscordName();
-                    status.setDiscordNickname(displayNick);
+                    String liveGlobal = liveData.getDiscordName();
 
-                    boolean avatarMatch = java.util.Objects.equals(member.getAvatarHash(), liveData.getAvatarHash());
+                    String displayName = "Unknown";
+
+                    if (isValidName(liveNick)) {
+                        displayName = liveNick;
+                    } else if (isValidName(liveGlobal)) {
+                        displayName = liveGlobal;
+                    }
+
+                    status.setDiscordName(displayName);boolean avatarMatch = java.util.Objects.equals(member.getAvatarHash(), liveData.getAvatarHash());
                     status.setAvatarSynced(avatarMatch);
 
                     List<String> liveRoles = discordRoleService.sortRoles(liveData.getDiscordRoles());
@@ -641,7 +649,7 @@ public class ClanmemberService {
 
             } catch (Exception e) {
                 status.setStatusMessage("API Error: " + e.getMessage());
-                status.setDiscordNickname("ERROR");
+                status.setDiscordName("ERROR");
                 status.setNicknameSynced(false);
                 status.setRolesSynced(false);
                 status.setAvatarSynced(false);
@@ -771,6 +779,10 @@ public class ClanmemberService {
         } else {
             log.info("Saved (Upsert) Known Team '{}' for member {}", team.getTeamName(), targetMember.getIngameName());
         }
+    }
+
+    private boolean isValidName(String s) {
+        return StringUtils.hasText(s) && !"null".equalsIgnoreCase(s);
     }
 
     private void validateTeamAgainstCondition(Team team) {

@@ -12,7 +12,7 @@ public class SyncStatusDTO {
     private String discordId;
     private String ingameName;
 
-    private String discordNickname;
+    private String discordName;
 
     private boolean nicknameSynced;
     private boolean rolesSynced;
