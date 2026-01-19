@@ -28,7 +28,7 @@
         </a>
 
         <div class="affinity-overlay" th:if="${champion.affinity != null}">
-            <img th:src="@{/images/affinity/{name}.png(name=${champion.affinity})}"
+            <img th:src="@{/images/affinity/{name}.png(name=${#strings.toLowerCase(champion.affinity)})}"
                  onerror="this.style.display='none'"
                  alt="Affinity" />
         </div>
