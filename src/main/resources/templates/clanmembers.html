@@ -30,6 +30,43 @@
 					</div>
 				</div>
 
+				<div sec:authorize="hasRole('ADMIN')" th:if="${pendingMembers != null and !pendingMembers.isEmpty()}"
+					 style="border: 2px solid #ffc107; background-color: #fff3cd; padding: 20px; border-radius: 8px; margin-bottom: 40px;">
+					<h3 style="color: #856404; margin-top: 0;"><i class="fas fa-user-plus"></i> Pending Setup (Auto-Onboarded)</h3>
+					<p style="color: #856404;">The following members have logged in with Discord Clan Roles but do not have a full profile yet. Please <strong>Edit</strong> them to set their Rank and correct In-Game Name.</p>
+
+					<table style="width: 100%; background: white;">
+						<thead>
+						<tr>
+							<th></th>
+							<th>Discord Name</th>
+							<th>Discord Nickname</th>
+							<th>Suggested Clan</th>
+							<th>Actions</th>
+						</tr>
+						</thead>
+						<tbody>
+						<tr th:each="member : ${pendingMembers}">
+							<td>
+								<img th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
+									 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
+							</td>
+							<td th:text="${member.discordName}">Global Name</td>
+							<td th:text="${member.playerNickname}">Server Nickname</td>
+							<td>
+								<span th:if="${member.clanGroup != null}" th:text="${member.clanGroup}"></span>
+								<span th:if="${member.clanGroup == null}" style="color: #999;">Unknown</span>
+							</td>
+							<td>
+								<a th:href="@{/clanmembers/edit/{id}(id=${member.id})}"
+								   class="button primary small"
+								   style="padding: 5px 15px; font-size: 0.8em;">Finalize Setup</a>
+							</td>
+						</tr>
+						</tbody>
+					</table>
+				</div>
+
 				<h2>T1 Clan</h2>
 				<table th:style="${#authorization.expression('isAuthenticated()')} ? 'width: 100%;' : 'width: 50%; margin: 0 auto;'">
 					<thead>
@@ -119,7 +156,7 @@
 					</tbody>
 				</table>
 
-				<div th:if="${clanmembers.isEmpty()}">
+				<div th:if="${clanmembers.isEmpty() and (pendingMembers == null or pendingMembers.isEmpty())}">
 					<p>The roster is currently empty. Please log in with a Administrator account to manually populate the initial list.</p>
 				</div>
 

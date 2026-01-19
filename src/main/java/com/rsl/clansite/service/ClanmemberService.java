@@ -303,6 +303,33 @@ public class ClanmemberService {
         List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordId(discordId);
 
         if (linkedMembers.isEmpty()) {
+            boolean hasT1 = currentDiscordRoles.contains(discordRoleService.getT1RoleId());
+            boolean hasT2 = currentDiscordRoles.contains(discordRoleService.getT2RoleId());
+
+            if (hasT1 || hasT2) {
+                log.info("Auto-Onboarding: User {} has Clan Roles but no profile. Creating Skeleton Entity.", globalName);
+
+                ClanmemberEntity skeleton = new ClanmemberEntity();
+                skeleton.setDiscordId(discordId);
+                skeleton.setDiscordName(globalName);
+                skeleton.setAvatarHash(avatarHash);
+                skeleton.setDiscordRoles(currentDiscordRoles);
+
+                skeleton.setIngameName(globalName);
+                skeleton.setPlayerNickname(globalName);
+
+                skeleton.setClanRank(null);
+
+                skeleton.setStatus(MemberStatus.ACTIVE);
+                skeleton.setLastLogin(LocalDateTime.now());
+
+                if (hasT1 && !hasT2) skeleton.setClanGroup(ClanGroup.T1);
+                else if (hasT2 && !hasT1) skeleton.setClanGroup(ClanGroup.T2);
+
+                clanmemberRepository.save(skeleton);
+                return;
+            }
+
             updateVisitorLog(discordId, globalName, avatarHash);
             return;
         }
@@ -324,11 +351,17 @@ public class ClanmemberService {
 
     public List<ClanmemberEntity> findAllClanmemberEntities() {
         List<ClanmemberEntity> members = clanmemberRepository.findAll().stream()
-                .filter(m -> m.getStatus() == MemberStatus.ACTIVE)
+                .filter(m -> m.getStatus() == MemberStatus.ACTIVE && m.getClanRank() != null)
                 .collect(Collectors.toList());
 
         members.sort(this::compareClanRanks);
         return members;
+    }
+
+    public List<ClanmemberEntity> findPendingClanmembers() {
+        return clanmemberRepository.findAll().stream()
+                .filter(m -> m.getStatus() == MemberStatus.ACTIVE && m.getClanRank() == null)
+                .collect(Collectors.toList());
     }
 
     public List<ClanmemberEntity> findInactiveClanmemberEntities() {

@@ -51,7 +51,9 @@ public class ClanmemberController {
 
         model.addAttribute("linkedMembers", clanmemberService.getLinkedClanmembers(authentication != null ? authentication.getName() : null));
         model.addAttribute("activeMemberId", activeMemberId);
+
         model.addAttribute("clanmembers", clanmemberService.findAllClanmemberEntities());
+        model.addAttribute("pendingMembers", clanmemberService.findPendingClanmembers());
         model.addAttribute("inactiveMembers", clanmemberService.findInactiveClanmemberEntities());
 
         return "clanmembers";

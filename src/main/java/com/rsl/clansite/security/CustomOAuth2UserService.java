@@ -52,7 +52,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     log.warn("Access Denied for user {}: Not a member of the clan server.", userId);
                     return new OAuth2AuthenticationException(new OAuth2Error(
                             "not_in_guild",
-                            "Access Denied: You must be a member of the clan's Discord server to access this application.",
+                            "We could not log you in, because you are not in the Clan Discord Server. If you are a part of the clan in Raid Shadow Legends, please ask one of them admins for an invite link to the Discord Server and try again.",
                             null
                     ));
                 });
@@ -64,8 +64,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         Set<SimpleGrantedAuthority> authorities = discordRoleService.getAuthoritiesForRoles(userDiscordRoles, userId);
 
+        boolean hasRequiredRole = userDiscordRoles.contains(discordRoleService.getT1RoleId()) ||
+                userDiscordRoles.contains(discordRoleService.getT2RoleId());
+
         Map<String, Object> updatedAttributes = new HashMap<>(oauth2User.getAttributes());
         updatedAttributes.put("rawDiscordRoleIds", userDiscordRoles);
+        updatedAttributes.put("needsRoleWarning", !hasRequiredRole);
 
         log.info("Logged in user {} has the following roles: {}", globalName, authorities);
 

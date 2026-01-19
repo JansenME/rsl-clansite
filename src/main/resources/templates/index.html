@@ -21,6 +21,8 @@
 
 				<section id="content">
 					<div class="container">
+						<div th:replace="~{inserts/alerts :: warning-box(${roleWarning})}"></div>
+
 						<div sec:authorize="isAuthenticated() and !hasRole('ROLE_COORDINATOR')"
 							 style="background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 20px; border-radius: 8px; margin-bottom: 30px; text-align: center;">
 							<i class="fas fa-lock" style="font-size: 2em; margin-bottom: 10px;"></i>

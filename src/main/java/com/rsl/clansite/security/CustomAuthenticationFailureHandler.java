@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 
 @Component
 public class CustomAuthenticationFailureHandler implements AuthenticationFailureHandler {
+
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
 
@@ -23,8 +24,8 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
             String errorCode = oauth2Ex.getError().getErrorCode();
             String description = oauth2Ex.getError().getDescription();
 
-            if ("unlinked_account".equals(errorCode) || "not_in_guild".equals(errorCode)) {
-                messageToUser = (description != null) ? description : "Access Denied.";
+            if ("not_in_guild".equals(errorCode)) {
+                messageToUser = (description != null) ? description : "Access Denied: You are not a member of the Clan Discord.";
             }
         }
 

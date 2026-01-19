@@ -6,6 +6,7 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +29,13 @@ public class IndexController {
     @GetMapping(value={"", "/", "/index"})
     public String index(Model model, Authentication authentication) {
         commonsService.fillModel(model, authentication);
+
+        if (authentication != null && authentication.getPrincipal() instanceof OAuth2User oauth2User) {
+            Boolean needsWarning = oauth2User.getAttribute("needsRoleWarning");
+            if (Boolean.TRUE.equals(needsWarning)) {
+                model.addAttribute("roleWarning", "You are logged in! However, it seems like you don't have the right roles in the Discord Server. Therefore we did not give you full access to the website yet. Please ask an admin to give you the right roles in the Discord Server and come back here!");
+            }
+        }
 
         return "index";
     }

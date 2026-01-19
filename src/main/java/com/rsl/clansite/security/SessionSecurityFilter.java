@@ -43,10 +43,8 @@ public class SessionSecurityFilter extends OncePerRequestFilter {
             Optional<Set<SimpleGrantedAuthority>> freshAuthoritiesOpt = clanmemberService.getFreshAuthorities(discordId);
 
             if (freshAuthoritiesOpt.isEmpty()) {
-                log.warn("Session Security: User {} no longer exists in DB. Invalidating session.", discordId);
-                SecurityContextHolder.clearContext();
-                request.getSession().invalidate();
-                response.sendRedirect("/");
+                log.debug("Session Security: User {} not found in Clanmember DB. Relying on Discord session authorities.", discordId);
+                filterChain.doFilter(request, response);
                 return;
             }
 
