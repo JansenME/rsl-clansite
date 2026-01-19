@@ -42,7 +42,7 @@ spring:
             user-info-uri: https://discord.com/api/users/@me
             user-name-attribute: id
   application:
-    name: Clansite Raid Shadow Legends
+    name: Clansite Fury of the Fallen
 server:
   forward-headers-strategy: native
   servlet:

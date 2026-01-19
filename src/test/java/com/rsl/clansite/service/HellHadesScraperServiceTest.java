@@ -99,7 +99,7 @@ class HellHadesScraperServiceTest {
         scraperService = new HellHadesScraperService(championRepository, commonsService) {
             @Override
             protected Document fetchDocument(String url) {
-                String html = "<html><head><title>Archer - Raid Shadow Legends</title>" +
+                String html = "<html><head><title>Archer - Fury of the Fallen</title>" +
                         "<meta name='description' content='Archer is an Uncommon HP Champion from Banner Lords.'/>" +
                         "</head><body>" +
                         "<h1>Archer</h1>" +
@@ -219,7 +219,7 @@ class HellHadesScraperServiceTest {
         protected Document fetchDocument(String url) throws IOException {
             // FIX 1: Dynamic HTML based on the URL requested
             if (url.contains("acelin")) {
-                String html = "<html><head><title>Acelin - Raid Shadow Legends</title>" +
+                String html = "<html><head><title>Acelin - Fury of the Fallen</title>" +
                         "<meta name='description' content='Acelin fallback description'/>" +
                         // This link ID (45734) triggers the Ratings JSON below
                         "<link rel='shortlink' href='https://hellhades.com/?p=45734' />" +

@@ -12,8 +12,8 @@
 	<groupId>com.rsl</groupId>
 	<artifactId>clansite</artifactId>
 	<version>0.0.2-SNAPSHOT</version>
-	<name>Clansite Raid Shadow Legends</name>
-	<description>Clansite Raid Shadow Legends</description>
+	<name>Clansite Fury of the Fallen</name>
+	<description>Clansite Fury of the Fallen</description>
 
 	<properties>
 		<java.version>17</java.version>
