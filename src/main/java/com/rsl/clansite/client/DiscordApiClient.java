@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rsl.clansite.model.dto.DiscordRoleDTO;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class DiscordApiClient {
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
@@ -27,6 +29,35 @@ public class DiscordApiClient {
                 .build();
 
         this.objectMapper = new ObjectMapper();
+    }
+
+    public List<NewClanmemberDTO> getAllGuildMembers() {
+        try {
+            String jsonResponse = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/members")
+                            .queryParam("limit", 1000)
+                            .build())
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            JsonNode root = objectMapper.readTree(jsonResponse);
+            List<NewClanmemberDTO> members = new ArrayList<>();
+
+            if (root.isArray()) {
+                for (JsonNode memberNode : root) {
+                    String discordId = memberNode.path("user").path("id").asText();
+                    members.add(parseDiscordResponse(discordId, memberNode.toString()));
+                }
+            }
+            log.info("Fetched {} members from Discord API in a single batch call.", members.size());
+            return members;
+
+        } catch (Exception e) {
+            log.error("Failed to fetch all guild members in batch: {}", e.getMessage());
+            return List.of();
+        }
     }
 
     public Optional<NewClanmemberDTO> getDiscordMember(String discordId) {

@@ -33,7 +33,14 @@ import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -275,6 +282,16 @@ public class ClanmemberService {
     public void updateAllClanmemberDiscordRoles() {
         siteAssetService.syncFavicon();
 
+        List<NewClanmemberDTO> discordMembers = discordApiClient.getAllGuildMembers();
+
+        if (discordMembers.isEmpty()) {
+            log.warn("Scheduled Sync: Received empty member list from Discord. Aborting sync to prevent data loss.");
+            return;
+        }
+
+        Map<String, NewClanmemberDTO> discordDataMap = discordMembers.stream()
+                .collect(Collectors.toMap(NewClanmemberDTO::getDiscordId, Function.identity(), (a, b) -> a));
+
         List<ClanmemberEntity> allLinkedMembers = clanmemberRepository.findAllByDiscordIdIsNotNull().stream()
                 .filter(m -> m.getStatus() == MemberStatus.ACTIVE)
                 .toList();
@@ -285,18 +302,63 @@ public class ClanmemberService {
         int membersUpdated = 0;
 
         for (Map.Entry<String, List<ClanmemberEntity>> entry : membersByDiscordId.entrySet()) {
+            String discordId = entry.getKey();
             List<ClanmemberEntity> userAccounts = entry.getValue();
             boolean isMultiAccount = userAccounts.size() > 1;
 
-            for (ClanmemberEntity member : userAccounts) {
-                if (tryUpdateMemberRoles(member, isMultiAccount)) {
-                    membersUpdated++;
+            NewClanmemberDTO discordData = discordDataMap.get(discordId);
+
+            if (discordData != null) {
+                for (ClanmemberEntity member : userAccounts) {
+                    if (applyDiscordDataToMember(member, discordData, isMultiAccount)) {
+                        membersUpdated++;
+                    }
                 }
+            } else {
+                log.info("Scheduled Sync: User ID {} not found in current Discord member list.", discordId);
             }
         }
+
         if (membersUpdated > 0) {
-            log.info("Scheduled Sync: Updated {} members based on Discord data.", membersUpdated);
+            log.info("Scheduled Sync: Updated {} members using Batch API strategy.", membersUpdated);
         }
+    }
+
+    private boolean applyDiscordDataToMember(ClanmemberEntity member, NewClanmemberDTO discordData, boolean isMultiAccount) {
+        try {
+            List<String> sortedRoles = discordRoleService.sortRoles(discordData.getDiscordRoles());
+            String newAvatarHash = discordData.getAvatarHash();
+            ClanGroup newDetectedGroup = resolveClanGroup(sortedRoles);
+
+            boolean rolesChanged = !sortedRoles.equals(member.getDiscordRoles());
+            boolean avatarChanged = member.getAvatarHash() == null || !newAvatarHash.equals(member.getAvatarHash());
+            boolean groupChanged = false;
+
+            boolean discordNameChanged = !Objects.equals(member.getDiscordName(), discordData.getDiscordName());
+            boolean nicknameChanged = !Objects.equals(member.getPlayerNickname(), discordData.getPlayerNickname());
+
+            if (!isMultiAccount && newDetectedGroup != null && !newDetectedGroup.equals(member.getClanGroup())) {
+                log.info("SYNC: Clan Group change detected for '{}': {} -> {}",
+                        member.getIngameName(), member.getClanGroup(), newDetectedGroup);
+
+                member.setClanGroup(newDetectedGroup);
+                groupChanged = true;
+            }
+
+            if (rolesChanged) member.setDiscordRoles(sortedRoles);
+            if (avatarChanged) member.setAvatarHash(newAvatarHash);
+
+            if (discordNameChanged) member.setDiscordName(discordData.getDiscordName());
+            if (nicknameChanged) member.setPlayerNickname(discordData.getPlayerNickname());
+
+            if (rolesChanged || avatarChanged || groupChanged || discordNameChanged || nicknameChanged) {
+                clanmemberRepository.save(member);
+                return true;
+            }
+        } catch (Exception e) {
+            log.error("SYNC: Error updating member {}: {}", member.getIngameName(), e.getMessage());
+        }
+        return false;
     }
 
     public void linkClanmember(final String discordId, final String globalName, final String avatarHash, final List<String> currentDiscordRoles) {
@@ -636,7 +698,9 @@ public class ClanmemberService {
                         displayName = liveGlobal;
                     }
 
-                    status.setDiscordName(displayName);boolean avatarMatch = java.util.Objects.equals(member.getAvatarHash(), liveData.getAvatarHash());
+                    status.setDiscordName(displayName);
+
+                    boolean avatarMatch = java.util.Objects.equals(member.getAvatarHash(), liveData.getAvatarHash());
                     status.setAvatarSynced(avatarMatch);
 
                     List<String> liveRoles = discordRoleService.sortRoles(liveData.getDiscordRoles());
@@ -881,41 +945,12 @@ public class ClanmemberService {
                 return false;
             }
 
-            NewClanmemberDTO discordData = discordDataOpt.get();
-            List<String> sortedRoles = discordRoleService.sortRoles(discordData.getDiscordRoles());
-            String newAvatarHash = discordData.getAvatarHash();
+            return applyDiscordDataToMember(member, discordDataOpt.get(), isMultiAccount);
 
-            ClanGroup newDetectedGroup = resolveClanGroup(sortedRoles);
-
-            boolean rolesChanged = !sortedRoles.equals(member.getDiscordRoles());
-            boolean avatarChanged = member.getAvatarHash() == null || !newAvatarHash.equals(member.getAvatarHash());
-            boolean groupChanged = false;
-
-            boolean discordNameChanged = !Objects.equals(member.getDiscordName(), discordData.getDiscordName());
-            boolean nicknameChanged = !Objects.equals(member.getPlayerNickname(), discordData.getPlayerNickname());
-
-            if (!isMultiAccount && newDetectedGroup != null && !newDetectedGroup.equals(member.getClanGroup())) {
-                log.info("SYNC: Clan Group change detected for '{}': {} -> {}",
-                        member.getIngameName(), member.getClanGroup(), newDetectedGroup);
-
-                member.setClanGroup(newDetectedGroup);
-                groupChanged = true;
-            }
-
-            if (rolesChanged) member.setDiscordRoles(sortedRoles);
-            if (avatarChanged) member.setAvatarHash(newAvatarHash);
-
-            if (discordNameChanged) member.setDiscordName(discordData.getDiscordName());
-            if (nicknameChanged) member.setPlayerNickname(discordData.getPlayerNickname());
-
-            if (rolesChanged || avatarChanged || groupChanged || discordNameChanged || nicknameChanged) {
-                clanmemberRepository.save(member);
-                return true;
-            }
         } catch (Exception e) {
             log.error("SYNC: General error during scheduled update for {}: {}", member.getIngameName(), e.getMessage());
+            return false;
         }
-        return false;
     }
 
     private void updateSingleLinkedMember(ClanmemberEntity member, String globalName, String avatarHash, List<String> sortedRoles, ClanGroup detectedGroup) {
