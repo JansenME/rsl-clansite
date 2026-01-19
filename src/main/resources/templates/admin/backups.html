@@ -1,0 +1,70 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Manage Backups - Fury of the Fallen</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+    <script th:src="@{/styles/js/main.js}"></script>
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container">
+        </div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <section>
+                <header class="main">
+                    <h2>Database Backups</h2>
+                </header>
+
+                <p>
+                    Below is a list of all automated and manual database backups.
+                </p>
+
+                <form method="post" th:action="@{/admin/backups/trigger}" style="margin-bottom: 2em;">
+                    <button type="submit" class="button primary icon solid fa-database">
+                        Create New Backup Now
+                    </button>
+                </form>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Date Created</th>
+                            <th>Filename</th>
+                            <th>Size</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${backups.empty}">
+                            <td colspan="4" style="text-align: center;">No backups found.</td>
+                        </tr>
+                        <tr th:each="file : ${backups}">
+                            <td th:text="${#temporals.format(file.lastModified, 'dd-MM-yyyy HH:mm:ss')}">Date</td>
+                            <td th:text="${file.filename}">filename.json.gz</td>
+                            <td th:text="${file.sizeBytes / 1024} + ' KB'">Size</td>
+                            <td>
+                                <a th:href="@{'/admin/backups/download/' + ${file.filename}}" class="button small icon solid fa-download">
+                                    Download
+                                </a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </section>
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+    </div>
+</div>
+</body>
+</html>

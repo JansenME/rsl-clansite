@@ -11,7 +11,8 @@ public enum QuickLink {
     AUDIT_LOG("Audit Log", "/audit-log", "ROLE_ADMIN"),
     LOGIN_HISTORY("Login History", "/clanmembers/admin/login-history", "ROLE_ADMIN"),
     DATA_HEALTH("Discord Data Health", "/clanmembers/admin/data-health", "ROLE_ADMIN"),
-    SIEGE_CONDITIONS("Siege Conditions", "/admin/siege-conditions", "ROLE_COORDINATOR");
+    SIEGE_CONDITIONS("Siege Conditions", "/admin/siege-conditions", "ROLE_COORDINATOR"),
+    MANAGE_BACKUPS("Manage Backups", "/admin/backups", "ROLE_OWNER");
 
     private final String label;
     private final String url;

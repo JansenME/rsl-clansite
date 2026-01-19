@@ -3,6 +3,10 @@ app:
   storage:
     location:
       champion-cards: "/var/www/clansite/images/champions/"
+  backup:
+    enabled: true
+    location: "/var/www/clansite/backups/"
+
 discord:
   bot-token: ${DISCORD_BOT_TOKEN}
   clan-server-id: "1062302225701015552"
