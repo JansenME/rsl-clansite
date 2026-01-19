@@ -18,6 +18,7 @@ import com.rsl.clansite.service.SiegeConditionService;
 import jakarta.servlet.http.HttpSession;
 import org.bson.types.ObjectId;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy; // Import added
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -40,15 +41,18 @@ public class ProfileController {
     private final ClanmemberService clanmemberService;
     private final ChampionsService championsService;
     private final SiegeConditionService siegeConditionService;
+    private final RoleHierarchy roleHierarchy;
 
     public ProfileController(CommonsService commonsService,
                              ClanmemberService clanmemberService,
                              ChampionsService championsService,
-                             SiegeConditionService siegeConditionService) {
+                             SiegeConditionService siegeConditionService,
+                             RoleHierarchy roleHierarchy) {
         this.commonsService = commonsService;
         this.clanmemberService = clanmemberService;
         this.championsService = championsService;
         this.siegeConditionService = siegeConditionService;
+        this.roleHierarchy = roleHierarchy;
     }
 
     public record TeamViewDTO(
@@ -81,7 +85,10 @@ public class ProfileController {
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    public String viewMemberProfile(@PathVariable String id, Model model, Authentication authentication, HttpSession session) {
+    public String viewMemberProfile(@PathVariable String id,
+                                    Model model,
+                                    Authentication authentication,
+                                    HttpSession session) {
         commonsService.fillModel(model, authentication, session);
 
         ClanmemberEntity targetMember = clanmemberService.getMemberById(id);
@@ -92,7 +99,8 @@ public class ProfileController {
         boolean isOwnProfile = myAccounts.stream()
                 .anyMatch(account -> account.getId().toHexString().equals(id));
 
-        boolean isMember = authentication.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_MEMBER"));
+        var effectiveAuthorities = roleHierarchy.getReachableGrantedAuthorities(authentication.getAuthorities());
+        boolean isMember = effectiveAuthorities.contains(new SimpleGrantedAuthority("ROLE_MEMBER"));
 
         if (!isOwnProfile && !isMember) {
             throw new AccessDeniedException("You do not have permission to view other member profiles.");
