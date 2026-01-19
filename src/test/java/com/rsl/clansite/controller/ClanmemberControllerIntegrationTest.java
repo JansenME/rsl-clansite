@@ -536,9 +536,8 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
     @DisplayName("GET /admin/data-health - ADMIN should access dashboard (200 OK)")
     void viewDataHealth_AsAdmin_ShouldSucceed() throws Exception {
         String adminId = "admin-health";
-        // Mock the service returning a dummy list
         com.rsl.clansite.model.dto.SyncStatusDTO status = new com.rsl.clansite.model.dto.SyncStatusDTO();
-        status.setIngameName("TestMember");
+        status.setDiscordName("TestMember");
         when(clanmemberService.getMemberSyncStatus()).thenReturn(List.of(status));
 
         when(clanmemberService.getFreshAuthorities(eq(adminId)))

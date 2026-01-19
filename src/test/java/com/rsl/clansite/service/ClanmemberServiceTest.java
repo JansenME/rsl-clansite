@@ -38,14 +38,17 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -302,17 +305,23 @@ class ClanmemberServiceTest {
     @Test
     @DisplayName("Scheduled Update: Should update member if Avatar changes")
     void updateAllClanmemberDiscordRoles_ShouldUpdate_WhenAvatarChanged() {
+        String discordId = "100";
+
         ClanmemberEntity existing = new ClanmemberEntity();
-        existing.setDiscordId("100");
+        existing.setDiscordId(discordId);
         existing.setAvatarHash("old_hash");
         existing.setDiscordRoles(List.of("roleA"));
+        existing.setStatus(MemberStatus.ACTIVE); // Ensure active, as the service now filters for ACTIVE
 
         when(clanmemberRepository.findAllByDiscordIdIsNotNull()).thenReturn(List.of(existing));
 
         NewClanmemberDTO apiData = new NewClanmemberDTO();
-        apiData.setAvatarHash("new_hash"); // Changed!
+        apiData.setDiscordId(discordId); // CRITICAL: Mapping needs this
+        apiData.setAvatarHash("new_hash");
         apiData.setDiscordRoles(List.of("roleA"));
-        when(discordApiClient.getDiscordMember("100")).thenReturn(Optional.of(apiData));
+
+        // Safety Fix: Mock the bulk fetch instead of (or in addition to) the singular fetch
+        when(discordApiClient.getAllGuildMembers()).thenReturn(List.of(apiData));
 
         when(discordRoleService.sortRoles(anyList())).thenReturn(List.of("roleA"));
 
@@ -327,25 +336,45 @@ class ClanmemberServiceTest {
     @Test
     @DisplayName("Scheduled Update: Should catch exception for one user and continue to next")
     void updateAllClanmemberDiscordRoles_ShouldContinue_WhenOneFails() {
+        // 1. Setup two active members
         ClanmemberEntity badUser = new ClanmemberEntity();
         badUser.setDiscordId("bad_id");
+        badUser.setStatus(MemberStatus.ACTIVE);
+        badUser.setIngameName("BadUser");
 
         ClanmemberEntity goodUser = new ClanmemberEntity();
         goodUser.setDiscordId("good_id");
+        goodUser.setStatus(MemberStatus.ACTIVE);
+        goodUser.setIngameName("GoodUser");
 
         when(clanmemberRepository.findAllByDiscordIdIsNotNull()).thenReturn(List.of(badUser, goodUser));
 
-        when(discordApiClient.getDiscordMember("bad_id")).thenThrow(new RuntimeException("API Down"));
+        // 2. Setup Bulk Discord Data
+        NewClanmemberDTO badData = new NewClanmemberDTO();
+        badData.setDiscordId("bad_id");
+        badData.setDiscordRoles(List.of("error_role"));
 
         NewClanmemberDTO goodData = new NewClanmemberDTO();
-        goodData.setAvatarHash("hash");
-        goodData.setDiscordRoles(List.of());
-        when(discordApiClient.getDiscordMember("good_id")).thenReturn(Optional.of(goodData));
-        when(discordRoleService.sortRoles(anyList())).thenReturn(List.of());
+        goodData.setDiscordId("good_id");
+        goodData.setAvatarHash("new_hash");
+        goodData.setDiscordRoles(List.of("roleA"));
 
+        // Mock the bulk fetch
+        when(discordApiClient.getAllGuildMembers()).thenReturn(List.of(badData, goodData));
+
+        // 3. Simulate failure for the bad user via the role service
+        when(discordRoleService.sortRoles(List.of("error_role"))).thenThrow(new RuntimeException("API Simulation Failure"));
+        // Success for the good user
+        when(discordRoleService.sortRoles(List.of("roleA"))).thenReturn(List.of("roleA"));
+
+        // 4. Run the sync
         clanmemberService.updateAllClanmemberDiscordRoles();
 
-        verify(clanmemberRepository, org.mockito.Mockito.times(1)).save(goodUser);
+        // 5. Assertions
+        // Verify that 'goodUser' was still processed and saved despite the first one crashing
+        verify(clanmemberRepository, times(1)).save(goodUser);
+        // Verify badUser was never saved
+        verify(clanmemberRepository, never()).save(badUser);
     }
 
     @Test
@@ -353,9 +382,6 @@ class ClanmemberServiceTest {
     void updateAllClanmemberDiscordRoles_ShouldLogWarn_WhenUserNotFound() {
         ClanmemberEntity missingMember = new ClanmemberEntity();
         missingMember.setDiscordId("missing_id");
-
-        when(clanmemberRepository.findAllByDiscordIdIsNotNull()).thenReturn(List.of(missingMember));
-        when(discordApiClient.getDiscordMember("missing_id")).thenReturn(Optional.empty());
 
         clanmemberService.updateAllClanmemberDiscordRoles();
 
@@ -612,8 +638,6 @@ class ClanmemberServiceTest {
         memberWithNoId.setDiscordId("");
         memberWithNoId.setIngameName("ManualUser");
 
-        when(clanmemberRepository.findAllByDiscordIdIsNotNull()).thenReturn(List.of(memberWithNoId));
-
         clanmemberService.updateAllClanmemberDiscordRoles();
 
         verify(discordApiClient, never()).getDiscordMember(any());
@@ -791,6 +815,7 @@ class ClanmemberServiceTest {
     void scheduledJob_SingleAccount_ShouldUpdateGroup() {
         String discordId = "12345";
 
+        // 1. Setup the DB member
         ClanmemberEntity member = new ClanmemberEntity();
         member.setDiscordId(discordId);
         member.setClanGroup(ClanGroup.T1);
@@ -798,19 +823,26 @@ class ClanmemberServiceTest {
 
         when(clanmemberRepository.findAllByDiscordIdIsNotNull()).thenReturn(java.util.List.of(member));
 
+        // 2. Setup the Discord Data
         NewClanmemberDTO discordData = new NewClanmemberDTO();
-        discordData.setDiscordRoles(java.util.List.of("T2_ROLE_ID"));
-        discordData.setAvatarHash("newHash");
-        when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(discordData));
+        // THIS IS THE FIX: The service needs the ID inside the DTO to build its Map
+        discordData.setDiscordId(discordId);
 
-        when(discordRoleService.sortRoles(any())).thenReturn(java.util.List.of("T2_ROLE_ID"));
-
-        String T2_ID = discordRoleService.getT2RoleId();
+        String T2_ID = "T2_ROLE_ID";
         discordData.setDiscordRoles(java.util.List.of(T2_ID));
+        discordData.setAvatarHash("newHash");
+
+        // Mock the bulk fetch
+        when(discordApiClient.getAllGuildMembers()).thenReturn(java.util.List.of(discordData));
+
+        // 3. Mock Role Service behavior
+        when(discordRoleService.getT2RoleId()).thenReturn(T2_ID);
         when(discordRoleService.sortRoles(any())).thenReturn(java.util.List.of(T2_ID));
 
+        // 4. Run the sync
         clanmemberService.updateAllClanmemberDiscordRoles();
 
+        // 5. Assertions
         assertEquals(ClanGroup.T2, member.getClanGroup());
         verify(clanmemberRepository).save(member);
     }
@@ -818,31 +850,43 @@ class ClanmemberServiceTest {
     @Test
     @DisplayName("updateAllClanmemberDiscordRoles - Multi Account + Group Change -> SHOULD NOT Update Group (Safety Lock)")
     void scheduledJob_MultiAccount_ShouldNotUpdateGroup() {
-        String discordId = "99999";
+        String discordId = "99999"; // Explicitly using 99999
 
+        // 1. Setup two members with the SAME Discord ID
         ClanmemberEntity main = new ClanmemberEntity();
         main.setDiscordId(discordId);
         main.setClanGroup(ClanGroup.T1);
+        main.setIngameName("MainAcc");
 
         ClanmemberEntity alt = new ClanmemberEntity();
         alt.setDiscordId(discordId);
         alt.setClanGroup(ClanGroup.T2);
+        alt.setIngameName("AltAcc");
 
-        when(clanmemberRepository.findAllByDiscordIdIsNotNull()).thenReturn(java.util.List.of(main, alt));
+        // Mock DB: Crucial that this returns BOTH when called
+        when(clanmemberRepository.findAllByDiscordIdIsNotNull())
+                .thenReturn(java.util.List.of(main, alt));
 
-        String T1_ID = discordRoleService.getT1RoleId();
+        // 2. Setup Discord Data
+        String T1_ID = "T1_ROLE_ID";
         NewClanmemberDTO discordData = new NewClanmemberDTO();
+        discordData.setDiscordId(discordId);
         discordData.setDiscordRoles(java.util.List.of(T1_ID));
-        discordData.setAvatarHash("newHash");
 
-        when(discordApiClient.getDiscordMember(discordId)).thenReturn(Optional.of(discordData));
-        when(discordRoleService.sortRoles(any())).thenReturn(java.util.List.of(T1_ID));
+        // Use the exact method name from your client (getAllGuildMembers)
+        when(discordApiClient.getAllGuildMembers())
+                .thenReturn(java.util.List.of(discordData));
 
+        // 3. Execute
         clanmemberService.updateAllClanmemberDiscordRoles();
 
-        assertEquals(ClanGroup.T2, alt.getClanGroup());
+        // 4. Assertions
+        // If the safety lock works, 'alt' stays T2.
+        assertEquals(ClanGroup.T2, alt.getClanGroup(),
+                "The safety lock should have detected 2 accounts for ID " + discordId + " and skipped the update.");
 
-        verify(clanmemberRepository, org.mockito.Mockito.times(2)).save(any());
+        // The safety lock should prevent ANY saves for a disputed Discord ID
+        verify(clanmemberRepository, never()).save(any());
     }
 
     @Test

@@ -290,6 +290,7 @@ public class ClanmemberService {
         }
 
         Map<String, NewClanmemberDTO> discordDataMap = discordMembers.stream()
+                .filter(d -> d.getDiscordId() != null)
                 .collect(Collectors.toMap(NewClanmemberDTO::getDiscordId, Function.identity(), (a, b) -> a));
 
         List<ClanmemberEntity> allLinkedMembers = clanmemberRepository.findAllByDiscordIdIsNotNull().stream()
@@ -303,19 +304,28 @@ public class ClanmemberService {
 
         for (Map.Entry<String, List<ClanmemberEntity>> entry : membersByDiscordId.entrySet()) {
             String discordId = entry.getKey();
-            List<ClanmemberEntity> userAccounts = entry.getValue();
-            boolean isMultiAccount = userAccounts.size() > 1;
+            try {
+                List<ClanmemberEntity> userAccounts = entry.getValue();
 
-            NewClanmemberDTO discordData = discordDataMap.get(discordId);
+                // --- SAFETY LOCK ---
+                if (userAccounts.size() > 1) {
+                    log.info("Scheduled Sync: Safety Lock triggered for Discord ID {}. Multiple accounts ({}) found, skipping auto-sync.",
+                            discordId, userAccounts.size());
+                    continue;
+                }
 
-            if (discordData != null) {
-                for (ClanmemberEntity member : userAccounts) {
-                    if (applyDiscordDataToMember(member, discordData, isMultiAccount)) {
+                NewClanmemberDTO discordData = discordDataMap.get(discordId);
+                if (discordData != null) {
+                    ClanmemberEntity member = userAccounts.get(0);
+                    if (applyDiscordDataToMember(member, discordData, false)) {
                         membersUpdated++;
                     }
+                } else {
+                    log.info("Scheduled Sync: User ID {} not found in current Discord member list.", discordId);
                 }
-            } else {
-                log.info("Scheduled Sync: User ID {} not found in current Discord member list.", discordId);
+            } catch (Exception e) {
+                // This is the "Shield": Catch errors here so the loop can continue to the next user
+                log.error("Scheduled Sync: Fatal error processing Discord ID {}: {}", discordId, e.getMessage());
             }
         }
 

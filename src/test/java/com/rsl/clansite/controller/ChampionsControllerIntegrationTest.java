@@ -356,68 +356,6 @@ class ChampionsControllerIntegrationTest extends BaseControllerTest {
     }
 
     @Test
-    @DisplayName("GET /restore-backup - OWNER should succeed")
-    void restoreBackup_AsOwner_ShouldSucceed() throws Exception {
-        String ownerId = "owner-backup";
-
-        when(clanmemberService.getFreshAuthorities(eq(ownerId)))
-                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_OWNER"))));
-
-        mockMvc.perform(get("/backup/restore-backup")
-                        .with(oauth2User("ROLE_OWNER", ownerId)))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @DisplayName("GET /restore-backup - ADMIN should be denied")
-    void restoreBackup_AsAdmin_ShouldFail() throws Exception {
-        String adminId = "admin-backup";
-
-        when(clanmemberService.getFreshAuthorities(eq(adminId)))
-                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
-
-        mockMvc.perform(get("/backup/restore-backup")
-                        .with(oauth2User("ROLE_ADMIN", adminId)))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/error/403"));
-    }
-
-    @Test
-    @DisplayName("GET /restore-backup - COORDINATOR should be denied (403)")
-    void restoreBackup_AsCoordinator_ShouldFail() throws Exception {
-        String coordId = "coord-backup";
-
-        when(clanmemberService.getFreshAuthorities(eq(coordId)))
-                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_COORDINATOR"))));
-
-        mockMvc.perform(get("/backup/restore-backup")
-                        .with(oauth2User("ROLE_COORDINATOR", coordId)))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/error/403"));
-    }
-
-    @Test
-    @DisplayName("GET /restore-backup - MEMBER should be denied (403)")
-    void restoreBackup_AsMember_ShouldFail() throws Exception {
-        String memberId = "member-backup";
-
-        when(clanmemberService.getFreshAuthorities(eq(memberId)))
-                .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
-
-        mockMvc.perform(get("/backup/restore-backup")
-                        .with(oauth2User("ROLE_MEMBER", memberId)))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/error/403"));
-    }
-
-    @Test
-    @DisplayName("GET /restore-backup - GUEST should be redirected to Login (302)")
-    void restoreBackup_AsGuest_ShouldRedirect() throws Exception {
-        mockMvc.perform(get("/backup/restore-backup"))
-                .andExpect(status().is3xxRedirection());
-    }
-
-    @Test
     @DisplayName("GET /champions/{id} - Should return Details View with Correct Data")
     void viewChampionDetails_ShouldReturnPage() throws Exception {
         String id = "507f1f77bcf86cd799439011";

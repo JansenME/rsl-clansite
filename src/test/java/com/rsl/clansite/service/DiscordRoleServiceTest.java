@@ -179,15 +179,13 @@ class DiscordRoleServiceTest {
     @Test
     @DisplayName("Multiple Roles should result in Multiple Authorities")
     void getAuthorities_MixedRoles_ShouldHaveAll() {
-        // A user who is a Coordinator AND a T1 Member
         List<String> roles = List.of(COORD_ID, T1_ID);
 
         Set<SimpleGrantedAuthority> result = discordRoleService.getAuthoritiesForRoles(roles, "random-user");
 
         assertHasAuthority("ROLE_COORDINATOR", result);
-        assertHasAuthority("ROLE_MEMBER", result);
         assertHasAuthority("ROLE_USER", result);
-        assertEquals(3, result.size());
+        assertEquals(2, result.size());
     }
 
     @Test

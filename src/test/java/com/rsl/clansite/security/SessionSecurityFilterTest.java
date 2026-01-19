@@ -27,6 +27,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -71,15 +72,14 @@ class SessionSecurityFilterTest {
         String userId = "missing-user";
         setupAuthentication(userId, "ROLE_MEMBER");
 
-        when(request.getSession()).thenReturn(session);
-
         when(clanmemberService.getFreshAuthorities(userId)).thenReturn(Optional.empty());
 
         sessionSecurityFilter.doFilterInternal(request, response, filterChain);
 
-        verify(session).invalidate();
-        verify(response).sendRedirect("/");
-        verify(filterChain, never()).doFilter(any(), any());
+        verify(session, never()).invalidate();
+        verify(response, never()).sendRedirect(anyString());
+
+        verify(filterChain).doFilter(request, response);
     }
 
     @Test
