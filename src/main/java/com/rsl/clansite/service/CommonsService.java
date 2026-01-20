@@ -13,7 +13,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
-import org.springframework.util.StringUtils;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Year;
 import java.time.ZoneId;
@@ -61,6 +62,9 @@ public class CommonsService {
         model.addAttribute("versionNumber", getAppVersion());
         model.addAttribute("currentYear", String.valueOf(Year.now().getValue()));
         model.addAttribute("applicationDate", getAppBuildDate());
+
+        String supportId = resolveSessionId(session);
+        model.addAttribute("supportId", supportId);
 
         if (authentication != null && authentication.isAuthenticated()) {
             ClanmemberViewData viewData = clanmemberService.getUserViewData(authentication);
@@ -132,5 +136,20 @@ public class CommonsService {
                     .format(APP_DATE_FORMATTER);
         }
         return "Unknown Date";
+    }
+
+    private String resolveSessionId(HttpSession explicitSession) {
+        if (explicitSession != null) {
+            return explicitSession.getId();
+        }
+        try {
+            ServletRequestAttributes attr = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attr != null && attr.getRequest().getSession(false) != null) {
+                return attr.getRequest().getSession(false).getId();
+            }
+        } catch (Exception ignored) {
+            // Context not available
+        }
+        return "N/A";
     }
 }

@@ -7,13 +7,19 @@
     <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
 </head>
 <body>
-    <div th:fragment="copyright">
-        &copy; 2025-<span th:text="${currentYear}"></span> Martijn Jansen. All rights reserved. Version <span th:text="${versionNumber}"></span> (<span th:text="${applicationDate}"></span>)
+<div th:fragment="copyright">
+    &copy; 2025-<span th:text="${currentYear}"></span> Martijn Jansen. All rights reserved.
+    Version <span th:text="${versionNumber}"></span> (<span th:text="${applicationDate}"></span>)
+    <span th:if="${supportId != null and supportId != 'N/A'}"
+        style="margin-left: 10px; color: #666; font-size: 0.8em;"
+        title="Provide this ID to support for error tracking">
+            | SID: <span th:text="${supportId}"></span>
+    </span>
 
-        <div id="loading-overlay">
-            <div class="spinner"></div>
-            <div id="loading-text">Processing...</div>
-        </div>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text">Processing...</div>
     </div>
+</div>
 </body>
 </html>
