@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -111,7 +112,8 @@ public class SiegeController {
         return siegeService.getActiveSiege(group)
                 .orElseGet(() -> {
                     log.info("Lazy-initializing first siege for {}", group);
-                    return siegeService.createNextSiege(group);
+                    // Updated to pass current time as start date
+                    return siegeService.createNextSiege(group, LocalDateTime.now());
                 });
     }
 }

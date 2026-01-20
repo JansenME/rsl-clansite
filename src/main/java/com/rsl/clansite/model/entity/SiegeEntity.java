@@ -32,6 +32,7 @@ public class SiegeEntity {
     @Indexed
     private SiegeStatus status;
 
+    // This is the anchor date for the 14-day cycle (Always a Thursday)
     private LocalDateTime startDate;
     private LocalDateTime lastModified;
 
@@ -43,10 +44,11 @@ public class SiegeEntity {
 
     private Map<String, SiegeMemberData> memberStats = new HashMap<>();
 
-    public SiegeEntity(ClanGroup clanGroup) {
+    // Updated constructor to accept a specific start date (Anchor Date)
+    public SiegeEntity(ClanGroup clanGroup, LocalDateTime startDate) {
         this.clanGroup = clanGroup;
         this.status = SiegeStatus.PREP;
-        this.startDate = LocalDateTime.now();
+        this.startDate = startDate;
         this.lastModified = LocalDateTime.now();
     }
 
