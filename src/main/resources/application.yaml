@@ -62,10 +62,7 @@ logging:
     root: INFO
     com.rsl.clansite: INFO
   file:
-    name: ${catalina.base:.}/logs/rsl-clansite.log
-  pattern:
-    console: "%d{dd-MM-yyyy HH:mm:ss.SSS} %5p [%X{sessionId}] --- [%t] %-40.40logger{39} : %m%n%wEx"
-    file: "%d{dd-MM-yyyy HH:mm:ss.SSS} %5p [%X{sessionId}] --- [%t] %-40.40logger{39} : %m%n%wEx"
+    name: ${catalina.base:-.}/logs/application-logging/rsl-clansite.log
 management:
   endpoints:
     web:
