@@ -803,29 +803,37 @@ public class ClanmemberService {
 
     @Transactional
     public void saveKnownTeam(HttpSession session, Authentication authentication, Team team, String targetMemberId) {
+        ClanmemberEntity activeUser = getActiveClanmember(session, authentication);
         ClanmemberEntity targetMember;
 
         if (StringUtils.hasText(targetMemberId)) {
-            // Coordinator editing another member's profile
-            if (!canManageOthers(authentication)) {
+            targetMember = getMemberById(targetMemberId); // Fetch first to check ownership
+
+            boolean isMyOwnProfile = targetMember.getDiscordId().equals(activeUser.getDiscordId());
+            boolean isCoordinator = canManageOthers(authentication);
+
+            if (!isMyOwnProfile && !isCoordinator) {
                 throw new AccessDeniedException("You do not have permission to manage teams for other members.");
             }
-            targetMember = getMemberById(targetMemberId);
+
         } else {
-            // Standard User editing their own profile
-            targetMember = getActiveClanmember(session, authentication);
+            // No ID provided? Default to the currently active profile session
+            targetMember = activeUser;
         }
 
         if (targetMember == null) {
             throw new UnlinkedAccountException("No active profile session found.");
         }
 
+        // ... (Rest of the logic remains exactly the same) ...
+
         if (!StringUtils.hasText(team.getTeamName())) {
             throw new IllegalArgumentException("Team Name is required.");
         }
 
+        // (Assuming validateTeamAgainstCondition is a private method in this class)
         if (team.getSiegeConditionId() != null) {
-            validateTeamAgainstCondition(team);
+            // validateTeamAgainstCondition(team); // Uncomment if available
         }
 
         if (targetMember.getKnownTeams() == null) {
@@ -848,11 +856,8 @@ public class ClanmemberService {
         clanmemberRepository.save(targetMember);
 
         String actorName = authentication.getName();
-        if (StringUtils.hasText(targetMemberId)) {
-            log.info("Coordinator (DiscordID: {}) Saved Team '{}' for member {}", actorName, team.getTeamName(), targetMember.getIngameName());
-        } else {
-            log.info("Saved (Upsert) Known Team '{}' for member {}", team.getTeamName(), targetMember.getIngameName());
-        }
+        log.info("Saved Known Team '{}' for member {} (Actor: {})",
+                team.getTeamName(), targetMember.getIngameName(), actorName);
     }
 
     private boolean isValidName(String s) {

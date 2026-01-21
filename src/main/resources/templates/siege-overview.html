@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
-    <title>Siege Dashboard</title>
+    <title>Siege Overview</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
@@ -14,9 +14,9 @@
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 40px;
-            margin-top: 25px; /* Added spacing for the badge */
+            margin-top: 25px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            position: relative; /* Ensure badge is relative to this */
+            position: relative;
         }
         .siege-header {
             display: flex;
@@ -30,7 +30,7 @@
             margin: 0;
             font-size: 1.5em;
             color: #333;
-            margin-top: 10px; /* Push title down slightly */
+            margin-top: 10px;
         }
         .siege-status {
             padding: 5px 12px;
@@ -103,7 +103,7 @@
         }
 
         .structure-cleared {
-            background-color: #ffebee; /* Red tint for destroyed/cleared */
+            background-color: #ffebee;
             color: #c0392b;
         }
         .structure-cleared .name-cell {
@@ -151,8 +151,14 @@
 
     <section id="content">
         <div class="container">
-            <h2><i class="fas fa-chess-rook"></i> Siege Management Dashboard</h2>
-            <p>Overview of current Siege Status, Map Layouts, and Structure Points.</p>
+            <div class="row">
+                <div class="col-8">
+                    <h2><i class="fas fa-binoculars"></i> Live Battlefield</h2>
+                </div>
+                <div class="col-4" style="text-align: right;">
+                    <a th:href="@{/siege}" class="button alt small">Back to Siege Hub</a>
+                </div>
+            </div>
 
             <div th:each="siege, iterStat : ${siegeList}"
                  class="siege-section"
@@ -283,7 +289,7 @@
             </div>
 
             <div style="text-align: center; margin-top: 2em;">
-                <a th:href="@{/}" class="button">Back to Home</a>
+                <a th:href="@{/siege}" class="button">Back to Siege Hub</a>
             </div>
         </div>
     </section>

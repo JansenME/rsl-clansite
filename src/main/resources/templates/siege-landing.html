@@ -1,0 +1,118 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Siege Hub</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+    <script th:src="@{/styles/js/main.js}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <style>
+        .hub-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 0;
+        }
+        .hub-card {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .hub-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+            border-color: #3498db;
+        }
+        .card-icon {
+            font-size: 3em;
+            color: #3498db;
+            margin-right: 30px;
+            width: 80px;
+        }
+        .card-content {
+            text-align: left;
+            flex-grow: 1;
+        }
+        .card-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        .card-desc {
+            color: #7f8c8d;
+            font-size: 1em;
+            margin: 0;
+        }
+        .card-arrow {
+            font-size: 1.5em;
+            color: #ccc;
+        }
+
+        /* Specific Colors */
+        .card-overview .card-icon { color: #e67e22; }
+        .card-defense .card-icon { color: #27ae60; }
+        .card-history .card-icon { color: #95a5a6; }
+    </style>
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container"></div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <h2 style="text-align: center; margin-bottom: 10px;"><i class="fas fa-chess-rook"></i> Siege Operations</h2>
+            <p style="text-align: center; color: #777;">Select an operation module below.</p>
+
+            <div class="hub-container">
+
+                <a th:href="@{/siege/overview}" class="hub-card card-overview">
+                    <div class="card-icon"><i class="fas fa-binoculars"></i></div>
+                    <div class="card-content">
+                        <div class="card-title">Live Battlefield</div>
+                        <p class="card-desc">View current scores, structure status, and attack targets.</p>
+                    </div>
+                    <div class="card-arrow"><i class="fas fa-chevron-right"></i></div>
+                </a>
+
+                <a th:href="@{/siege/defense}" class="hub-card card-defense">
+                    <div class="card-icon"><i class="fas fa-shield-alt"></i></div>
+                    <div class="card-content">
+                        <div class="card-title">Defense Logistics</div>
+                        <p class="card-desc">Manage your team placement, assign defenders, and view the grid.</p>
+                    </div>
+                    <div class="card-arrow"><i class="fas fa-chevron-right"></i></div>
+                </a>
+
+                <a th:href="@{/siege/history}" class="hub-card card-history">
+                    <div class="card-icon"><i class="fas fa-history"></i></div>
+                    <div class="card-content">
+                        <div class="card-title">War Archives</div>
+                        <p class="card-desc">Browse past Siege results, scores, and historical data.</p>
+                    </div>
+                    <div class="card-arrow"><i class="fas fa-chevron-right"></i></div>
+                </a>
+
+            </div>
+
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright"></div>
+</div>
+</body>
+</html>

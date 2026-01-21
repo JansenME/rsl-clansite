@@ -120,10 +120,10 @@ public class DiscordRoleService {
             authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
         } else if (userDiscordRoles.contains(getSiegeCoordinatorRoleId())) {
             authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
-        } else if (userDiscordRoles.contains(getT1RoleId()) ||
+        } /*else if (userDiscordRoles.contains(getT1RoleId()) ||
                 userDiscordRoles.contains(getT2RoleId())) {
             authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
-        }
+        }*/
 
         //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
         //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));

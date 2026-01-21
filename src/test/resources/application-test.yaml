@@ -45,7 +45,7 @@ logging:
   level:
     org.springframework.data.mongodb: WARN
   file:
-    name: /logs/rsl-clansite.log
+    name: "C:/Development/rsl-clansite-tests.log"
   pattern:
     console: "%d{dd-MM-yyyy HH:mm:ss.SSS} %5p %X{process_id} --- [%t] %-40.40logger{39} : %m%n%wEx"
 management:

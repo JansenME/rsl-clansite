@@ -1,0 +1,537 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Siege Defense Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+    <script th:src="@{/styles/js/main.js}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <style>
+        .siege-map-container { display: flex; flex-direction: column; gap: 40px; }
+        .siege-instance { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .siege-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f4f4f4; padding-bottom: 15px; margin-bottom: 20px; }
+        .structure-row { margin-bottom: 30px; border: 1px solid #eee; border-radius: 6px; overflow: hidden; }
+        .structure-title { background: #f9f9f9; padding: 10px 15px; font-weight: bold; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+
+        .group-container { display: flex; flex-wrap: wrap; gap: 15px; padding: 15px; background: #fff; }
+        .siege-group {
+            flex: 0 0 30%;
+            min-width: 250px;
+            border: 1px dashed #ccc;
+            padding: 10px;
+            border-radius: 4px;
+            position: relative;
+            margin-top: 10px;
+        }
+        .group-label { position: absolute; top: -10px; left: 10px; background: #fff; padding: 0 5px; font-size: 0.8em; color: #777; font-weight: bold; }
+
+        .slot-card { background: #fdfdfd; border: 1px solid #e0e0e0; margin-bottom: 8px; padding: 10px; border-radius: 4px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; }
+        .slot-card:hover { border-color: #3498db; background: #f0f8ff; transform: translateY(-2px); }
+        .slot-card.empty { border-style: dashed; color: #999; }
+        .slot-card.disabled { opacity: 0.6; cursor: not-allowed; background: #f9f9f9; border-color: #eee; }
+        .slot-number { font-weight: bold; color: #555; margin-right: 10px; min-width: 20px; }
+        .slot-info { flex-grow: 1; font-size: 0.9em; }
+        .slot-member { font-weight: bold; color: #2980b9; display: block; }
+        .slot-team { font-size: 0.85em; color: #555; }
+        .mine-highlight { border-left: 4px solid #27ae60; }
+
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fff; margin: 5% auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 600px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .close-modal { float: right; font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa; }
+        .close-modal:hover { color: #000; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-control { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+        .scroll-badge { background: #e74c3c; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; font-weight: bold; display: inline-block; margin-left: 10px;}
+        .scroll-badge.full { background: #95a5a6; }
+
+        option:disabled { color: #ccc; font-style: italic; background-color: #f9f9f9; }
+        .error-message { color: #e74c3c; font-size: 0.9em; margin-top: 5px; display: none; }
+        .btn-delete { color: #fff; background-color: #e74c3c; border: none; float: left; }
+        .btn-delete:hover { background-color: #c0392b; }
+
+        .admin-box { background: #fff3e0; border: 1px solid #ffcc80; padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container"></div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <div th:if="${success}" class="alert alert-success" style="background:#d4edda; color:#155724; padding:10px; border-radius:4px; margin-bottom:20px;">
+                <i class="fas fa-check-circle"></i> <span th:text="${success}">Success</span>
+            </div>
+            <div th:if="${error}" class="alert alert-danger" style="background:#f8d7da; color:#721c24; padding:10px; border-radius:4px; margin-bottom:20px;">
+                <i class="fas fa-exclamation-circle"></i> <span th:text="${error}">Error</span>
+            </div>
+
+            <div class="row">
+                <div class="col-8">
+                    <h2><i class="fas fa-shield-alt"></i> Defense Placement Map</h2>
+                </div>
+                <div class="col-4" style="text-align: right;">
+                    <a th:href="@{/siege/overview}" class="button alt small">Back to Overview</a>
+                </div>
+            </div>
+
+            <p>Select an empty slot below to assign your defense team.</p>
+
+            <div class="siege-map-container">
+                <div th:each="siege : ${siegeList}" class="siege-instance">
+                    <div th:with="localProfile=${profiles.get(siege.clanGroup)},
+                                  usedCount=${usedSlotsMap.get(siege.id.toHexString())},
+                                  canAdd=${isPrivileged || (localProfile != null && usedCount < localProfile.maxDefenseScrolls)}">
+
+                        <div class="siege-header">
+                            <div>
+                                <h3 style="display:inline-block; margin-right: 10px;" th:text="${siege.clanGroup} + ' Base Defense'">T1 Base Defense</h3>
+                                <span th:text="${siege.status}" style="font-weight:bold; color:#777; font-size: 0.9em;">PREP</span>
+                            </div>
+
+                            <div>
+                                <span th:if="${localProfile == null}" style="color:red; font-size:0.8em; font-weight:bold;">(Read Only - Not in this Clan)</span>
+
+                                <span th:if="${localProfile != null}" class="scroll-badge" th:classappend="${usedCount >= localProfile.maxDefenseScrolls ? 'full' : ''}">
+                                    <i class="fas fa-scroll"></i>
+                                    Used: <span th:text="${usedCount}">1</span> / <span th:text="${localProfile.maxDefenseScrolls}">2</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div th:each="struct : ${siege.defensiveStructures}" class="structure-row">
+                            <div class="structure-title">
+                                <span><i class="fas fa-archway"></i> <span th:text="${struct.name}">Stronghold</span></span>
+                                <span style="font-size:0.8em; color:#555;">Slots: <span th:text="${struct.slots.size()}">12</span></span>
+                            </div>
+
+                            <div class="group-container">
+                                <div th:each="group, gStat : ${struct.getGroups()}" class="siege-group">
+                                    <span class="group-label">Group <span th:text="${gStat.count}">1</span></span>
+
+                                    <div th:each="slot : ${group}"
+                                         class="slot-card"
+                                         th:with="isMine=${localProfile != null && slot.memberId == localProfile.id.toHexString()},
+                                                  isOccupied=${slot.memberId != null},
+                                                  isInteractive=${isMine || isPrivileged || (!isOccupied && canAdd)}"
+
+                                         th:classappend="${isMine ? 'mine-highlight' : (!isInteractive ? 'disabled empty' : 'empty')}"
+
+                                         th:data-siege-id="${siege.id}"
+                                         th:data-structure-id="${struct.id}"
+                                         th:data-slot-number="${slot.slotNumber}"
+                                         th:data-member-id="${localProfile != null ? localProfile.id : ''}"
+                                         th:data-leader-id="${slot.leaderChampionId}"
+                                         th:data-support-ids="${slot.supportChampionIds}"
+                                         th:data-occupied-by="${slot.memberId}"
+
+                                         th:onclick="${isInteractive} ? 'openAssignModal(this)' : ''">
+
+                                        <span class="slot-number" th:text="${slot.slotNumber}">1</span>
+
+                                        <div class="slot-info">
+                                            <div th:if="${slot.memberId == null}">
+                                                <em>Empty Slot</em>
+                                            </div>
+                                            <div th:if="${slot.memberId != null}">
+                                                <span class="slot-member" th:text="${slot.playerName}">PlayerName</span>
+                                                <span class="slot-team" th:if="${slot.leaderChampionId != null}">
+                                                    Leader: <span th:text="${championNames.getOrDefault(slot.leaderChampionId, slot.leaderChampionId)}">Krisk</span>
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div th:if="${slot.memberId != null}"><i class="fas fa-user-shield" style="color: #ccc;"></i></div>
+                                        <div th:if="${slot.memberId == null && canAdd}"><i class="fas fa-plus-circle" style="color: #27ae60;"></i></div>
+                                        <div th:if="${isPrivileged && slot.memberId != null && !isMine}" style="margin-left:5px;"><i class="fas fa-cog" style="color: #f39c12;"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <script th:if="${localProfile != null}" th:inline="javascript">
+                            if (!window.knownTeamsMap) window.knownTeamsMap = {};
+                            if (!window.rosterMap) window.rosterMap = {};
+                            if (!window.siegeGroupMap) window.siegeGroupMap = {};
+
+                            var siegeId = /*[[${siege.id.toString()}]]*/ 'default';
+                            window.siegeGroupMap[siegeId] = /*[[${siege.clanGroup.toString()}]]*/ 'T1';
+                            window.knownTeamsMap[siegeId] = /*[[${localProfile.knownTeams}]]*/ [];
+                            window.rosterMap[siegeId] = /*[[${localProfile.rosterChampionIds}]]*/ [];
+                        </script>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <div id="assignModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h3><i class="fas fa-edit"></i> Edit Defense Slot</h3>
+
+            <form th:action="@{/siege/assign-slot}" method="POST" onsubmit="return validateForm()">
+                <input type="hidden" id="modalSiegeId" name="siegeId" />
+                <input type="hidden" id="modalStructureId" name="structureId" />
+                <input type="hidden" id="modalSlotNumber" name="slotNumber" />
+
+                <input type="hidden" id="modalMemberId" name="memberId" />
+
+                <div id="validationError" class="alert alert-danger" style="display:none; padding:10px; margin-bottom:15px;"></div>
+
+                <div id="adminControls" class="admin-box" style="display:none;">
+                    <label style="color:#d35400; font-weight:bold;"><i class="fas fa-user-secret"></i> Assigning On Behalf Of:</label>
+                    <select id="adminMemberSelect" class="form-control" onchange="updateAdminContext()">
+                    </select>
+                </div>
+
+                <div class="form-group" style="background: #f0f8ff; padding: 10px; border-radius: 4px; border: 1px dashed #3498db;">
+                    <label style="color:#2980b9;"><i class="fas fa-bolt"></i> Quick Select Saved Team</label>
+                    <select id="quickSelect" class="form-control" onchange="applyQuickTeam()">
+                        <option value="">-- Select a preset team --</option>
+                    </select>
+                </div>
+
+                <hr />
+
+                <div class="form-group">
+                    <label style="color:#d35400;">Leader Champion</label>
+                    <select name="leaderChampionId" id="modalLeader" class="form-control" onchange="validateChampionSelection()">
+                        <option value="" selected>Select Leader...</option>
+                        <option th:each="entry : ${championNames}"
+                                th:value="${entry.key}" th:text="${entry.value}">Krisk</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Champion 2</label>
+                    <select name="supportChampionIds" id="modalSup1" class="form-control" onchange="validateChampionSelection()">
+                        <option value="">(None)</option>
+                        <option th:each="entry : ${championNames}"
+                                th:value="${entry.key}" th:text="${entry.value}">Siphi</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Champion 3</label>
+                    <select name="supportChampionIds" id="modalSup2" class="form-control" onchange="validateChampionSelection()">
+                        <option value="">(None)</option>
+                        <option th:each="entry : ${championNames}"
+                                th:value="${entry.key}" th:text="${entry.value}">Rotos</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Champion 4</label>
+                    <select name="supportChampionIds" id="modalSup3" class="form-control" onchange="validateChampionSelection()">
+                        <option value="">(None)</option>
+                        <option th:each="entry : ${championNames}"
+                                th:value="${entry.key}" th:text="${entry.value}">Duchess</option>
+                    </select>
+                </div>
+
+                <div style="text-align: right; margin-top: 20px;">
+                    <button type="submit" id="btnDelete" class="button btn-delete"
+                            th:formaction="@{/siege/clear-slot}"
+                            onclick="return confirm('Are you sure you want to delete this team?');">
+                        <i class="fas fa-trash"></i> Delete Team
+                    </button>
+
+                    <button type="button" class="button alt" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="button primary">Save Team</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright"></div>
+</div>
+
+<script th:if="${isPrivileged}" th:inline="javascript">
+    // FIX: Use the specific JS data variables
+    var t1Members = /*[[${t1MembersJs}]]*/ [];
+    var t2Members = /*[[${t2MembersJs}]]*/ [];
+    var isPrivilegedUser = true;
+</script>
+<script th:unless="${isPrivileged}" th:inline="javascript">
+    var isPrivilegedUser = false;
+</script>
+
+<script th:inline="javascript">
+    var currentSiegeTeams = [];
+    var currentGlobalUsedChampions = [];
+    var currentRoster = [];
+
+    function getGloballyUsedChampions(siegeId, memberId, currentStructureId, currentSlotNumber) {
+        var used = [];
+        var slots = document.querySelectorAll('.slot-card[data-siege-id="' + siegeId + '"]');
+
+        slots.forEach(function(slot) {
+            if (slot.getAttribute('data-member-id') === memberId) {
+                var sStructId = slot.getAttribute('data-structure-id');
+                var sSlotNum = slot.getAttribute('data-slot-number');
+
+                if (sStructId === currentStructureId && sSlotNum === String(currentSlotNumber)) {
+                    return;
+                }
+
+                var leader = slot.getAttribute('data-leader-id');
+                if (leader && leader !== 'null') used.push(leader);
+
+                var supportsStr = slot.getAttribute('data-support-ids');
+                if (supportsStr && supportsStr !== 'null') {
+                    var arr = supportsStr.replace('[','').replace(']','').split(',').map(s => s.trim());
+                    arr.forEach(function(id) { if(id) used.push(id); });
+                }
+            }
+        });
+        return used;
+    }
+
+    function filterDropdownsByRoster() {
+        var selectIds = ['modalLeader', 'modalSup1', 'modalSup2', 'modalSup3'];
+        selectIds.forEach(function(id) {
+            var select = document.getElementById(id);
+            var options = select.options;
+            for (var i = 0; i < options.length; i++) {
+                var opt = options[i];
+                if (opt.value === "") continue;
+
+                if (currentRoster.includes(opt.value)) {
+                    opt.style.display = 'block';
+                } else {
+                    opt.style.display = 'none';
+                    opt.disabled = true;
+                }
+            }
+        });
+    }
+
+    function openAssignModal(element) {
+        var siegeId = element.getAttribute('data-siege-id');
+        var structureId = element.getAttribute('data-structure-id');
+        var slotNumber = element.getAttribute('data-slot-number');
+        var occupiedBy = element.getAttribute('data-occupied-by');
+
+        var initialMemberId = element.getAttribute('data-member-id');
+
+        document.getElementById('modalSiegeId').value = siegeId;
+        document.getElementById('modalStructureId').value = structureId;
+        document.getElementById('modalSlotNumber').value = slotNumber;
+        document.getElementById('validationError').style.display = 'none';
+
+        var leaderId = element.getAttribute('data-leader-id');
+        var supportList = element.getAttribute('data-support-ids');
+
+        if (isPrivilegedUser) {
+            document.getElementById('adminControls').style.display = 'block';
+            var select = document.getElementById('adminMemberSelect');
+            select.innerHTML = "";
+
+            var group = window.siegeGroupMap ? window.siegeGroupMap[siegeId] : 'T1';
+            var list = (group === 'T2') ? t2Members : t1Members;
+
+            if (list) {
+                list.forEach(function(m) {
+                    var opt = document.createElement('option');
+                    opt.value = m.id; // This is now a clean string
+                    opt.text = m.ingameName;
+                    select.appendChild(opt);
+                });
+            }
+
+            if (occupiedBy && occupiedBy !== 'null') {
+                select.value = occupiedBy;
+            } else {
+                // If it's empty, default to ME.
+                // IMPORTANT: Ensure 'initialMemberId' matches the ID format in the list
+                select.value = initialMemberId;
+            }
+
+            updateAdminContext();
+        } else {
+            document.getElementById('adminControls').style.display = 'none';
+            document.getElementById('modalMemberId').value = initialMemberId;
+
+            if (window.knownTeamsMap && window.knownTeamsMap[siegeId]) {
+                currentSiegeTeams = window.knownTeamsMap[siegeId];
+            } else { currentSiegeTeams = []; }
+
+            if (window.rosterMap && window.rosterMap[siegeId]) {
+                currentRoster = window.rosterMap[siegeId];
+            } else { currentRoster = []; }
+
+            setupQuickSelect();
+            filterDropdownsByRoster();
+
+            currentGlobalUsedChampions = getGloballyUsedChampions(siegeId, initialMemberId, structureId, slotNumber);
+        }
+
+        document.getElementById('modalLeader').value = "";
+        document.getElementById('modalSup1').value = "";
+        document.getElementById('modalSup2').value = "";
+        document.getElementById('modalSup3').value = "";
+
+        var supports = [];
+        if (supportList && supportList !== 'null') {
+            supports = supportList.replace('[','').replace(']','').split(',').map(s => s.trim());
+        }
+
+        if (leaderId && leaderId !== 'null') document.getElementById('modalLeader').value = leaderId;
+        if(supports[0]) document.getElementById('modalSup1').value = supports[0];
+        if(supports[1]) document.getElementById('modalSup2').value = supports[1];
+        if(supports[2]) document.getElementById('modalSup3').value = supports[2];
+
+        var deleteBtn = document.getElementById('btnDelete');
+        if (leaderId && leaderId !== 'null' && leaderId !== '') {
+            deleteBtn.style.display = 'inline-block';
+        } else {
+            deleteBtn.style.display = 'none';
+        }
+
+        validateChampionSelection();
+        document.getElementById('assignModal').style.display = "block";
+    }
+
+    function updateAdminContext() {
+        if (!isPrivilegedUser) return;
+
+        var selectedId = document.getElementById('adminMemberSelect').value;
+        document.getElementById('modalMemberId').value = selectedId;
+
+        var siegeId = document.getElementById('modalSiegeId').value;
+        var structureId = document.getElementById('modalStructureId').value;
+        var slotNumber = document.getElementById('modalSlotNumber').value;
+
+        var group = window.siegeGroupMap[siegeId];
+        var list = (group === 'T2') ? t2Members : t1Members;
+        var memberObj = list.find(m => m.id === selectedId);
+
+        if (memberObj) {
+            currentRoster = memberObj.rosterChampionIds || [];
+            currentSiegeTeams = memberObj.knownTeams || [];
+
+            setupQuickSelect();
+            filterDropdownsByRoster();
+            currentGlobalUsedChampions = getGloballyUsedChampions(siegeId, selectedId, structureId, slotNumber);
+            validateChampionSelection();
+        }
+    }
+
+    function setupQuickSelect() {
+        var qs = document.getElementById('quickSelect');
+        qs.innerHTML = '<option value="">-- Select a preset team --</option>';
+        currentSiegeTeams.forEach(function(team, index) {
+            var opt = document.createElement('option');
+            opt.value = index;
+            opt.innerHTML = team.teamName || ('Team ' + (index + 1));
+            qs.appendChild(opt);
+        });
+    }
+
+    function applyQuickTeam() {
+        var index = document.getElementById('quickSelect').value;
+        if (index === "") {
+            validateChampionSelection();
+            return;
+        }
+
+        var team = currentSiegeTeams[index];
+        if (team) {
+            var setIfAvailable = function(elementId, champId) {
+                if (champId && champId !== 'null') {
+                    document.getElementById(elementId).value = champId;
+                }
+            };
+
+            document.getElementById('modalLeader').value = "";
+            document.getElementById('modalSup1').value = "";
+            document.getElementById('modalSup2').value = "";
+            document.getElementById('modalSup3').value = "";
+
+            setIfAvailable('modalLeader', team.leaderChampionId);
+            setIfAvailable('modalSup1', team.champion2Id);
+            setIfAvailable('modalSup2', team.champion3Id);
+            setIfAvailable('modalSup3', team.champion4Id);
+
+            validateChampionSelection();
+        }
+    }
+
+    function validateChampionSelection() {
+        var selectIds = ['modalLeader', 'modalSup1', 'modalSup2', 'modalSup3'];
+        var selects = selectIds.map(function(id) { return document.getElementById(id); });
+        var localSelected = selects.map(function(s) { return s.value; }).filter(function(val) { return val !== ""; });
+
+        selects.forEach(function(currentSelect) {
+            var options = currentSelect.options;
+            for (var i = 0; i < options.length; i++) {
+                var opt = options[i];
+                if (opt.value === "") continue;
+
+                if (opt.style.display === 'none') continue;
+
+                opt.text = opt.text.replace(" (Used elsewhere)", "");
+
+                var isGloballyUsed = currentGlobalUsedChampions.includes(opt.value);
+                var isLocallyUsed = localSelected.includes(opt.value) && currentSelect.value !== opt.value;
+
+                if (isGloballyUsed) {
+                    opt.disabled = true;
+                    opt.text = opt.text + " (Used elsewhere)";
+                } else if (isLocallyUsed) {
+                    opt.disabled = true;
+                } else {
+                    opt.disabled = false;
+                }
+            }
+        });
+    }
+
+    function validateForm() {
+        if (document.activeElement && document.activeElement.id === 'btnDelete') {
+            return true;
+        }
+
+        var selectIds = ['modalLeader', 'modalSup1', 'modalSup2', 'modalSup3'];
+        var conflicts = [];
+
+        selectIds.forEach(function(id) {
+            var val = document.getElementById(id).value;
+            if (val && val !== "") {
+                if (currentGlobalUsedChampions.includes(val)) {
+                    var sel = document.getElementById(id);
+                    var text = sel.options[sel.selectedIndex].text;
+                    conflicts.push(text);
+                }
+            }
+        });
+
+        if (conflicts.length > 0) {
+            var errorDiv = document.getElementById('validationError');
+            errorDiv.innerHTML = "<strong>Cannot Save:</strong> The following champions are already used in other slots:<br/>" + conflicts.join(", ");
+            errorDiv.style.display = 'block';
+            return false;
+        }
+
+        return true;
+    }
+
+    function closeModal() {
+        document.getElementById('assignModal').style.display = "none";
+    }
+
+    window.onclick = function(event) {
+        var modal = document.getElementById('assignModal');
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+</script>
+
+</body>
+</html>

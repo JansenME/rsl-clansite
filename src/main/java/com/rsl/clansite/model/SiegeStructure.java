@@ -38,6 +38,15 @@ public class SiegeStructure {
         }
     }
 
+    public List<List<SiegeSlot>> getGroups() {
+        List<List<SiegeSlot>> groups = new ArrayList<>();
+        int groupSize = 3;
+        for (int i = 0; i < slots.size(); i += groupSize) {
+            groups.add(slots.subList(i, Math.min(i + groupSize, slots.size())));
+        }
+        return groups;
+    }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -46,10 +55,15 @@ public class SiegeStructure {
         private String memberId;
         private String playerName;
 
+        private String leaderChampionId;
+        private List<String> supportChampionIds = new ArrayList<>();
+
         public SiegeSlot(int slotNumber) {
             this.slotNumber = slotNumber;
             this.memberId = null;
             this.playerName = null;
+            this.leaderChampionId = null;
+            this.supportChampionIds = new ArrayList<>();
         }
     }
 }

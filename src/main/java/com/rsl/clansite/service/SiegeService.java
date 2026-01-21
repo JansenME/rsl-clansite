@@ -1,29 +1,38 @@
 package com.rsl.clansite.service;
 
 import com.rsl.clansite.model.SiegeStructure;
+import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.entity.SiegeEntity;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.SiegeStatus;
 import com.rsl.clansite.model.enums.SiegeStructureType;
+import com.rsl.clansite.repository.ClanmemberRepository;
 import com.rsl.clansite.repository.SiegeRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Slf4j
 @Service
 public class SiegeService {
 
     private final SiegeRepository siegeRepository;
+    private final ClanmemberRepository clanmemberRepository;
 
-    public SiegeService(SiegeRepository siegeRepository) {
+    public SiegeService(SiegeRepository siegeRepository, ClanmemberRepository clanmemberRepository) {
         this.siegeRepository = siegeRepository;
+        this.clanmemberRepository = clanmemberRepository;
     }
 
     public Optional<SiegeEntity> getActiveSiege(ClanGroup clanGroup) {
@@ -150,5 +159,124 @@ public class SiegeService {
         }
 
         return map;
+    }
+
+    // -------------------------------------------------------------------------------------
+    // NEW METHODS ADDED FOR DEFENSE ASSIGNMENT (User Story: Siege Defense & Grouping)
+    // -------------------------------------------------------------------------------------
+
+    @Transactional
+    public void assignDefenseTeam(String siegeId, String structureId, int slotNumber, String memberId, String leaderId, List<String> supportIds) {
+
+        SiegeEntity siege = siegeRepository.findById(new ObjectId(siegeId))
+                .orElseThrow(() -> new IllegalArgumentException("Siege not found"));
+
+        // Find the Structure
+        SiegeStructure structure = siege.getDefensiveStructures().stream()
+                .filter(s -> s.getId().equals(structureId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Structure not found"));
+
+        // Find the Slot using the inner class reference
+        SiegeStructure.SiegeSlot slot = structure.getSlots().stream()
+                .filter(s -> s.getSlotNumber() == slotNumber)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Slot not found"));
+
+        // --- CLEARING LOGIC (Delete Team) ---
+        // If memberId is null or empty, we are clearing the slot.
+        if (!StringUtils.hasText(memberId)) {
+            log.info("Clearing slot {} in structure {}", slotNumber, structure.getName());
+            slot.setMemberId(null);
+            slot.setPlayerName(null);
+            slot.setLeaderChampionId(null);
+            slot.setSupportChampionIds(new ArrayList<>());
+            siegeRepository.save(siege);
+            return;
+        }
+
+        // --- ASSIGNMENT LOGIC ---
+        // 1. Fetch Member (Convert String ID to ObjectId)
+        ClanmemberEntity member = clanmemberRepository.findById(new ObjectId(memberId))
+                .orElseThrow(() -> new IllegalArgumentException("Member not found"));
+
+        // 2. Prepare Roster for O(1) Lookup
+        List<String> rosterList = member.getRosterChampionIds();
+        Set<String> roster = new HashSet<>(rosterList != null ? rosterList : Collections.emptyList());
+
+        // 3. Validate Ownership (Leader)
+        if (StringUtils.hasText(leaderId) && !roster.contains(leaderId)) {
+            throw new IllegalArgumentException("Member does not own the Leader champion.");
+        }
+
+        // 4. Validate Ownership (Supports)
+        if (supportIds != null) {
+            for (String supId : supportIds) {
+                if (StringUtils.hasText(supId) && !roster.contains(supId)) {
+                    throw new IllegalArgumentException("Member does not own one or more support champions.");
+                }
+            }
+        }
+
+        // 5. Validate Slot Limits (Skip if editing a slot I already own)
+        if (!memberId.equals(slot.getMemberId())) {
+            long usedSlots = countUsedSlots(siege, memberId);
+            if (usedSlots >= member.getMaxDefenseScrolls()) {
+                throw new IllegalArgumentException("Member has reached their Defense Scroll limit (" + member.getMaxDefenseScrolls() + ").");
+            }
+        }
+
+        // 6. Validate Champion Uniqueness (Global for this Siege)
+        validateGlobalUniqueness(siege, memberId, leaderId, supportIds, structureId, slotNumber);
+
+        // 7. Update Slot
+        slot.setMemberId(memberId);
+        slot.setPlayerName(member.getIngameName()); // Using Ingame Name correctly
+        slot.setLeaderChampionId(leaderId);
+        slot.setSupportChampionIds(supportIds != null ? supportIds : new ArrayList<>());
+
+        siegeRepository.save(siege);
+    }
+
+    public long countUsedSlots(SiegeEntity siege, String memberId) {
+        return siege.getDefensiveStructures().stream()
+                .flatMap(s -> s.getSlots().stream())
+                .filter(slot -> memberId.equals(slot.getMemberId()))
+                .count();
+    }
+
+    private void validateGlobalUniqueness(SiegeEntity siege, String memberId, String leaderId, List<String> supportIds, String currentStructId, int currentSlotNum) {
+        Set<String> proposedChamps = new HashSet<>();
+        if (StringUtils.hasText(leaderId)) proposedChamps.add(leaderId);
+        if (supportIds != null) supportIds.stream().filter(StringUtils::hasText).forEach(proposedChamps::add);
+
+        // Iterate over every structure and every slot in the siege
+        for (SiegeStructure struct : siege.getDefensiveStructures()) {
+            for (SiegeStructure.SiegeSlot slot : struct.getSlots()) {
+
+                // Only check slots owned by this member
+                if (memberId.equals(slot.getMemberId())) {
+
+                    // Skip the slot we are currently editing
+                    if (struct.getId().equals(currentStructId) && slot.getSlotNumber() == currentSlotNum) {
+                        continue;
+                    }
+
+                    // Check Leader Collision
+                    if (StringUtils.hasText(slot.getLeaderChampionId()) && proposedChamps.contains(slot.getLeaderChampionId())) {
+                        throw new IllegalArgumentException("Champion (ID: " + slot.getLeaderChampionId() + ") is already used in another slot.");
+                    }
+
+                    // Check Support Collision
+                    if (slot.getSupportChampionIds() != null) {
+                        for (String sup : slot.getSupportChampionIds()) {
+                            if (StringUtils.hasText(sup) && proposedChamps.contains(sup)) {
+                                throw new IllegalArgumentException("Champion (ID: " + sup + ") is already used in another slot.");
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

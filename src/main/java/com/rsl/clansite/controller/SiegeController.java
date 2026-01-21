@@ -1,9 +1,15 @@
 package com.rsl.clansite.controller;
 
 import com.rsl.clansite.model.SiegeStructure;
+import com.rsl.clansite.model.dto.SiegeSlotAssignmentDTO;
+import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.entity.SiegeEntity;
 import com.rsl.clansite.model.enums.ClanGroup;
+import com.rsl.clansite.model.enums.MemberStatus; // Import Added
+import com.rsl.clansite.model.enums.SiegeStatus;
+import com.rsl.clansite.repository.ChampionRepository;
+import com.rsl.clansite.repository.ClanmemberRepository;
 import com.rsl.clansite.repository.SiegeRepository;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
@@ -13,17 +19,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Controller
@@ -33,38 +37,256 @@ public class SiegeController {
     private final CommonsService commonsService;
     private final ClanmemberService clanmemberService;
     private final SiegeService siegeService;
-    private final SiegeRepository siegeRepository; // Direct access for updates
+    private final SiegeRepository siegeRepository;
+    private final ClanmemberRepository clanmemberRepository;
+    private final ChampionRepository championRepository;
 
     public SiegeController(CommonsService commonsService,
                            ClanmemberService clanmemberService,
                            SiegeService siegeService,
-                           SiegeRepository siegeRepository) {
+                           SiegeRepository siegeRepository,
+                           ClanmemberRepository clanmemberRepository,
+                           ChampionRepository championRepository) {
         this.commonsService = commonsService;
         this.clanmemberService = clanmemberService;
         this.siegeService = siegeService;
         this.siegeRepository = siegeRepository;
+        this.clanmemberRepository = clanmemberRepository;
+        this.championRepository = championRepository;
     }
+
+    // --- GET MAPPINGS ---
 
     @GetMapping
     @PreAuthorize("hasRole('MEMBER')")
-    public String siegeDashboard(Model model, Authentication authentication, HttpSession session) {
+    public String siegeLanding(Model model, Authentication authentication, HttpSession session) {
         commonsService.fillModel(model, authentication, session);
-        ClanmemberEntity activeMember = clanmemberService.getActiveClanmember(session, authentication);
+        return "siege-landing";
+    }
 
-        ClanGroup primaryGroup = activeMember.getClanGroup();
-        if (primaryGroup == null) {
-            primaryGroup = ClanGroup.T1;
+    @GetMapping("/overview")
+    @PreAuthorize("hasRole('MEMBER')")
+    public String siegeOverview(Model model, Authentication authentication, HttpSession session) {
+        commonsService.fillModel(model, authentication, session);
+        setupSiegeModel(model, session, authentication);
+        return "siege-overview";
+    }
+
+    @GetMapping("/defense")
+    @PreAuthorize("hasRole('MEMBER')")
+    public String siegeDefenseMap(Model model, Authentication authentication, HttpSession session) {
+        commonsService.fillModel(model, authentication, session);
+        setupSiegeModel(model, session, authentication);
+
+        ClanmemberEntity activeMember = clanmemberService.getActiveClanmember(session, authentication);
+        String discordId = activeMember.getDiscordId();
+
+        boolean isPrivileged = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(r -> r.equals("ROLE_COORDINATOR") || r.equals("ROLE_ADMIN") || r.equals("ROLE_OWNER"));
+        model.addAttribute("isPrivileged", isPrivileged);
+
+        // --- Data Loading Strategy ---
+        List<ClanmemberEntity> profilesForData;
+        Map<ClanGroup, ClanmemberEntity> myProfiles = new HashMap<>();
+
+        if (isPrivileged) {
+            // ADMIN: Load EVERYONE for name resolution
+            profilesForData = clanmemberRepository.findAll();
+
+            // Create Filtered Lists for Dropdown (ACTIVE ONLY)
+            List<ClanmemberEntity> t1Members = profilesForData.stream()
+                    .filter(m -> m.getClanGroup() == ClanGroup.T1)
+                    .filter(m -> m.getStatus() == MemberStatus.ACTIVE) // Filter Inactive
+                    .collect(Collectors.toList());
+
+            List<ClanmemberEntity> t2Members = profilesForData.stream()
+                    .filter(m -> m.getClanGroup() == ClanGroup.T2)
+                    .filter(m -> m.getStatus() == MemberStatus.ACTIVE) // Filter Inactive
+                    .collect(Collectors.toList());
+
+            Comparator<ClanmemberEntity> nameSorter = Comparator.comparing(ClanmemberEntity::getIngameName, String.CASE_INSENSITIVE_ORDER);
+            t1Members.sort(nameSorter);
+            t2Members.sort(nameSorter);
+
+            model.addAttribute("t1MembersJs", toJsList(t1Members));
+            model.addAttribute("t2MembersJs", toJsList(t2Members));
+
+            List<ClanmemberEntity> myOwn = clanmemberRepository.findAllByDiscordId(discordId);
+            myOwn.forEach(p -> myProfiles.put(p.getClanGroup(), p));
+
+        } else {
+            // MEMBER: Load only own profiles
+            profilesForData = clanmemberRepository.findAllByDiscordId(discordId);
+            profilesForData.forEach(p -> myProfiles.put(p.getClanGroup(), p));
         }
 
-        Object switchedGroupObj = session.getAttribute("switchedClanGroup");
-        if (switchedGroupObj != null) {
-            try {
-                primaryGroup = ClanGroup.valueOf(switchedGroupObj.toString());
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid ClanGroup in session: {}", switchedGroupObj);
+        model.addAttribute("profiles", myProfiles);
+
+        // --- Used Slots Calculation ---
+        List<SiegeEntity> siegeList = (List<SiegeEntity>) model.getAttribute("siegeList");
+        Map<String, Long> usedSlotsMap = new HashMap<>();
+
+        if (siegeList != null) {
+            for (SiegeEntity siege : siegeList) {
+                ClanmemberEntity profile = myProfiles.get(siege.getClanGroup());
+                if (profile != null) {
+                    long count = siegeService.countUsedSlots(siege, profile.getId().toHexString());
+                    usedSlotsMap.put(siege.getId().toHexString(), count);
+                } else {
+                    usedSlotsMap.put(siege.getId().toHexString(), 0L);
+                }
             }
         }
+        model.addAttribute("usedSlotsMap", usedSlotsMap);
 
+        // --- Champion Name Lookup ---
+        Set<String> allChampIds = new HashSet<>();
+        profilesForData.forEach(p -> {
+            if (p.getRosterChampionIds() != null) {
+                allChampIds.addAll(p.getRosterChampionIds());
+            }
+        });
+
+        Map<String, String> championNames = new HashMap<>();
+        if (!allChampIds.isEmpty()) {
+            List<ObjectId> objectIds = allChampIds.stream()
+                    .map(id -> {
+                        try { return new ObjectId(id); } catch (IllegalArgumentException e) { return null; }
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            if (!objectIds.isEmpty()) {
+                List<ChampionEntity> champs = championRepository.findAllById(objectIds);
+                champs.forEach(c -> championNames.put(c.getId().toHexString(), c.getName()));
+            }
+        }
+        model.addAttribute("championNames", championNames);
+
+        return "siege-defense";
+    }
+
+    // --- Helper to convert Entities to Simple JS Maps ---
+    private List<Map<String, Object>> toJsList(List<ClanmemberEntity> members) {
+        return members.stream().map(m -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", m.getId().toHexString());
+            map.put("ingameName", m.getIngameName());
+            map.put("rosterChampionIds", m.getRosterChampionIds());
+            map.put("knownTeams", m.getKnownTeams());
+            return map;
+        }).collect(Collectors.toList());
+    }
+
+    @GetMapping("/history")
+    @PreAuthorize("hasRole('MEMBER')")
+    public String siegeHistory(Model model, Authentication authentication, HttpSession session) {
+        commonsService.fillModel(model, authentication, session);
+        ClanGroup group = resolveClanGroup(session, authentication);
+        List<SiegeEntity> history = siegeRepository.findByClanGroupAndStatusOrderByStartDateDesc(group, SiegeStatus.FINISHED);
+        model.addAttribute("siegeHistory", history);
+        return "siege-history";
+    }
+
+    // --- ACTIONS ---
+
+    @PostMapping("/assign-slot")
+    @PreAuthorize("hasRole('MEMBER')")
+    public String assignDefenseSlot(@ModelAttribute SiegeSlotAssignmentDTO assignmentDTO,
+                                    RedirectAttributes redirectAttributes,
+                                    Authentication authentication,
+                                    HttpSession session) {
+
+        if (!hasPermission(session, authentication, assignmentDTO.getMemberId())) {
+            redirectAttributes.addFlashAttribute("error", "You do not have permission to edit this slot.");
+            return "redirect:/siege/defense";
+        }
+
+        try {
+            siegeService.assignDefenseTeam(
+                    assignmentDTO.getSiegeId(),
+                    assignmentDTO.getStructureId(),
+                    assignmentDTO.getSlotNumber(),
+                    assignmentDTO.getMemberId(),
+                    assignmentDTO.getLeaderChampionId(),
+                    assignmentDTO.getSupportChampionIds()
+            );
+            redirectAttributes.addFlashAttribute("success", "Defense team assigned successfully!");
+        } catch (Exception e) {
+            log.error("Failed to assign defense slot", e);
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+
+        return "redirect:/siege/defense";
+    }
+
+    @PostMapping("/clear-slot")
+    @PreAuthorize("hasRole('MEMBER')")
+    public String clearDefenseSlot(@RequestParam String siegeId,
+                                   @RequestParam String structureId,
+                                   @RequestParam int slotNumber,
+                                   @RequestParam String memberId,
+                                   RedirectAttributes redirectAttributes,
+                                   Authentication authentication,
+                                   HttpSession session) {
+
+        if (!hasPermission(session, authentication, memberId)) {
+            redirectAttributes.addFlashAttribute("error", "You do not have permission to clear this slot.");
+            return "redirect:/siege/defense";
+        }
+
+        try {
+            siegeService.assignDefenseTeam(siegeId, structureId, slotNumber, null, null, new ArrayList<>());
+
+            redirectAttributes.addFlashAttribute("success", "Defense slot cleared successfully!");
+        } catch (Exception e) {
+            log.error("Failed to clear defense slot", e);
+            redirectAttributes.addFlashAttribute("error", "Failed to clear slot: " + e.getMessage());
+        }
+
+        return "redirect:/siege/defense";
+    }
+
+    @PostMapping("/structure/update")
+    @PreAuthorize("hasRole('COORDINATOR') or hasRole('ADMIN') or hasRole('OWNER')")
+    public String updateStructureStatus(@RequestParam("siegeId") String siegeId,
+                                        @RequestParam("structureId") String structureId,
+                                        @RequestParam("mapType") String mapType,
+                                        @RequestParam("isCleared") boolean isCleared) {
+        Optional<SiegeEntity> siegeOpt = siegeRepository.findById(new ObjectId(siegeId));
+        if (siegeOpt.isEmpty()) return "redirect:/siege/overview";
+        SiegeEntity siege = siegeOpt.get();
+        List<SiegeStructure> targetList = mapType.equals("DEFENSE") ? siege.getDefensiveStructures() : siege.getTargetStructures();
+        for (SiegeStructure structure : targetList) {
+            if (structure.getId().equals(structureId)) {
+                structure.setCleared(isCleared);
+                break;
+            }
+        }
+        siegeRepository.save(siege);
+        return "redirect:/siege/overview";
+    }
+
+    // --- HELPER METHODS ---
+
+    private boolean hasPermission(HttpSession session, Authentication authentication, String targetMemberId) {
+        ClanmemberEntity activeUser = clanmemberService.getActiveClanmember(session, authentication);
+        List<ClanmemberEntity> userProfiles = clanmemberRepository.findAllByDiscordId(activeUser.getDiscordId());
+
+        boolean isSelf = userProfiles.stream()
+                .anyMatch(p -> p.getId().toHexString().equals(targetMemberId));
+
+        boolean isPrivileged = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_COORDINATOR") || role.equals("ROLE_ADMIN") || role.equals("ROLE_OWNER"));
+
+        return isSelf || isPrivileged;
+    }
+
+    private void setupSiegeModel(Model model, HttpSession session, Authentication authentication) {
+        ClanmemberEntity activeMember = clanmemberService.getActiveClanmember(session, authentication);
+        ClanGroup primaryGroup = resolveClanGroup(session, authentication);
         ClanGroup secondaryGroup = (primaryGroup == ClanGroup.T1) ? ClanGroup.T2 : ClanGroup.T1;
 
         SiegeEntity primarySiege = getOrCreateSiege(primaryGroup);
@@ -76,44 +298,25 @@ public class SiegeController {
 
         model.addAttribute("siegeList", siegeList);
         model.addAttribute("primaryGroup", primaryGroup);
-
-        return "siege-dashboard";
+        model.addAttribute("currentUser", activeMember);
     }
 
-    @PostMapping("/structure/update")
-    @PreAuthorize("hasRole('COORDINATOR') or hasRole('ADMIN') or hasRole('OWNER')")
-    public String updateStructureStatus(@RequestParam("siegeId") String siegeId,
-                                        @RequestParam("structureId") String structureId,
-                                        @RequestParam("mapType") String mapType, // "DEFENSE" or "TARGET"
-                                        @RequestParam("isCleared") boolean isCleared) {
+    private ClanGroup resolveClanGroup(HttpSession session, Authentication authentication) {
+        ClanmemberEntity activeMember = clanmemberService.getActiveClanmember(session, authentication);
+        ClanGroup primaryGroup = activeMember.getClanGroup();
+        if (primaryGroup == null) primaryGroup = ClanGroup.T1;
 
-        Optional<SiegeEntity> siegeOpt = siegeRepository.findById(new ObjectId(siegeId));
-        if (siegeOpt.isEmpty()) {
-            return "redirect:/siege";
+        Object switchedGroupObj = session.getAttribute("switchedClanGroup");
+        if (switchedGroupObj != null) {
+            try {
+                primaryGroup = ClanGroup.valueOf(switchedGroupObj.toString());
+            } catch (IllegalArgumentException e) { }
         }
-        SiegeEntity siege = siegeOpt.get();
-
-        List<SiegeStructure> targetList = mapType.equals("DEFENSE")
-                ? siege.getDefensiveStructures()
-                : siege.getTargetStructures();
-
-        for (SiegeStructure structure : targetList) {
-            if (structure.getId().equals(structureId)) {
-                structure.setCleared(isCleared);
-                break;
-            }
-        }
-
-        siegeRepository.save(siege);
-        return "redirect:/siege";
+        return primaryGroup;
     }
 
     private SiegeEntity getOrCreateSiege(ClanGroup group) {
         return siegeService.getActiveSiege(group)
-                .orElseGet(() -> {
-                    log.info("Lazy-initializing first siege for {}", group);
-                    // Updated to pass current time as start date
-                    return siegeService.createNextSiege(group, LocalDateTime.now());
-                });
+                .orElseGet(() -> siegeService.createNextSiege(group, LocalDateTime.now()));
     }
 }

@@ -1,0 +1,133 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Siege History</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+    <script th:src="@{/styles/js/main.js}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <style>
+        .history-container {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        table.history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table.history-table th, table.history-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        table.history-table th {
+            background-color: #f8f9fa;
+            color: #555;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.85em;
+        }
+        table.history-table tr:hover {
+            background-color: #fcfcfc;
+        }
+        .score-pill {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-weight: bold;
+            background: #eef2f5;
+            color: #2c3e50;
+        }
+        .score-breakdown {
+            font-size: 0.8em;
+            color: #7f8c8d;
+            margin-left: 10px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #777;
+        }
+        .clan-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            margin-right: 8px;
+            font-weight: bold;
+        }
+        .badge-T1 { background-color: #3498db; color: white; }
+        .badge-T2 { background-color: #e67e22; color: white; }
+    </style>
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container"></div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <div class="row">
+                <div class="col-8">
+                    <h2><i class="fas fa-history"></i> Siege Archives</h2>
+                </div>
+                <div class="col-4" style="text-align: right;">
+                    <a th:href="@{/siege}" class="button alt small">Back to Siege Hub</a>
+                </div>
+            </div>
+
+            <p>Historical record of past battles and outcomes.</p>
+
+            <div class="history-container">
+                <div th:if="${#lists.isEmpty(siegeHistory)}" class="empty-state">
+                    <i class="fas fa-scroll" style="font-size: 3em; color: #ddd; margin-bottom: 20px;"></i>
+                    <p>No completed sieges found in the archives.</p>
+                </div>
+
+                <table th:if="${!#lists.isEmpty(siegeHistory)}" class="history-table">
+                    <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Clan</th>
+                        <th>Opponent</th>
+                        <th>Score</th>
+                        <th>Details</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="siege : ${siegeHistory}">
+                        <td th:text="${#temporals.format(siege.startDate, 'dd MMM yyyy')}">01 Jan 2026</td>
+                        <td>
+                            <span class="clan-badge"
+                                  th:classappend="'badge-' + ${siege.clanGroup}"
+                                  th:text="${siege.clanGroup}">T1</span>
+                        </td>
+                        <td style="font-weight: bold; color: #333;" th:text="${siege.opponentClanName}">Opponent Name</td>
+                        <td>
+                            <span class="score-pill" th:text="${siege.totalPoints}">2500</span>
+                            <span class="score-breakdown">
+                                (<span th:text="${siege.currentDefensePoints}">Def</span> Def /
+                                <span th:text="${siege.currentAttackPoints}">Atk</span> Atk)
+                            </span>
+                        </td>
+                        <td>
+                            <span style="color: #aaa; font-size: 0.8em;">Finished</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright"></div>
+</div>
+</body>
+</html>

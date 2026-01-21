@@ -38,6 +38,9 @@ public class ClanmemberEntity {
     private String ingameName;
 
     private ClanRank clanRank;
+
+    private int maxDefenseScrolls = 2;
+
     private List<String> rosterChampionIds = new ArrayList<>();
 
     private List<Team> knownTeams = new ArrayList<>();
