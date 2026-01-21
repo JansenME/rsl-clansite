@@ -252,7 +252,6 @@
 </div>
 
 <script th:if="${isPrivileged}" th:inline="javascript">
-    // FIX: Use the specific JS data variables
     var t1Members = /*[[${t1MembersJs}]]*/ [];
     var t2Members = /*[[${t2MembersJs}]]*/ [];
     var isPrivilegedUser = true;
@@ -338,7 +337,7 @@
             if (list) {
                 list.forEach(function(m) {
                     var opt = document.createElement('option');
-                    opt.value = m.id; // This is now a clean string
+                    opt.value = m.id;
                     opt.text = m.ingameName;
                     select.appendChild(opt);
                 });
@@ -347,8 +346,6 @@
             if (occupiedBy && occupiedBy !== 'null') {
                 select.value = occupiedBy;
             } else {
-                // If it's empty, default to ME.
-                // IMPORTANT: Ensure 'initialMemberId' matches the ID format in the list
                 select.value = initialMemberId;
             }
 
@@ -417,6 +414,15 @@
 
             setupQuickSelect();
             filterDropdownsByRoster();
+
+            var idsToCheck = ['modalLeader', 'modalSup1', 'modalSup2', 'modalSup3'];
+            idsToCheck.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el.value && el.value !== "" && !currentRoster.includes(el.value)) {
+                    el.value = "";
+                }
+            });
+
             currentGlobalUsedChampions = getGloballyUsedChampions(siegeId, selectedId, structureId, slotNumber);
             validateChampionSelection();
         }
