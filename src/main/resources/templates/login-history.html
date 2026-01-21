@@ -91,26 +91,26 @@
                                <span class="local-time"
 									 th:data-time="${member.lastLogin}"
 									 th:text="${#temporals.format(member.lastLogin, 'dd-MM-yyyy HH:mm')}">
-                                     Date Placeholder
+								   Date Placeholder
                                </span>
 							</td>
 
 							<td style="padding: 10px; vertical-align: middle; text-align: center;">
-                                <span th:if="${member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusMinutes(5))}"
+								<span th:if="${member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusMinutes(5))}"
 									  style="color: #27ae60; font-weight: bold;">
-                                     ● Online Now
-                                </span>
+									● Online Now
+								</span>
 
 								<span th:if="${!member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusMinutes(5))
-                                         and member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusDays(7))}"
+									  and member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusHours(12))}"
 									  style="color: #e67e22; font-weight: bold;">
-                                     ● Recent
-                                </span>
+									● Recent
+								</span>
 
-								<span th:if="${!member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusDays(7))}"
+								<span th:if="${!member.lastLogin.isAfter(T(java.time.LocalDateTime).now().minusHours(12))}"
 									  style="color: #999;">
-                                     ● Inactive
-                                </span>
+									● Inactive
+								</span>
 							</td>
 						</tr>
 						</tbody>
