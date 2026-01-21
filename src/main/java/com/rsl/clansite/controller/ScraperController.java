@@ -6,6 +6,7 @@ import com.rsl.clansite.model.enums.Alliance;
 import com.rsl.clansite.model.enums.Faction;
 import com.rsl.clansite.model.enums.Rarity;
 import com.rsl.clansite.repository.ChampionRepository;
+import com.rsl.clansite.service.CommonsService;
 import com.rsl.clansite.service.HellHadesScraperService;
 import com.rsl.clansite.service.TargetService;
 import lombok.AllArgsConstructor;
@@ -36,19 +37,23 @@ public class ScraperController {
     private final HellHadesScraperService scraperService;
     private final TargetService targetService;
     private final ChampionRepository championRepository;
+    private final CommonsService commonsService;
 
     @Value("${app.storage.location.champion-cards}")
     private String imageStorageLocation;
 
-    public ScraperController(HellHadesScraperService scraperService, TargetService targetService, ChampionRepository championRepository) {
+    public ScraperController(HellHadesScraperService scraperService, TargetService targetService, ChampionRepository championRepository, CommonsService commonsService) {
         this.scraperService = scraperService;
         this.targetService = targetService;
         this.championRepository = championRepository;
+        this.commonsService = commonsService;
     }
 
     @GetMapping("/scraper")
     @PreAuthorize("hasRole('ADMIN')")
-    public String scraperDashboard(Model model) {
+    public String scraperDashboard(Model model, Authentication authentication) {
+        commonsService.fillModel(model, authentication);
+
         List<ChampionEntity> allChampions = championRepository.findAll();
 
         List<AllianceGroup> allianceGroups = new ArrayList<>();
@@ -174,7 +179,9 @@ public class ScraperController {
 
     @GetMapping("/data-health")
     @PreAuthorize("hasRole('ADMIN')")
-    public String showDataHealth(Model model) {
+    public String showDataHealth(Model model, Authentication authentication) {
+        commonsService.fillModel(model, authentication);
+
         List<ChampionEntity> allChampions = championRepository.findAll();
         List<ProblemRow> problems = new ArrayList<>();
 
