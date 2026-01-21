@@ -61,10 +61,19 @@ public class BackupService {
     public void init() {
         if (backupEnabled) {
             try {
-                Files.createDirectories(Paths.get(backupLocation));
-                log.info("Backup directory initialized at: {}", backupLocation);
+                Path path = Paths.get(backupLocation);
+                if (!Files.exists(path)) {
+                    Files.createDirectories(path);
+                    log.info("Backup directory created at: {}", backupLocation);
+                } else {
+                    log.info("Backup directory already exists at: {}", backupLocation);
+                }
+
+                if (!Files.isWritable(path)) {
+                    log.error("WARNING: Backup directory exists but is NOT writable by Tomcat: {}", backupLocation);
+                }
             } catch (IOException e) {
-                log.error("Could not create backup directory: {}", e.getMessage());
+                log.error("Could not initialize backup directory: {}", e.getMessage());
             }
         }
     }
