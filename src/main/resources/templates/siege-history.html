@@ -14,7 +14,7 @@
             border-radius: 8px;
             padding: 30px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            margin-bottom: 40px; /* Spacing between tables */
+            margin-bottom: 40px;
         }
 
         h3.clan-header {
@@ -77,6 +77,23 @@
         }
         .badge-T1 { background-color: #3498db; color: white; }
         .badge-T2 { background-color: #e67e22; color: white; }
+
+        /* NEW: Outcome Badges */
+        .outcome-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: white;
+            min-width: 70px;
+            text-align: center;
+        }
+        .outcome-win { background-color: #27ae60; }
+        .outcome-loss { background-color: #e74c3c; }
+        .outcome-draw { background-color: #95a5a6; }
+
     </style>
 </head>
 <body>
@@ -110,8 +127,8 @@
                     <tr>
                         <th>Date</th>
                         <th>Opponent</th>
-                        <th>Our Score</th>
-                        <th>Actions</th>
+                        <th>Score (Us vs Them)</th>
+                        <th>Outcome</th> <th>Actions</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -119,11 +136,12 @@
                         <td th:text="${#temporals.format(siege.startDate, 'dd MMM yyyy')}">Date</td>
                         <td style="font-weight: bold; color: #333;" th:text="${siege.opponentClanName}">Opponent</td>
                         <td>
-                            <span class="score-pill" th:text="${siege.totalPoints}">2500</span>
-                            <span class="score-breakdown">
-                                (<span th:text="${siege.currentDefensePoints}">Def</span> D /
-                                <span th:text="${siege.currentAttackPoints}">Atk</span> A)
-                            </span>
+                            <span class="score-pill" th:text="${siege.totalPoints + ' - ' + siege.opponentTotalPoints}">2500 - 2000</span>
+                        </td>
+                        <td>
+                            <span th:if="${siege.totalPoints > siege.opponentTotalPoints}" class="outcome-badge outcome-win">Victory</span>
+                            <span th:if="${siege.totalPoints < siege.opponentTotalPoints}" class="outcome-badge outcome-loss">Defeat</span>
+                            <span th:if="${siege.totalPoints == siege.opponentTotalPoints}" class="outcome-badge outcome-draw">Draw</span>
                         </td>
                         <td>
                             <a th:href="@{/siege/history/{id}(id=${siege.id})}" class="button small">
@@ -147,8 +165,8 @@
                     <tr>
                         <th>Date</th>
                         <th>Opponent</th>
-                        <th>Our Score</th>
-                        <th>Actions</th>
+                        <th>Score (Us vs Them)</th>
+                        <th>Outcome</th> <th>Actions</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -156,11 +174,12 @@
                         <td th:text="${#temporals.format(siege.startDate, 'dd MMM yyyy')}">Date</td>
                         <td style="font-weight: bold; color: #333;" th:text="${siege.opponentClanName}">Opponent</td>
                         <td>
-                            <span class="score-pill" th:text="${siege.totalPoints}">2500</span>
-                            <span class="score-breakdown">
-                                (<span th:text="${siege.currentDefensePoints}">Def</span> D /
-                                <span th:text="${siege.currentAttackPoints}">Atk</span> A)
-                            </span>
+                            <span class="score-pill" th:text="${siege.totalPoints + ' - ' + siege.opponentTotalPoints}">2500 - 2000</span>
+                        </td>
+                        <td>
+                            <span th:if="${siege.totalPoints > siege.opponentTotalPoints}" class="outcome-badge outcome-win">Victory</span>
+                            <span th:if="${siege.totalPoints < siege.opponentTotalPoints}" class="outcome-badge outcome-loss">Defeat</span>
+                            <span th:if="${siege.totalPoints == siege.opponentTotalPoints}" class="outcome-badge outcome-draw">Draw</span>
                         </td>
                         <td>
                             <a th:href="@{/siege/history/{id}(id=${siege.id})}" class="button small">
