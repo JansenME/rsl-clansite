@@ -25,10 +25,7 @@
             top: 0;
             z-index: 100;
             background-color: #ffffff;
-
-            /* UPDATED: Reduced padding back to normal */
             padding-top: 20px;
-
             margin: -20px -20px 20px -20px;
             padding-left: 20px;
             padding-right: 20px;
@@ -65,20 +62,47 @@
         /* Points Ribbon */
         .siege-stats-ribbon {
             display: flex;
-            justify-content: center;
-            gap: 20px;
+            justify-content: space-between;
+            align-items: center;
             background: #f8f9fa;
             border-radius: 5px;
-            padding: 10px;
+            padding: 10px 20px;
             margin-bottom: 15px;
             border: 1px solid #eee;
+            transition: background-color 0.3s ease; /* Smooth transition for AJAX updates */
         }
+
+        /* NEW: Winning/Losing Backgrounds */
+        .ribbon-win {
+            background-color: #d4edda !important;
+            border-color: #c3e6cb !important;
+        }
+        .ribbon-lose {
+            background-color: #f8d7da !important;
+            border-color: #f5c6cb !important;
+        }
+
+        .score-side {
+            display: flex;
+            gap: 25px;
+            width: 45%;
+            justify-content: center;
+        }
+
+        .vs-divider {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #ccc;
+            text-transform: uppercase;
+        }
+
         .stat-box {
             text-align: center;
         }
         .stat-label { font-size: 0.75em; color: #777; text-transform: uppercase; letter-spacing: 1px; }
         .stat-value { font-size: 1.2em; font-weight: bold; color: #333; }
         .stat-total { color: #2980b9; }
+        .stat-total-opp { color: #c0392b; }
 
         /* Grid for Map Tables */
         .map-grid {
@@ -89,6 +113,8 @@
         }
         @media screen and (max-width: 980px) {
             .map-grid { grid-template-columns: 1fr; }
+            .siege-stats-ribbon { flex-direction: column; gap: 15px; }
+            .score-side { width: 100%; justify-content: space-around; }
         }
 
         .map-box h3 {
@@ -139,7 +165,6 @@
 
         .primary-badge {
             position: absolute;
-            /* UPDATED: Negative top value pulls it 'outside' the div */
             top: -12px;
             left: 20px;
             background: #3498db;
@@ -205,21 +230,44 @@
                         </div>
                     </div>
 
-                    <div class="siege-stats-ribbon">
-                        <div class="stat-box">
-                            <div class="stat-label">Defense Points</div>
-                            <div class="stat-value" th:id="'def-points-' + ${siege.id}" th:text="${siege.currentDefensePoints}">0</div>
+                    <div class="siege-stats-ribbon"
+                         th:id="'ribbon-' + ${siege.id}"
+                         th:classappend="${siege.totalPoints > siege.opponentTotalPoints} ? 'ribbon-win' : (${siege.totalPoints < siege.opponentTotalPoints} ? 'ribbon-lose' : '')">
+
+                        <div class="score-side">
+                            <div class="stat-box">
+                                <div class="stat-label">Defense Pts</div>
+                                <div class="stat-value" th:id="'def-points-' + ${siege.id}" th:text="${siege.currentDefensePoints}">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Attack Pts</div>
+                                <div class="stat-value" th:id="'atk-points-' + ${siege.id}" th:text="${siege.currentAttackPoints}">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Our Total</div>
+                                <div class="stat-value stat-total" th:id="'total-points-' + ${siege.id}" th:text="${siege.totalPoints}">0</div>
+                            </div>
                         </div>
-                        <div class="stat-box">
-                            <div class="stat-label">Attack Points</div>
-                            <div class="stat-value" th:id="'atk-points-' + ${siege.id}" th:text="${siege.currentAttackPoints}">0</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">Total Score</div>
-                            <div class="stat-value stat-total" th:id="'total-points-' + ${siege.id}" th:text="${siege.totalPoints}">0</div>
+
+                        <div class="vs-divider">VS</div>
+
+                        <div class="score-side">
+                            <div class="stat-box">
+                                <div class="stat-label">Their Total</div>
+                                <div class="stat-value stat-total-opp" th:id="'opp-total-' + ${siege.id}" th:text="${siege.opponentTotalPoints}">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Attack Pts</div>
+                                <div class="stat-value" th:id="'opp-atk-' + ${siege.id}" th:text="${siege.opponentAttackPoints}">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Defense Pts</div>
+                                <div class="stat-value" th:id="'opp-def-' + ${siege.id}" th:text="${siege.opponentDefensePoints}">0</div>
+                            </div>
                         </div>
                     </div>
                 </div>
+
                 <div class="map-grid">
                     <div class="map-box">
                         <h3 class="def-header"><i class="fas fa-shield-alt"></i> Defense Map (Our Base)</h3>
@@ -238,7 +286,7 @@
                                 <td class="name-cell" th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
                                 <td th:text="${struct.defensePoints}">0</td>
                                 <td>
-                                    <div sec:authorize="hasRole('COORDINATOR') or hasRole('ADMIN') or hasRole('OWNER')">
+                                    <div th:if="${isPrivileged} and !${isHistoryView}">
                                         <form method="POST" th:action="@{/siege/structure/update}" class="ajax-form">
                                             <input type="hidden" name="siegeId" th:value="${siege.id}" />
                                             <input type="hidden" name="structureId" th:value="${struct.id}" />
@@ -256,7 +304,7 @@
                                         </form>
                                     </div>
 
-                                    <div sec:authorize="!hasRole('COORDINATOR') and !hasRole('ADMIN') and !hasRole('OWNER')">
+                                    <div th:if="!${isPrivileged} or ${isHistoryView}">
                                         <span th:if="${!struct.isCleared}" class="structure-ok"><i class="fas fa-check-circle"></i> Intact</span>
                                         <span th:if="${struct.isCleared}"><i class="fas fa-skull"></i> Destroyed</span>
                                     </div>
@@ -283,7 +331,7 @@
                                 <td class="name-cell" th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
                                 <td th:text="${struct.attackPoints}">0</td>
                                 <td>
-                                    <div sec:authorize="hasRole('COORDINATOR') or hasRole('ADMIN') or hasRole('OWNER')">
+                                    <div th:if="${isPrivileged} and !${isHistoryView}">
                                         <form method="POST" th:action="@{/siege/structure/update}" class="ajax-form">
                                             <input type="hidden" name="siegeId" th:value="${siege.id}" />
                                             <input type="hidden" name="structureId" th:value="${struct.id}" />
@@ -301,7 +349,7 @@
                                         </form>
                                     </div>
 
-                                    <div sec:authorize="!hasRole('COORDINATOR') and !hasRole('ADMIN') and !hasRole('OWNER')">
+                                    <div th:if="!${isPrivileged} or ${isHistoryView}">
                                         <span th:if="${!struct.isCleared}" style="color: #e74c3c;">Active</span>
                                         <span th:if="${struct.isCleared}" class="structure-ok"><i class="fas fa-flag"></i> Captured</span>
                                     </div>
@@ -387,6 +435,7 @@
                 }
             }
 
+            // Update Our Scores
             const defEl = document.getElementById('def-points-' + siegeId);
             const atkEl = document.getElementById('atk-points-' + siegeId);
             const totEl = document.getElementById('total-points-' + siegeId);
@@ -394,6 +443,31 @@
             if (defEl) defEl.innerText = data.newDefensePoints;
             if (atkEl) atkEl.innerText = data.newAttackPoints;
             if (totEl) totEl.innerText = data.newTotalPoints;
+
+            // Update Opponent Scores
+            const oppDefEl = document.getElementById('opp-def-' + siegeId);
+            const oppAtkEl = document.getElementById('opp-atk-' + siegeId);
+            const oppTotEl = document.getElementById('opp-total-' + siegeId);
+
+            if (oppDefEl) oppDefEl.innerText = data.oppDefensePoints;
+            if (oppAtkEl) oppAtkEl.innerText = data.oppAttackPoints;
+            if (oppTotEl) oppTotEl.innerText = data.oppTotalPoints;
+
+            // NEW: Update Ribbon Color Class based on AJAX data
+            const ribbon = document.getElementById('ribbon-' + siegeId);
+            if (ribbon) {
+                // Remove existing classes
+                ribbon.classList.remove('ribbon-win', 'ribbon-lose');
+
+                const ourTotal = data.newTotalPoints;
+                const oppTotal = data.oppTotalPoints;
+
+                if (ourTotal > oppTotal) {
+                    ribbon.classList.add('ribbon-win');
+                } else if (ourTotal < oppTotal) {
+                    ribbon.classList.add('ribbon-lose');
+                }
+            }
         }
     });
 </script>

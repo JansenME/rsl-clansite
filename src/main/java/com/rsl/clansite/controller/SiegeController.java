@@ -83,10 +83,9 @@ public class SiegeController {
         ClanmemberEntity activeMember = clanmemberService.getActiveClanmember(session, authentication);
         String discordId = activeMember.getDiscordId();
 
-        boolean isPrivileged = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(r -> r.equals("ROLE_COORDINATOR") || r.equals("ROLE_ADMIN") || r.equals("ROLE_OWNER"));
-        model.addAttribute("isPrivileged", isPrivileged);
+        // isPrivileged is now set in setupSiegeModel, can reuse logic or rely on model
+
+        boolean isPrivileged = (boolean) model.getAttribute("isPrivileged");
 
         // --- Data Loading Strategy ---
         List<ClanmemberEntity> profilesForData;
@@ -177,10 +176,34 @@ public class SiegeController {
     @PreAuthorize("hasRole('MEMBER')")
     public String siegeHistory(Model model, Authentication authentication, HttpSession session) {
         commonsService.fillModel(model, authentication, session);
-        ClanGroup group = resolveClanGroup(session, authentication);
-        List<SiegeEntity> history = siegeRepository.findByClanGroupAndStatusOrderByStartDateDesc(group, SiegeStatus.FINISHED);
-        model.addAttribute("siegeHistory", history);
+
+        List<SiegeEntity> t1History = siegeRepository.findByClanGroupAndStatusOrderByStartDateDesc(ClanGroup.T1, SiegeStatus.FINISHED);
+        List<SiegeEntity> t2History = siegeRepository.findByClanGroupAndStatusOrderByStartDateDesc(ClanGroup.T2, SiegeStatus.FINISHED);
+
+        model.addAttribute("t1History", t1History);
+        model.addAttribute("t2History", t2History);
         return "siege-history";
+    }
+
+    @GetMapping("/history/{id}")
+    @PreAuthorize("hasRole('MEMBER')")
+    public String viewHistoryDetails(@PathVariable String id, Model model, Authentication authentication, HttpSession session) {
+        commonsService.fillModel(model, authentication, session);
+
+        SiegeEntity siege = siegeRepository.findById(new ObjectId(id))
+                .orElseThrow(() -> new IllegalArgumentException("Siege not found"));
+
+        model.addAttribute("siegeList", Collections.singletonList(siege));
+        model.addAttribute("isHistoryView", true);
+        model.addAttribute("primaryGroup", siege.getClanGroup());
+
+        // UPDATED: Manually calculate privilege for history view context
+        boolean isPrivileged = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(r -> r.equals("ROLE_COORDINATOR") || r.equals("ROLE_ADMIN") || r.equals("ROLE_OWNER"));
+        model.addAttribute("isPrivileged", isPrivileged);
+
+        return "siege-overview";
     }
 
     // --- ACTIONS ---
@@ -248,7 +271,7 @@ public class SiegeController {
                                         @RequestParam("structureId") String structureId,
                                         @RequestParam("mapType") String mapType,
                                         @RequestParam("isCleared") boolean isCleared,
-                                        HttpServletRequest request) { // Added Request
+                                        HttpServletRequest request) {
 
         Optional<SiegeEntity> siegeOpt = siegeRepository.findById(new ObjectId(siegeId));
         if (siegeOpt.isEmpty()) {
@@ -266,13 +289,15 @@ public class SiegeController {
         }
         siegeRepository.save(siege);
 
-        // Check for AJAX
         if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("newDefensePoints", siege.getCurrentDefensePoints());
             response.put("newAttackPoints", siege.getCurrentAttackPoints());
             response.put("newTotalPoints", siege.getTotalPoints());
+            response.put("oppDefensePoints", siege.getOpponentDefensePoints());
+            response.put("oppAttackPoints", siege.getOpponentAttackPoints());
+            response.put("oppTotalPoints", siege.getOpponentTotalPoints());
 
             return ResponseEntity.ok(response);
         }
@@ -311,6 +336,17 @@ public class SiegeController {
         model.addAttribute("siegeList", siegeList);
         model.addAttribute("primaryGroup", primaryGroup);
         model.addAttribute("currentUser", activeMember);
+
+        // ADDED: Centralized privilege calculation for Overview
+        boolean isPrivileged = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(r -> r.equals("ROLE_COORDINATOR") || r.equals("ROLE_ADMIN") || r.equals("ROLE_OWNER"));
+        model.addAttribute("isPrivileged", isPrivileged);
+
+        // ADDED: Default check for history view
+        if (!model.containsAttribute("isHistoryView")) {
+            model.addAttribute("isHistoryView", false);
+        }
     }
 
     private ClanGroup resolveClanGroup(HttpSession session, Authentication authentication) {

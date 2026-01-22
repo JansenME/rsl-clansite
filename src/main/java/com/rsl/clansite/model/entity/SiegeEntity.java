@@ -32,7 +32,6 @@ public class SiegeEntity {
     @Indexed
     private SiegeStatus status;
 
-    // This is the anchor date for the 14-day cycle (Always a Thursday)
     private LocalDateTime startDate;
     private LocalDateTime lastModified;
 
@@ -44,13 +43,14 @@ public class SiegeEntity {
 
     private Map<String, SiegeMemberData> memberStats = new HashMap<>();
 
-    // Updated constructor to accept a specific start date (Anchor Date)
     public SiegeEntity(ClanGroup clanGroup, LocalDateTime startDate) {
         this.clanGroup = clanGroup;
         this.status = SiegeStatus.PREP;
         this.startDate = startDate;
         this.lastModified = LocalDateTime.now();
     }
+
+    // --- OUR SCORE (Correct) ---
 
     public int getCurrentDefensePoints() {
         return defensiveStructures.stream()
@@ -70,6 +70,26 @@ public class SiegeEntity {
         return getCurrentDefensePoints() + getCurrentAttackPoints();
     }
 
+    // --- OPPONENT SCORE (Fixed Logic) ---
+
+    public int getOpponentAttackPoints() {
+        return defensiveStructures.stream()
+                .filter(SiegeStructure::isCleared)
+                .mapToInt(SiegeStructure::getAttackPoints)
+                .sum();
+    }
+
+    public int getOpponentDefensePoints() {
+        return targetStructures.stream()
+                .filter(s -> !s.isCleared())
+                .mapToInt(SiegeStructure::getDefensePoints)
+                .sum();
+    }
+
+    public int getOpponentTotalPoints() {
+        return getOpponentAttackPoints() + getOpponentDefensePoints();
+    }
+
     public int getMaxPossiblePoints() {
         int defMax = defensiveStructures.stream().mapToInt(SiegeStructure::getDefensePoints).sum();
         int atkMax = targetStructures.stream().mapToInt(SiegeStructure::getAttackPoints).sum();
@@ -82,7 +102,6 @@ public class SiegeEntity {
     public static class SiegeMemberData {
         private int maxDefenseScrolls = 0;
         private int maxAttackScrolls = 0;
-
         private int usedDefenseScrolls = 0;
         private int usedAttackScrolls = 0;
     }
