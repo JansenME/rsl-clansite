@@ -18,19 +18,36 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             position: relative;
         }
+
+        /* The Sticky Container */
+        .sticky-header-wrapper {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background-color: #ffffff;
+
+            /* UPDATED: Reduced padding back to normal */
+            padding-top: 20px;
+
+            margin: -20px -20px 20px -20px;
+            padding-left: 20px;
+            padding-right: 20px;
+            border-bottom: 1px solid #f0f0f0;
+            box-shadow: 0 4px 6px -4px rgba(0,0,0,0.1);
+        }
+
         .siege-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #f4f4f4;
-            padding-bottom: 15px;
-            margin-bottom: 15px;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
         }
         .siege-title {
             margin: 0;
             font-size: 1.5em;
             color: #333;
-            margin-top: 10px;
+            margin-top: 5px;
         }
         .siege-status {
             padding: 5px 12px;
@@ -53,7 +70,7 @@
             background: #f8f9fa;
             border-radius: 5px;
             padding: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             border: 1px solid #eee;
         }
         .stat-box {
@@ -68,6 +85,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
+            margin-top: 20px;
         }
         @media screen and (max-width: 980px) {
             .map-grid { grid-template-columns: 1fr; }
@@ -102,13 +120,15 @@
             color: #555;
         }
 
-        .structure-cleared {
-            background-color: #ffebee;
-            color: #c0392b;
+        tr.structure-cleared,
+        tr.structure-cleared td {
+            background-color: #ffebee !important;
+            color: #c0392b !important;
         }
-        .structure-cleared .name-cell {
+        tr.structure-cleared .name-cell {
             text-decoration: line-through;
         }
+
         .structure-ok {
             color: #27ae60;
         }
@@ -116,8 +136,10 @@
         .primary-highlight {
             border: 2px solid #3498db;
         }
+
         .primary-badge {
             position: absolute;
+            /* UPDATED: Negative top value pulls it 'outside' the div */
             top: -12px;
             left: 20px;
             background: #3498db;
@@ -126,7 +148,7 @@
             font-size: 0.75em;
             border-radius: 4px;
             font-weight: bold;
-            z-index: 10;
+            z-index: 101;
         }
 
         /* Action Buttons */
@@ -141,17 +163,6 @@
         .btn-destroy { color: #e74c3c; }
         .btn-restore { color: #27ae60; }
         .btn-capture { color: #2980b9; }
-
-        tr.structure-cleared,
-        tr.structure-cleared td {
-            background-color: #ffebee !important;
-            color: #c0392b !important;
-        }
-
-        /* Optional: Ensure the crossed-out text style applies even if color is forced */
-        tr.structure-cleared .name-cell {
-            text-decoration: line-through;
-        }
     </style>
 </head>
 <body>
@@ -175,39 +186,40 @@
                  class="siege-section"
                  th:classappend="${siege.clanGroup == primaryGroup} ? 'primary-highlight' : ''">
 
-                <div th:if="${siege.clanGroup == primaryGroup}" class="primary-badge">YOUR ACTIVE CLAN</div>
+                <div class="sticky-header-wrapper">
+                    <div th:if="${siege.clanGroup == primaryGroup}" class="primary-badge">YOUR ACTIVE CLAN</div>
 
-                <div class="siege-header">
-                    <h3 class="siege-title">
-                        <span th:text="${siege.clanGroup.name}">T1/T2</span>
-                        <span style="color: #ccc; margin: 0 10px;">vs</span>
-                        <span th:text="${siege.opponentClanName}">Opponent</span>
-                    </h3>
-                    <div>
-                        <span class="siege-status"
-                              th:classappend="'status-' + ${siege.status}"
-                              th:text="${siege.status.displayName}">STATUS</span>
-                        <small style="margin-left: 10px; color: #777;">
-                            Started: <span th:text="${#temporals.format(siege.startDate, 'dd MMM')}">Date</span>
-                        </small>
+                    <div class="siege-header">
+                        <h3 class="siege-title">
+                            <span th:text="${siege.clanGroup.name}">T1/T2</span>
+                            <span style="color: #ccc; margin: 0 10px;">vs</span>
+                            <span th:text="${siege.opponentClanName}">Opponent</span>
+                        </h3>
+                        <div>
+                            <span class="siege-status"
+                                  th:classappend="'status-' + ${siege.status}"
+                                  th:text="${siege.status.displayName}">STATUS</span>
+                            <small style="margin-left: 10px; color: #777;">
+                                Started: <span th:text="${#temporals.format(siege.startDate, 'dd MMM')}">Date</span>
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="siege-stats-ribbon">
+                        <div class="stat-box">
+                            <div class="stat-label">Defense Points</div>
+                            <div class="stat-value" th:id="'def-points-' + ${siege.id}" th:text="${siege.currentDefensePoints}">0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Attack Points</div>
+                            <div class="stat-value" th:id="'atk-points-' + ${siege.id}" th:text="${siege.currentAttackPoints}">0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Total Score</div>
+                            <div class="stat-value stat-total" th:id="'total-points-' + ${siege.id}" th:text="${siege.totalPoints}">0</div>
+                        </div>
                     </div>
                 </div>
-
-                <div class="siege-stats-ribbon">
-                    <div class="stat-box">
-                        <div class="stat-label">Defense Points</div>
-                        <div class="stat-value" th:id="'def-points-' + ${siege.id}" th:text="${siege.currentDefensePoints}">0</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">Attack Points</div>
-                        <div class="stat-value" th:id="'atk-points-' + ${siege.id}" th:text="${siege.currentAttackPoints}">0</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">Total Score</div>
-                        <div class="stat-value stat-total" th:id="'total-points-' + ${siege.id}" th:text="${siege.totalPoints}">0</div>
-                    </div>
-                </div>
-
                 <div class="map-grid">
                     <div class="map-box">
                         <h3 class="def-header"><i class="fas fa-shield-alt"></i> Defense Map (Our Base)</h3>
@@ -222,7 +234,8 @@
                             <tbody>
                             <tr th:each="struct : ${siege.defensiveStructures}"
                                 th:classappend="${struct.isCleared} ? 'structure-cleared' : ''"
-                                th:id="'struct-row-' + ${struct.id}"> <td class="name-cell" th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
+                                th:id="'struct-row-' + ${struct.id}">
+                                <td class="name-cell" th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
                                 <td th:text="${struct.defensePoints}">0</td>
                                 <td>
                                     <div sec:authorize="hasRole('COORDINATOR') or hasRole('ADMIN') or hasRole('OWNER')">
@@ -315,33 +328,27 @@
 
         forms.forEach(form => {
             form.addEventListener('submit', function(e) {
-                e.preventDefault(); // Stop the reload
-
+                e.preventDefault();
                 const formData = new FormData(this);
                 const actionUrl = this.action;
                 const button = this.querySelector('button');
-                const originalContent = button.innerHTML;
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; // Loading state
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
                 fetch(actionUrl, {
                     method: 'POST',
                     body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
                         updateUI(this, data);
                     } else {
-                        // Fallback if server logic failed
                         window.location.reload();
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    // On fatal error, reload to ensure state consistency
                     window.location.reload();
                 });
             });
@@ -351,10 +358,9 @@
             const structureId = form.querySelector('input[name="structureId"]').value;
             const siegeId = form.querySelector('input[name="siegeId"]').value;
             const isClearedInput = form.querySelector('input[name="isCleared"]');
-            const wasClearing = isClearedInput.value === 'true'; // Current action was "to clear"
+            const wasClearing = isClearedInput.value === 'true';
             const mapType = form.querySelector('input[name="mapType"]').value;
 
-            // 1. Update Row Styling
             const row = document.getElementById('struct-row-' + structureId);
             if (wasClearing) {
                 row.classList.add('structure-cleared');
@@ -362,16 +368,13 @@
                 row.classList.remove('structure-cleared');
             }
 
-            // 2. Flip Button and Input for next action
             const button = form.querySelector('button');
             if (wasClearing) {
-                // Swapping to RESTORE mode
                 isClearedInput.value = 'false';
                 button.className = 'btn-action btn-restore';
                 button.title = (mapType === 'DEFENSE') ? 'Mark as Intact' : 'Undo Capture';
                 button.innerHTML = '<i class="fas fa-undo"></i> Restore';
             } else {
-                // Swapping to DESTROY/CAPTURE mode
                 isClearedInput.value = 'true';
                 if (mapType === 'DEFENSE') {
                     button.className = 'btn-action btn-destroy';
@@ -384,7 +387,6 @@
                 }
             }
 
-            // 3. Update Points Ribbon
             const defEl = document.getElementById('def-points-' + siegeId);
             const atkEl = document.getElementById('atk-points-' + siegeId);
             const totEl = document.getElementById('total-points-' + siegeId);
