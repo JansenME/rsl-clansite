@@ -571,7 +571,7 @@ public class ClanmemberService {
 
         auditLogService.logAction(
                 authentication,
-                AuditAction.MEMBER_ADD,
+                AuditAction.MEMBER_REACTIVATE,
                 member.getIngameName(),
                 "Member Re-activated from Archive"
         );
