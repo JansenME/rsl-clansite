@@ -14,9 +14,11 @@ import com.rsl.clansite.repository.SiegeRepository;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
 import com.rsl.clansite.service.SiegeService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -91,10 +93,7 @@ public class SiegeController {
         Map<ClanGroup, ClanmemberEntity> myProfiles = new HashMap<>();
 
         if (isPrivileged) {
-            // ADMIN: Load EVERYONE for name resolution
             profilesForData = clanmemberRepository.findAll();
-
-            // Create Filtered Lists for Dropdown (ACTIVE ONLY)
             List<ClanmemberEntity> t1Members = profilesForData.stream()
                     .filter(m -> m.getClanGroup() == ClanGroup.T1)
                     .filter(m -> m.getStatus() == MemberStatus.ACTIVE)
@@ -114,16 +113,13 @@ public class SiegeController {
 
             List<ClanmemberEntity> myOwn = clanmemberRepository.findAllByDiscordId(discordId);
             myOwn.forEach(p -> myProfiles.put(p.getClanGroup(), p));
-
         } else {
-            // MEMBER: Load only own profiles
             profilesForData = clanmemberRepository.findAllByDiscordId(discordId);
             profilesForData.forEach(p -> myProfiles.put(p.getClanGroup(), p));
         }
 
         model.addAttribute("profiles", myProfiles);
 
-        // --- Used Slots Calculation ---
         List<SiegeEntity> siegeList = (List<SiegeEntity>) model.getAttribute("siegeList");
         Map<String, Long> usedSlotsMap = new HashMap<>();
 
@@ -140,7 +136,6 @@ public class SiegeController {
         }
         model.addAttribute("usedSlotsMap", usedSlotsMap);
 
-        // --- Champion Name Lookup ---
         Set<String> allChampIds = new HashSet<>();
         profilesForData.forEach(p -> {
             if (p.getRosterChampionIds() != null) {
@@ -167,7 +162,6 @@ public class SiegeController {
         return "siege-defense";
     }
 
-    // --- Helper to convert Entities to Simple JS Maps ---
     private List<Map<String, Object>> toJsList(List<ClanmemberEntity> members) {
         return members.stream().map(m -> {
             Map<String, Object> map = new HashMap<>();
@@ -211,7 +205,7 @@ public class SiegeController {
                     assignmentDTO.getMemberId(),
                     assignmentDTO.getLeaderChampionId(),
                     assignmentDTO.getSupportChampionIds(),
-                    authentication // Passed Authentication
+                    authentication
             );
             redirectAttributes.addFlashAttribute("success", "Defense team assigned successfully!");
         } catch (Exception e) {
@@ -238,9 +232,7 @@ public class SiegeController {
         }
 
         try {
-            // Passed Authentication
             siegeService.assignDefenseTeam(siegeId, structureId, slotNumber, null, null, new ArrayList<>(), authentication);
-
             redirectAttributes.addFlashAttribute("success", "Defense slot cleared successfully!");
         } catch (Exception e) {
             log.error("Failed to clear defense slot", e);
@@ -252,14 +244,20 @@ public class SiegeController {
 
     @PostMapping("/structure/update")
     @PreAuthorize("hasRole('COORDINATOR') or hasRole('ADMIN') or hasRole('OWNER')")
-    public String updateStructureStatus(@RequestParam("siegeId") String siegeId,
+    public Object updateStructureStatus(@RequestParam("siegeId") String siegeId,
                                         @RequestParam("structureId") String structureId,
                                         @RequestParam("mapType") String mapType,
-                                        @RequestParam("isCleared") boolean isCleared) {
+                                        @RequestParam("isCleared") boolean isCleared,
+                                        HttpServletRequest request) { // Added Request
+
         Optional<SiegeEntity> siegeOpt = siegeRepository.findById(new ObjectId(siegeId));
-        if (siegeOpt.isEmpty()) return "redirect:/siege/overview";
+        if (siegeOpt.isEmpty()) {
+            return "redirect:/siege/overview";
+        }
+
         SiegeEntity siege = siegeOpt.get();
         List<SiegeStructure> targetList = mapType.equals("DEFENSE") ? siege.getDefensiveStructures() : siege.getTargetStructures();
+
         for (SiegeStructure structure : targetList) {
             if (structure.getId().equals(structureId)) {
                 structure.setCleared(isCleared);
@@ -267,6 +265,18 @@ public class SiegeController {
             }
         }
         siegeRepository.save(siege);
+
+        // Check for AJAX
+        if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("newDefensePoints", siege.getCurrentDefensePoints());
+            response.put("newAttackPoints", siege.getCurrentAttackPoints());
+            response.put("newTotalPoints", siege.getTotalPoints());
+
+            return ResponseEntity.ok(response);
+        }
+
         return "redirect:/siege/overview";
     }
 

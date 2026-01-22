@@ -141,6 +141,17 @@
         .btn-destroy { color: #e74c3c; }
         .btn-restore { color: #27ae60; }
         .btn-capture { color: #2980b9; }
+
+        tr.structure-cleared,
+        tr.structure-cleared td {
+            background-color: #ffebee !important;
+            color: #c0392b !important;
+        }
+
+        /* Optional: Ensure the crossed-out text style applies even if color is forced */
+        tr.structure-cleared .name-cell {
+            text-decoration: line-through;
+        }
     </style>
 </head>
 <body>
@@ -185,15 +196,15 @@
                 <div class="siege-stats-ribbon">
                     <div class="stat-box">
                         <div class="stat-label">Defense Points</div>
-                        <div class="stat-value" th:text="${siege.currentDefensePoints}">0</div>
+                        <div class="stat-value" th:id="'def-points-' + ${siege.id}" th:text="${siege.currentDefensePoints}">0</div>
                     </div>
                     <div class="stat-box">
                         <div class="stat-label">Attack Points</div>
-                        <div class="stat-value" th:text="${siege.currentAttackPoints}">0</div>
+                        <div class="stat-value" th:id="'atk-points-' + ${siege.id}" th:text="${siege.currentAttackPoints}">0</div>
                     </div>
                     <div class="stat-box">
                         <div class="stat-label">Total Score</div>
-                        <div class="stat-value stat-total" th:text="${siege.totalPoints}">0</div>
+                        <div class="stat-value stat-total" th:id="'total-points-' + ${siege.id}" th:text="${siege.totalPoints}">0</div>
                     </div>
                 </div>
 
@@ -210,12 +221,12 @@
                             </thead>
                             <tbody>
                             <tr th:each="struct : ${siege.defensiveStructures}"
-                                th:classappend="${struct.isCleared} ? 'structure-cleared' : ''">
-                                <td class="name-cell" th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
+                                th:classappend="${struct.isCleared} ? 'structure-cleared' : ''"
+                                th:id="'struct-row-' + ${struct.id}"> <td class="name-cell" th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
                                 <td th:text="${struct.defensePoints}">0</td>
                                 <td>
                                     <div sec:authorize="hasRole('COORDINATOR') or hasRole('ADMIN') or hasRole('OWNER')">
-                                        <form method="POST" th:action="@{/siege/structure/update}">
+                                        <form method="POST" th:action="@{/siege/structure/update}" class="ajax-form">
                                             <input type="hidden" name="siegeId" th:value="${siege.id}" />
                                             <input type="hidden" name="structureId" th:value="${struct.id}" />
                                             <input type="hidden" name="mapType" value="DEFENSE" />
@@ -254,12 +265,13 @@
                             </thead>
                             <tbody>
                             <tr th:each="struct : ${siege.targetStructures}"
-                                th:classappend="${struct.isCleared} ? 'structure-cleared' : ''">
+                                th:classappend="${struct.isCleared} ? 'structure-cleared' : ''"
+                                th:id="'struct-row-' + ${struct.id}">
                                 <td class="name-cell" th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
                                 <td th:text="${struct.attackPoints}">0</td>
                                 <td>
                                     <div sec:authorize="hasRole('COORDINATOR') or hasRole('ADMIN') or hasRole('OWNER')">
-                                        <form method="POST" th:action="@{/siege/structure/update}">
+                                        <form method="POST" th:action="@{/siege/structure/update}" class="ajax-form">
                                             <input type="hidden" name="siegeId" th:value="${siege.id}" />
                                             <input type="hidden" name="structureId" th:value="${struct.id}" />
                                             <input type="hidden" name="mapType" value="TARGET" />
@@ -296,5 +308,93 @@
 
     <div th:insert="~{inserts/copyright :: copyright}" id="copyright"></div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const forms = document.querySelectorAll('.ajax-form');
+
+        forms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault(); // Stop the reload
+
+                const formData = new FormData(this);
+                const actionUrl = this.action;
+                const button = this.querySelector('button');
+                const originalContent = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; // Loading state
+
+                fetch(actionUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        updateUI(this, data);
+                    } else {
+                        // Fallback if server logic failed
+                        window.location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // On fatal error, reload to ensure state consistency
+                    window.location.reload();
+                });
+            });
+        });
+
+        function updateUI(form, data) {
+            const structureId = form.querySelector('input[name="structureId"]').value;
+            const siegeId = form.querySelector('input[name="siegeId"]').value;
+            const isClearedInput = form.querySelector('input[name="isCleared"]');
+            const wasClearing = isClearedInput.value === 'true'; // Current action was "to clear"
+            const mapType = form.querySelector('input[name="mapType"]').value;
+
+            // 1. Update Row Styling
+            const row = document.getElementById('struct-row-' + structureId);
+            if (wasClearing) {
+                row.classList.add('structure-cleared');
+            } else {
+                row.classList.remove('structure-cleared');
+            }
+
+            // 2. Flip Button and Input for next action
+            const button = form.querySelector('button');
+            if (wasClearing) {
+                // Swapping to RESTORE mode
+                isClearedInput.value = 'false';
+                button.className = 'btn-action btn-restore';
+                button.title = (mapType === 'DEFENSE') ? 'Mark as Intact' : 'Undo Capture';
+                button.innerHTML = '<i class="fas fa-undo"></i> Restore';
+            } else {
+                // Swapping to DESTROY/CAPTURE mode
+                isClearedInput.value = 'true';
+                if (mapType === 'DEFENSE') {
+                    button.className = 'btn-action btn-destroy';
+                    button.title = 'Mark as Destroyed';
+                    button.innerHTML = '<i class="fas fa-bomb"></i> Destroy';
+                } else {
+                    button.className = 'btn-action btn-capture';
+                    button.title = 'Mark as Captured';
+                    button.innerHTML = '<i class="fas fa-flag"></i> Capture';
+                }
+            }
+
+            // 3. Update Points Ribbon
+            const defEl = document.getElementById('def-points-' + siegeId);
+            const atkEl = document.getElementById('atk-points-' + siegeId);
+            const totEl = document.getElementById('total-points-' + siegeId);
+
+            if (defEl) defEl.innerText = data.newDefensePoints;
+            if (atkEl) atkEl.innerText = data.newAttackPoints;
+            if (totEl) totEl.innerText = data.newTotalPoints;
+        }
+    });
+</script>
+
 </body>
 </html>
