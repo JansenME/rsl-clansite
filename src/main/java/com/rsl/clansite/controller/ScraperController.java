@@ -11,6 +11,7 @@ import com.rsl.clansite.service.HellHadesScraperService;
 import com.rsl.clansite.service.TargetService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -31,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Controller
 @RequestMapping("/admin")
 public class ScraperController {
@@ -55,19 +57,17 @@ public class ScraperController {
         commonsService.fillModel(model, authentication);
 
         List<ChampionEntity> allChampions = championRepository.findAll();
-
         List<AllianceGroup> allianceGroups = new ArrayList<>();
 
         for (Alliance alliance : Alliance.values()) {
             List<DashboardRow> allianceRows = new ArrayList<>();
             int allianceTotalDb = 0;
-            int allianceTotalTargets = 0; // NEW: Track total targets
+            int allianceTotalTargets = 0;
 
             for (Faction faction : Faction.values()) {
                 if (faction.getAlliance() == alliance) {
-
                     Map<Rarity, Integer> targets = new HashMap<>();
-                    int myTotal = targetService.getMyTotalForFaction(faction); // Total Targets for this faction
+                    int myTotal = targetService.getMyTotalForFaction(faction);
                     Map<Rarity, Integer> database = new HashMap<>();
 
                     List<ChampionEntity> factionChampions = allChampions.stream()
@@ -82,14 +82,11 @@ public class ScraperController {
 
                     Map<Rarity, Integer> online = scraperService.getOnlineCounts(faction);
                     DashboardRow row = new DashboardRow(faction, targets, database, online, myTotal);
-
                     allianceRows.add(row);
-
                     allianceTotalDb += row.getDatabase().values().stream().mapToInt(Integer::intValue).sum();
-                    allianceTotalTargets += myTotal; // Add to alliance sum
+                    allianceTotalTargets += myTotal;
                 }
             }
-
             if (!allianceRows.isEmpty()) {
                 allianceGroups.add(new AllianceGroup(alliance, allianceRows, allianceTotalDb, allianceTotalTargets));
             }
@@ -97,36 +94,47 @@ public class ScraperController {
 
         model.addAttribute("allianceGroups", allianceGroups);
         model.addAttribute("rarities", Rarity.values());
-
         return "scraper-dashboard";
     }
 
     @PostMapping("/scraper/targets/update")
     @PreAuthorize("hasRole('ADMIN')")
-    public String updateFactionTargets(@RequestParam Map<String, String> allParams, RedirectAttributes redirectAttributes) {
+    public String updateFactionTargets(@RequestParam Map<String, String> allParams,
+                                       RedirectAttributes redirectAttributes,
+                                       Authentication authentication) {
         int updatedCount = 0;
+        log.info("Received Target Update Request with {} params", allParams.size());
 
         for (Map.Entry<String, String> entry : allParams.entrySet()) {
             if (entry.getKey().contains("_")) {
                 try {
+                    // Expect format "Faction Name_RARITY"
                     String[] parts = entry.getKey().split("_");
                     if (parts.length != 2) continue;
 
-                    String factionName = parts[0];
-                    String rarityName = parts[1];
+                    String factionName = parts[0].trim();
+                    String rarityName = parts[1].trim();
 
                     Faction faction = Faction.getFactionByName(factionName);
+                    if (faction == null) {
+                        faction = Faction.getFactionByName(factionName.replace("_", " "));
+                    }
+
+                    if (faction == null) {
+                        log.warn("Could not find faction for key: {}", factionName);
+                        continue;
+                    }
+
                     Rarity rarity = Rarity.valueOf(rarityName);
-
                     int count = Integer.parseInt(entry.getValue());
-
                     int current = targetService.getTargetCount(faction, rarity);
+
                     if (current != count) {
-                        targetService.updateTarget(faction, rarity, count);
+                        targetService.updateTarget(faction, rarity, count, authentication);
                         updatedCount++;
                     }
                 } catch (Exception e) {
-                    // Ignore invalid inputs
+                    log.error("Failed to parse update for key {}: {}", entry.getKey(), e.getMessage());
                 }
             }
         }
@@ -156,7 +164,6 @@ public class ScraperController {
         }
 
         boolean forceRefresh = (referer != null && referer.contains("data-health"));
-
         var contexts = scraperService.scanForChampions(faction, forceRefresh);
 
         if (contexts.isEmpty()) {
@@ -164,7 +171,6 @@ public class ScraperController {
             redirectAttributes.addFlashAttribute("alertClass", "alert-info");
         } else {
             scraperService.importChampions(contexts, faction, authentication);
-
             String actionType = forceRefresh ? "Refreshed/Updated" : "imported";
             redirectAttributes.addFlashAttribute("message", "Successfully " + actionType + " " + contexts.size() + " champions into " + faction.getName());
             redirectAttributes.addFlashAttribute("alertClass", "alert-success");
@@ -173,7 +179,6 @@ public class ScraperController {
         if (forceRefresh) {
             return "redirect:/admin/data-health";
         }
-
         return "redirect:/admin/scraper";
     }
 
@@ -181,31 +186,23 @@ public class ScraperController {
     @PreAuthorize("hasRole('ADMIN')")
     public String showDataHealth(Model model, Authentication authentication) {
         commonsService.fillModel(model, authentication);
-
         List<ChampionEntity> allChampions = championRepository.findAll();
         List<ProblemRow> problems = new ArrayList<>();
 
         for (ChampionEntity c : allChampions) {
             List<String> issues = new ArrayList<>();
-
             if (c.getType() == null) issues.add("Missing Type");
             if (c.getAffinity() == null) issues.add("Missing Affinity");
             if (c.getRarity() == null) issues.add("Missing Rarity");
             if (c.getFaction() == null) issues.add("Missing Faction");
             if (c.getBaseStats() == null) issues.add("Missing Stats");
-
             if (c.getImagename() == null || c.getImagename().isEmpty()) {
                 issues.add("No Image Name in DB");
             } else {
                 Path path = Paths.get(imageStorageLocation, c.getImagename());
-                if (!Files.exists(path)) {
-                    issues.add("File Missing on Disk");
-                }
+                if (!Files.exists(path)) issues.add("File Missing on Disk");
             }
-
-            if (!issues.isEmpty()) {
-                problems.add(new ProblemRow(c, issues));
-            }
+            if (!issues.isEmpty()) problems.add(new ProblemRow(c, issues));
         }
 
         model.addAttribute("problems", problems);

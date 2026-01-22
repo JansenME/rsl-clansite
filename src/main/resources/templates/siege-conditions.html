@@ -54,7 +54,7 @@
                             <span th:text="${condition.category.displayName}">Category</span>
                         </td>
 
-                        <td th:text="${condition.conditionKey}">Key</td>
+                        <td th:text="${#strings.capitalizeWords(#strings.toLowerCase(#strings.replace(condition.conditionKey, '_', ' ')))}">Key</td>
 
                         <td>
                        <span th:if="${condition.isActive}" style="color: #27ae60; font-weight: bold;">

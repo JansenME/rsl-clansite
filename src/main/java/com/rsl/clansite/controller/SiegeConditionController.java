@@ -48,9 +48,12 @@ public class SiegeConditionController {
 
     @PostMapping("/{id}/toggle")
     @PreAuthorize("hasRole('COORDINATOR')")
-    public String toggleCondition(@PathVariable String id, RedirectAttributes redirectAttributes) {
+    public String toggleCondition(@PathVariable String id,
+                                  RedirectAttributes redirectAttributes,
+                                  Authentication authentication) { // Added Authentication
         try {
-            siegeConditionService.toggleConditionStatus(id);
+            // Pass Authentication to Service
+            siegeConditionService.toggleConditionStatus(id, authentication);
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Error updating condition: " + e.getMessage());
         }

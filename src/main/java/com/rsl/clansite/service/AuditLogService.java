@@ -27,6 +27,9 @@ public class AuditLogService {
         this.clanmemberRepository = clanmemberRepository;
     }
 
+    /**
+     * Standard logging for User-initiated actions (via Controller).
+     */
     public void logAction(Authentication authentication, AuditAction action, String target, String details) {
         String actorId = "SYSTEM";
         String actorName = "System";
@@ -36,6 +39,25 @@ public class AuditLogService {
             actorName = resolveActorName(oauth2User, actorId);
         }
 
+        saveLog(actorId, actorName, action, target, details);
+    }
+
+    /**
+     * Logging for System or Background tasks (Scheduler, Backup, Scraper) where no user session exists.
+     */
+    public void logSystemAction(AuditAction action, String target, String details) {
+        saveLog("SYSTEM", "System", action, target, details);
+    }
+
+    /**
+     * Overloaded method for when we know the specific user ID (e.g. Scraper initiated by specific Admin ID)
+     * but don't have the full Authentication object passed down.
+     */
+    public void logManualAction(String actorId, String actorName, AuditAction action, String target, String details) {
+        saveLog(actorId, actorName, action, target, details);
+    }
+
+    private void saveLog(String actorId, String actorName, AuditAction action, String target, String details) {
         AuditLogEntity logEntry = new AuditLogEntity(
                 ObjectId.get(),
                 LocalDateTime.now(),
@@ -45,9 +67,8 @@ public class AuditLogService {
                 target,
                 details
         );
-
         auditLogRepository.save(logEntry);
-        log.info("Audit Log recorded: [{}] {} performed by {}", action, target, actorName);
+        log.debug("Audit Log recorded: [{}] {} - {} performed by {}", action, target, details, actorName);
     }
 
     public List<AuditLogEntity> getAllLogs() {

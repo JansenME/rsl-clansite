@@ -1,11 +1,14 @@
 package com.rsl.clansite.service;
 
 import com.rsl.clansite.model.entity.SiegeConditionEntity;
+import com.rsl.clansite.model.enums.AuditAction;
 import com.rsl.clansite.model.enums.ConditionCategory;
 import com.rsl.clansite.repository.SiegeConditionRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.text.WordUtils; // Ensure this dependency exists
 import org.bson.types.ObjectId;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,9 +20,11 @@ import java.util.Optional;
 @Slf4j
 public class SiegeConditionService {
     private final SiegeConditionRepository siegeConditionRepository;
+    private final AuditLogService auditLogService;
 
-    public SiegeConditionService(SiegeConditionRepository siegeConditionRepository) {
+    public SiegeConditionService(SiegeConditionRepository siegeConditionRepository, AuditLogService auditLogService) {
         this.siegeConditionRepository = siegeConditionRepository;
+        this.auditLogService = auditLogService;
     }
 
     @PostConstruct
@@ -34,12 +39,10 @@ public class SiegeConditionService {
 
         for (ConditionCategory category : ConditionCategory.values()) {
             Class<? extends Enum<?>> enumClass = category.getEnumClass();
-
             Object[] constants = enumClass.getEnumConstants();
 
             for (Object constant : constants) {
                 String key = ((Enum<?>) constant).name();
-
                 Optional<SiegeConditionEntity> existing = siegeConditionRepository.findByCategoryAndConditionKey(category, key);
 
                 if (existing.isEmpty()) {
@@ -49,42 +52,38 @@ public class SiegeConditionService {
                 }
             }
         }
-
-        if (newConditions > 0) {
-            log.info("Siege Condition Sync: Discovered and added {} new conditions to the database.", newConditions);
-        } else {
-            log.info("Siege Condition Sync: Database is up to date.");
-        }
+        if (newConditions > 0) log.info("Added {} new conditions.", newConditions);
     }
 
     public List<SiegeConditionEntity> findAllConditions() {
         List<SiegeConditionEntity> conditions = siegeConditionRepository.findAll();
-
         conditions.sort(Comparator.comparing((SiegeConditionEntity c) -> c.getCategory().name())
                 .thenComparing(SiegeConditionEntity::getConditionKey));
-
         return conditions;
     }
 
     @Transactional
-    public void toggleConditionStatus(String id) {
-        if (id == null || !ObjectId.isValid(id)) {
-            throw new IllegalArgumentException("Invalid ID provided");
-        }
+    public void toggleConditionStatus(String id, Authentication authentication) {
+        if (id == null || !ObjectId.isValid(id)) throw new IllegalArgumentException("Invalid ID");
 
         siegeConditionRepository.findById(new ObjectId(id)).ifPresent(condition -> {
             boolean newState = !condition.isActive();
             condition.setActive(newState);
             siegeConditionRepository.save(condition);
-            log.info("Siege Condition '{}' ({}) toggled to: {}", condition.getConditionKey(), condition.getCategory(), newState);
+
+            String readableName = condition.getCategory().getDisplayName() + " - " +
+                    WordUtils.capitalize(condition.getConditionKey().replace("_", " ").toLowerCase());
+
+            String details = "Toggled to " + (newState ? "Active" : "Inactive");
+            log.info("Siege Condition '{}' toggled to: {}", readableName, newState);
+
+            auditLogService.logAction(authentication, AuditAction.SIEGE_CONDITION_TOGGLE, readableName, details);
         });
     }
 
     public SiegeConditionEntity getConditionById(ObjectId id) {
-        if (id == null) {
-            return null;
-        }
+        if (id == null) return null;
         return siegeConditionRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Siege Condition not found with ID: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("Condition not found: " + id));
     }
 }

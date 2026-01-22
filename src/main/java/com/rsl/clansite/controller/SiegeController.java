@@ -6,7 +6,7 @@ import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.entity.SiegeEntity;
 import com.rsl.clansite.model.enums.ClanGroup;
-import com.rsl.clansite.model.enums.MemberStatus; // Import Added
+import com.rsl.clansite.model.enums.MemberStatus;
 import com.rsl.clansite.model.enums.SiegeStatus;
 import com.rsl.clansite.repository.ChampionRepository;
 import com.rsl.clansite.repository.ClanmemberRepository;
@@ -97,12 +97,12 @@ public class SiegeController {
             // Create Filtered Lists for Dropdown (ACTIVE ONLY)
             List<ClanmemberEntity> t1Members = profilesForData.stream()
                     .filter(m -> m.getClanGroup() == ClanGroup.T1)
-                    .filter(m -> m.getStatus() == MemberStatus.ACTIVE) // Filter Inactive
+                    .filter(m -> m.getStatus() == MemberStatus.ACTIVE)
                     .collect(Collectors.toList());
 
             List<ClanmemberEntity> t2Members = profilesForData.stream()
                     .filter(m -> m.getClanGroup() == ClanGroup.T2)
-                    .filter(m -> m.getStatus() == MemberStatus.ACTIVE) // Filter Inactive
+                    .filter(m -> m.getStatus() == MemberStatus.ACTIVE)
                     .collect(Collectors.toList());
 
             Comparator<ClanmemberEntity> nameSorter = Comparator.comparing(ClanmemberEntity::getIngameName, String.CASE_INSENSITIVE_ORDER);
@@ -210,7 +210,8 @@ public class SiegeController {
                     assignmentDTO.getSlotNumber(),
                     assignmentDTO.getMemberId(),
                     assignmentDTO.getLeaderChampionId(),
-                    assignmentDTO.getSupportChampionIds()
+                    assignmentDTO.getSupportChampionIds(),
+                    authentication // Passed Authentication
             );
             redirectAttributes.addFlashAttribute("success", "Defense team assigned successfully!");
         } catch (Exception e) {
@@ -237,7 +238,8 @@ public class SiegeController {
         }
 
         try {
-            siegeService.assignDefenseTeam(siegeId, structureId, slotNumber, null, null, new ArrayList<>());
+            // Passed Authentication
+            siegeService.assignDefenseTeam(siegeId, structureId, slotNumber, null, null, new ArrayList<>(), authentication);
 
             redirectAttributes.addFlashAttribute("success", "Defense slot cleared successfully!");
         } catch (Exception e) {

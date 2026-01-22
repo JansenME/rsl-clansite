@@ -3,11 +3,13 @@ package com.rsl.clansite.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rsl.clansite.model.entity.FactionTargetEntity;
+import com.rsl.clansite.model.enums.AuditAction;
 import com.rsl.clansite.model.enums.Faction;
 import com.rsl.clansite.model.enums.Rarity;
 import com.rsl.clansite.repository.FactionTargetRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +26,11 @@ public class TargetService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final FactionTargetRepository factionTargetRepository;
+    private final AuditLogService auditLogService;
 
-    public TargetService(FactionTargetRepository factionTargetRepository) {
+    public TargetService(FactionTargetRepository factionTargetRepository, AuditLogService auditLogService) {
         this.factionTargetRepository = factionTargetRepository;
+        this.auditLogService = auditLogService;
     }
 
     @PostConstruct
@@ -58,8 +62,6 @@ public class TargetService {
         boolean changed = false;
 
         for (Rarity rarity : Rarity.values()) {
-            // REMOVED: Skipping Common/Uncommon. Now we track EVERYTHING.
-
             // JSON Key is usually lowercase (e.g. "legendary")
             int jsonCount = jsonRarityMap.getOrDefault(rarity.name().toLowerCase(), 0);
             int dbCount = entity.getRarityTargets().getOrDefault(rarity, 0);
@@ -68,9 +70,14 @@ public class TargetService {
             if (jsonCount > dbCount) {
                 entity.getRarityTargets().put(rarity, jsonCount);
                 changed = true;
-                log.info("Sync [{} - {}]: Updated DB ({}) to match higher JSON ({})", faction, rarity, dbCount, jsonCount);
+
+                String details = String.format("Startup Sync: Increased %s target from %d to %d (JSON source)", rarity, dbCount, jsonCount);
+                log.info("Sync [{} - {}]: {}", faction, rarity, details);
+
+                // Audit Log for System Change
+                auditLogService.logSystemAction(AuditAction.TARGET_CONFIG_UPDATE, faction.getName(), details);
+
             } else if (dbCount == 0 && jsonCount > 0) {
-                // Initialize if DB is empty
                 entity.getRarityTargets().put(rarity, jsonCount);
                 changed = true;
             }
@@ -110,12 +117,21 @@ public class TargetService {
     }
 
     @Transactional
-    public void updateTarget(Faction faction, Rarity rarity, int newCount) {
+    public void updateTarget(Faction faction, Rarity rarity, int newCount, Authentication authentication) {
         FactionTargetEntity entity = factionTargetRepository.findByFaction(faction)
                 .orElse(new FactionTargetEntity(faction));
 
+        int oldCount = entity.getRarityTargets().getOrDefault(rarity, 0);
+
         entity.getRarityTargets().put(rarity, newCount);
         factionTargetRepository.save(entity);
-        log.info("Manually updated target for [{} - {}] to {}", faction.getName(), rarity, newCount);
+
+        String details = String.format("Changed target from %d to %d", oldCount, newCount);
+        String targetStr = faction.getName() + " - " + rarity.name();
+
+        log.info("Manually updated target for [{}] to {}", targetStr, newCount);
+
+        // Audit Log for User Change
+        auditLogService.logAction(authentication, AuditAction.TARGET_CONFIG_UPDATE, targetStr, details);
     }
 }

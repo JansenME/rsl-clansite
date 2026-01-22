@@ -8,6 +8,7 @@ import com.rsl.clansite.model.BaseStats;
 import com.rsl.clansite.model.dto.ScrapedChampion;
 import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.model.enums.Affinity;
+import com.rsl.clansite.model.enums.AuditAction;
 import com.rsl.clansite.model.enums.AuraLocation;
 import com.rsl.clansite.model.enums.AuraStat;
 import com.rsl.clansite.model.enums.Faction;
@@ -47,6 +48,7 @@ public class HellHadesScraperService {
 
     private final ChampionRepository championRepository;
     private final CommonsService commonsService;
+    private final AuditLogService auditLogService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${app.storage.location.champion-cards}")
@@ -150,6 +152,10 @@ public class HellHadesScraperService {
 
         championRepository.saveAll(entitiesToSave);
         log.info("Imported/Updated {} champions for {}", entitiesToSave.size(), faction);
+
+        // --- AUDIT LOGGING ---
+        String details = String.format("Scrape completed. Updated/Added: %d", entitiesToSave.size());
+        auditLogService.logAction(authentication, AuditAction.CHAMPION_SCRAPE, faction.name(), details);
     }
 
     // --- SCRAPING LOGIC ---
