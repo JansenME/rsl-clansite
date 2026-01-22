@@ -49,6 +49,7 @@ public class ClanmemberEntity {
     private LocalDateTime statusChangedDate;
 
     private LocalDateTime lastLogin;
+    private String lastLocation;
 
     private LocalDateTime rosterLastUpdated;
     private String rosterUpdatedBy;

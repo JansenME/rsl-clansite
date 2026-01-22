@@ -22,6 +22,7 @@ public class VisitorLogEntity {
     private String username;
     private String avatarHash;
     private LocalDateTime lastLogin;
+    private String lastLocation;
     private int visitCount;
 
     public VisitorLogEntity(String discordId, String username, String avatarHash) {
@@ -30,6 +31,7 @@ public class VisitorLogEntity {
         this.avatarHash = avatarHash;
         this.lastLogin = LocalDateTime.now();
         this.visitCount = 1;
+        this.lastLocation = "Homepage"; // Default
     }
 
     public void updateLogin() {

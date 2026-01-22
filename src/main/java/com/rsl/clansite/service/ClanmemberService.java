@@ -81,6 +81,7 @@ public class ClanmemberService {
             String discordName,
             String avatarUrl,
             LocalDateTime lastLogin,
+            String lastLocation,
             List<AccountDetailDTO> accounts
     ) {}
 
@@ -140,12 +141,13 @@ public class ClanmemberService {
                 continue;
             }
 
-            LocalDateTime latestLogin = allAccounts.stream()
-                    .map(ClanmemberEntity::getLastLogin)
-                    .filter(Objects::nonNull)
-                    .max(LocalDateTime::compareTo)
-                    .orElse(null);
+            // Find the account with the most recent login to get the timestamp AND location
+            ClanmemberEntity latestActivityMember = allAccounts.stream()
+                    .filter(m -> m.getLastLogin() != null)
+                    .max((m1, m2) -> m1.getLastLogin().compareTo(m2.getLastLogin()))
+                    .orElse(allAccounts.get(0));
 
+            LocalDateTime latestLogin = latestActivityMember.getLastLogin();
             if (latestLogin == null) continue;
 
             List<AccountDetailDTO> activeAccountDetails = allAccounts.stream()
@@ -162,6 +164,7 @@ public class ClanmemberService {
                     primary.getDiscordName(),
                     avatarUrl,
                     latestLogin,
+                    latestActivityMember.getLastLocation(), // Get location from the latest active entity
                     activeAccountDetails
             ));
         }
@@ -307,7 +310,6 @@ public class ClanmemberService {
             try {
                 List<ClanmemberEntity> userAccounts = entry.getValue();
 
-                // --- SAFETY LOCK ---
                 if (userAccounts.size() > 1) {
                     log.info("Scheduled Sync: Safety Lock triggered for Discord ID {}. Multiple accounts ({}) found, skipping auto-sync.",
                             discordId, userAccounts.size());
@@ -324,7 +326,6 @@ public class ClanmemberService {
                     log.info("Scheduled Sync: User ID {} not found in current Discord member list.", discordId);
                 }
             } catch (Exception e) {
-                // This is the "Shield": Catch errors here so the loop can continue to the next user
                 log.error("Scheduled Sync: Fatal error processing Discord ID {}: {}", discordId, e.getMessage());
             }
         }
@@ -767,8 +768,9 @@ public class ClanmemberService {
         }
     }
 
+    // UPDATED: Now accepts location and saves it to Entities
     @Transactional
-    public void updateLastSeen(String discordId) {
+    public void updateLastSeen(String discordId, String location) {
         if (!StringUtils.hasText(discordId)) return;
 
         List<ClanmemberEntity> members = clanmemberRepository.findAllByDiscordId(discordId);
@@ -776,6 +778,7 @@ public class ClanmemberService {
             for (ClanmemberEntity member : members) {
                 if (shouldUpdateTimestamp(member.getLastLogin())) {
                     member.setLastLogin(LocalDateTime.now());
+                    member.setLastLocation(location); // Update Location
                     clanmemberRepository.save(member);
                 }
             }
@@ -787,6 +790,7 @@ public class ClanmemberService {
             VisitorLogEntity visitor = visitorOpt.get();
             if (shouldUpdateTimestamp(visitor.getLastLogin())) {
                 visitor.updateLogin();
+                visitor.setLastLocation(location); // Update Location
                 visitorLogRepository.save(visitor);
             }
         }
@@ -825,15 +829,18 @@ public class ClanmemberService {
             throw new UnlinkedAccountException("No active profile session found.");
         }
 
-        // ... (Rest of the logic remains exactly the same) ...
+        // --- Previously abbreviated logic (Restored standard ID generation) ---
+        if (team.getId() == null) {
+            team.setId(new ObjectId().toHexString());
+        }
+        // --------------------------------------------------------------------
 
         if (!StringUtils.hasText(team.getTeamName())) {
             throw new IllegalArgumentException("Team Name is required.");
         }
 
-        // (Assuming validateTeamAgainstCondition is a private method in this class)
         if (team.getSiegeConditionId() != null) {
-            // validateTeamAgainstCondition(team); // Uncomment if available
+            validateTeamAgainstCondition(team);
         }
 
         if (targetMember.getKnownTeams() == null) {

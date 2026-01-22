@@ -44,11 +44,15 @@
 							<th style="padding: 12px; text-align: left;">Clan</th>
 							<th style="padding: 12px; text-align: left;">Last Online (Local)</th>
 							<th style="padding: 12px; text-align: left;">Status</th>
+
+							<th sec:authorize="hasRole('OWNER')" style="padding: 12px; text-align: left;">
+								<i class="fas fa-eye"></i> Location
+							</th>
 						</tr>
 						</thead>
 						<tbody>
 						<tr th:if="${#lists.isEmpty(memberHistory)}">
-							<td colspan="6" style="padding: 20px; text-align: center; color: #666;">No member activity recorded yet.</td>
+							<td colspan="7" style="padding: 20px; text-align: center; color: #666;">No member activity recorded yet.</td>
 						</tr>
 
 						<tr th:each="member : ${memberHistory}" style="border-bottom: 1px solid #eee;">
@@ -112,6 +116,11 @@
 									● Inactive
 								</span>
 							</td>
+
+							<td sec:authorize="hasRole('OWNER')" style="padding: 10px; vertical-align: middle;">
+								<i class="fas fa-map-marker-alt" style="margin-right: 5px; color: #3498db;"></i>
+								<span th:text="${member.lastLocation} ?: 'Unknown'">Location</span>
+							</td>
 						</tr>
 						</tbody>
 					</table>
@@ -129,6 +138,11 @@
 						<tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; color: #666;">
 							<th style="padding: 12px; text-align: left;">Discord User</th>
 							<th style="padding: 12px; text-align: left;">Discord ID</th>
+
+							<th sec:authorize="hasRole('OWNER')" style="padding: 12px; text-align: left; color: #c0392b;">
+								<i class="fas fa-eye"></i> Location
+							</th>
+
 							<th style="padding: 12px; text-align: left;">Last Seen (Local)</th>
 							<th style="padding: 12px; text-align: left;">Visit Count</th>
 							<th style="padding: 12px; text-align: center;">Action</th>
@@ -136,7 +150,7 @@
 						</thead>
 						<tbody>
 						<tr th:if="${#lists.isEmpty(visitorHistory)}">
-							<td colspan="5" style="padding: 20px; text-align: center; color: #666;">No unknown visitors recorded.</td>
+							<td colspan="6" style="padding: 20px; text-align: center; color: #666;">No unknown visitors recorded.</td>
 						</tr>
 						<tr th:each="visitor : ${visitorHistory}" style="border-bottom: 1px solid #eee;">
 							<td style="padding: 10px;">
@@ -148,6 +162,11 @@
 								</div>
 							</td>
 							<td th:text="${visitor.discordId}" style="padding: 10px; font-family: monospace;">ID</td>
+
+							<td sec:authorize="hasRole('OWNER')" style="padding: 10px; font-size: 0.85em; color: #555;">
+								<i class="fas fa-map-marker-alt" style="margin-right: 5px; color: #e74c3c;"></i>
+								<span th:text="${visitor.lastLocation} ?: 'Unknown'">Location</span>
+							</td>
 
 							<td style="padding: 10px;">
                                <span class="local-time"
