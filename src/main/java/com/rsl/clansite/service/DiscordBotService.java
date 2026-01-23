@@ -36,12 +36,14 @@ public class DiscordBotService extends ListenerAdapter {
                     .addEventListeners(this)
                     .build();
 
-            jda.awaitReady(); // Wait until connected
+            jda.awaitReady();
             log.info("Discord Bot is ONLINE as: {}", jda.getSelfUser().getAsTag());
 
             jda.updateCommands().addCommands(
-                    Commands.slash("hello", "I will help with anything you want!")
+                    Commands.slash("hello", "I will help with anything you want!"),
+                    Commands.slash("coming-soon", "Get a hint about what lies ahead...")
             ).queue();
+
         } catch (Exception e) {
             log.error("Failed to start Discord Bot", e);
         }
@@ -49,8 +51,16 @@ public class DiscordBotService extends ListenerAdapter {
 
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
-        if (event.getName().equals("hello")) {
+        String commandName = event.getName();
+
+        if (commandName.equals("hello")) {
             event.reply("Fuck off!")
+                    .setEphemeral(false)
+                    .queue();
+        }
+        else if (commandName.equals("coming-soon")) {
+            event.reply("Something ancient is waking up... 🏰 \n\n" +
+                            "Prepare yourself. It will arrive soon!")
                     .setEphemeral(false)
                     .queue();
         }
