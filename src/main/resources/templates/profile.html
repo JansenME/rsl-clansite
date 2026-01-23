@@ -197,17 +197,23 @@
 						 style="width: 250px; border-left: 1px solid #eee; padding-left: 30px; margin-left: 20px;">
 						<h2 style="font-size: 1.4em;">Quick Links</h2>
 						<ul style="list-style: none; padding: 0; margin: 0;">
+							<th:block th:each="link, iterStat : ${quickLinks}">
 
-							<li th:each="link : ${quickLinks}" style="margin-bottom: 10px;">
-								<a th:href="@{${link.url}}"
-								   th:text="${link.label}"
-								   class="button small fit"
-								   style="display: block; width: 100%; text-align: center;">
-									Link Name
-								</a>
-							</li>
+								<li th:if="${!iterStat.first and link.groupOrder != quickLinks[iterStat.index - 1].groupOrder}"
+									style="height: 20px;">
+								</li>
 
-							<li style="margin-bottom: 10px;">
+								<li style="margin-bottom: 10px;">
+									<a th:href="@{${link.url}}"
+									   th:text="${link.label}"
+									   class="button small fit"
+									   style="display: block; width: 100%; text-align: center;">
+										Link Name
+									</a>
+								</li>
+							</th:block>
+
+							<li style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #eee;">
 								<form th:action="@{/perform_logout}" method="post" style="margin: 0;">
 									<button type="submit" class="button small fit" style="display: block; width: 100%; text-align: center;">Logout</button>
 								</form>

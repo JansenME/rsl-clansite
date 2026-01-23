@@ -158,10 +158,10 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
 
         when(commonsService.getVisibleQuickLinks(any(), any()))
                 .thenReturn(List.of(
-                        new CommonsService.VisibleQuickLink(QuickLink.ADD_CLANMEMBER.getLabel(), QuickLink.ADD_CLANMEMBER.getUrl()),
-                        new CommonsService.VisibleQuickLink(QuickLink.AUDIT_LOG.getLabel(), QuickLink.AUDIT_LOG.getUrl()),
-                        new CommonsService.VisibleQuickLink(QuickLink.LOGIN_HISTORY.getLabel(), QuickLink.LOGIN_HISTORY.getUrl()),
-                        new CommonsService.VisibleQuickLink(QuickLink.DATA_HEALTH.getLabel(), QuickLink.DATA_HEALTH.getUrl())
+                        new CommonsService.VisibleQuickLink(QuickLink.ADD_CLANMEMBER.getLabel(), QuickLink.ADD_CLANMEMBER.getUrl(), QuickLink.ADD_CLANMEMBER.getGroupOrder()),
+                        new CommonsService.VisibleQuickLink(QuickLink.AUDIT_LOG.getLabel(), QuickLink.AUDIT_LOG.getUrl(), QuickLink.AUDIT_LOG.getGroupOrder()),
+                        new CommonsService.VisibleQuickLink(QuickLink.LOGIN_HISTORY.getLabel(), QuickLink.LOGIN_HISTORY.getUrl(), QuickLink.LOGIN_HISTORY.getGroupOrder()),
+                        new CommonsService.VisibleQuickLink(QuickLink.DATA_HEALTH.getLabel(), QuickLink.DATA_HEALTH.getUrl(), QuickLink.DATA_HEALTH.getGroupOrder())
                 ));
 
         mockMvc.perform(get("/profile/" + myId)
@@ -253,7 +253,7 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
 
             // Convert our Enums to the Record type Thymeleaf expects
             List<CommonsService.VisibleQuickLink> mockLinks = links.stream()
-                    .map(link -> new CommonsService.VisibleQuickLink(link.getLabel(), link.getUrl()))
+                    .map(link -> new CommonsService.VisibleQuickLink(link.getLabel(), link.getUrl(), link.getGroupOrder()))
                     .collect(Collectors.toList());
 
             // Manually simulate what the real service does

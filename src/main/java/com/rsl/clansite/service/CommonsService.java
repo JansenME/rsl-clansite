@@ -111,13 +111,13 @@ public class CommonsService {
                     }
                 }
 
-                visibleLinks.add(new VisibleQuickLink(link.getLabel(), finalUrl));
+                visibleLinks.add(new VisibleQuickLink(link.getLabel(), finalUrl, link.getGroupOrder()));
             }
         }
         return visibleLinks;
     }
 
-    public record VisibleQuickLink(String label, String url) {}
+    public record VisibleQuickLink(String label, String url, int groupOrder) {}
 
     private String getAppVersion() {
         if (buildProperties != null) {
