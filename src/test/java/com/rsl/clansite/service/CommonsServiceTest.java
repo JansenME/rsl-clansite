@@ -2,6 +2,7 @@ package com.rsl.clansite.service;
 
 import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.enums.QuickLink;
+import com.rsl.clansite.security.SecurityService;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,7 +48,7 @@ class CommonsServiceTest {
     private HttpSession session;
 
     @Mock
-    private RoleHierarchy roleHierarchy;
+    private SecurityService securityService;
 
     @Mock
     private Authentication authentication;
@@ -71,7 +72,7 @@ class CommonsServiceTest {
     @Test
     @DisplayName("fillModel should fallback when BuildProperties is missing (simulating null injection)")
     void fillModel_ShouldFallback_WhenPropertiesNull() {
-        CommonsService serviceWithNullProps = new CommonsService(clanmemberService, null, roleHierarchy);
+        CommonsService serviceWithNullProps = new CommonsService(clanmemberService, null, securityService);
 
         serviceWithNullProps.fillModel(model, null);
 
@@ -150,9 +151,8 @@ class CommonsServiceTest {
 
         Authentication auth = mock(Authentication.class);
         when(auth.isAuthenticated()).thenReturn(true);
-        when(auth.getAuthorities()).thenReturn((Collection) authList);
 
-        when(roleHierarchy.getReachableGrantedAuthorities(authList))
+        when(securityService.getReachableAuthorities(auth))
                 .thenReturn((Collection) List.of(
                         new SimpleGrantedAuthority("ROLE_OWNER"),
                         new SimpleGrantedAuthority("ROLE_ADMIN"),
@@ -177,9 +177,8 @@ class CommonsServiceTest {
 
         Authentication auth = mock(Authentication.class);
         when(auth.isAuthenticated()).thenReturn(true);
-        when(auth.getAuthorities()).thenReturn((Collection) authList);
 
-        when(roleHierarchy.getReachableGrantedAuthorities(authList))
+        when(securityService.getReachableAuthorities(auth))
                 .thenReturn((Collection) authList);
 
         List<CommonsService.VisibleQuickLink> links = commonsService.getVisibleQuickLinks(auth, session);
@@ -198,11 +197,13 @@ class CommonsServiceTest {
     void getVisibleQuickLinks_Member_ShouldSeeNone() {
         Authentication auth = mock(Authentication.class);
         when(auth.isAuthenticated()).thenReturn(true);
-        when(auth.getAuthorities()).thenReturn((List) List.of(new SimpleGrantedAuthority("ROLE_MEMBER")));
+
+        when(securityService.getReachableAuthorities(auth))
+                .thenReturn((List) List.of(new SimpleGrantedAuthority("ROLE_MEMBER")));
 
         List<CommonsService.VisibleQuickLink> links = commonsService.getVisibleQuickLinks(auth, session);
 
-        assertTrue(links.isEmpty(), "Member should have 0 quick links");
+        assertTrue(links.size() == 1, "Member should see Add Siege Team quick link");
     }
 
     @Test

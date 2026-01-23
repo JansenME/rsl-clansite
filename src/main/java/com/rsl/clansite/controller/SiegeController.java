@@ -11,6 +11,7 @@ import com.rsl.clansite.model.enums.SiegeStatus;
 import com.rsl.clansite.repository.ChampionRepository;
 import com.rsl.clansite.repository.ClanmemberRepository;
 import com.rsl.clansite.repository.SiegeRepository;
+import com.rsl.clansite.security.SecurityService;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
 import com.rsl.clansite.service.SiegeService;
@@ -21,7 +22,6 @@ import org.bson.types.ObjectId;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -39,6 +39,7 @@ public class SiegeController {
     private final CommonsService commonsService;
     private final ClanmemberService clanmemberService;
     private final SiegeService siegeService;
+    private final SecurityService securityService;
     private final SiegeRepository siegeRepository;
     private final ClanmemberRepository clanmemberRepository;
     private final ChampionRepository championRepository;
@@ -48,13 +49,15 @@ public class SiegeController {
                            SiegeService siegeService,
                            SiegeRepository siegeRepository,
                            ClanmemberRepository clanmemberRepository,
-                           ChampionRepository championRepository) {
+                           ChampionRepository championRepository,
+                           SecurityService securityService) {
         this.commonsService = commonsService;
         this.clanmemberService = clanmemberService;
         this.siegeService = siegeService;
         this.siegeRepository = siegeRepository;
         this.clanmemberRepository = clanmemberRepository;
         this.championRepository = championRepository;
+        this.securityService = securityService;
     }
 
     // --- GET MAPPINGS ---
@@ -197,11 +200,7 @@ public class SiegeController {
         model.addAttribute("isHistoryView", true);
         model.addAttribute("primaryGroup", siege.getClanGroup());
 
-        // UPDATED: Manually calculate privilege for history view context
-        boolean isPrivileged = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(r -> r.equals("ROLE_COORDINATOR") || r.equals("ROLE_ADMIN") || r.equals("ROLE_OWNER"));
-        model.addAttribute("isPrivileged", isPrivileged);
+        model.addAttribute("isPrivileged", securityService.isCoordinator(authentication));
 
         return "siege-overview";
     }
@@ -314,11 +313,7 @@ public class SiegeController {
         boolean isSelf = userProfiles.stream()
                 .anyMatch(p -> p.getId().toHexString().equals(targetMemberId));
 
-        boolean isPrivileged = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(role -> role.equals("ROLE_COORDINATOR") || role.equals("ROLE_ADMIN") || role.equals("ROLE_OWNER"));
-
-        return isSelf || isPrivileged;
+        return isSelf || securityService.isCoordinator(authentication);
     }
 
     private void setupSiegeModel(Model model, HttpSession session, Authentication authentication) {
@@ -337,13 +332,8 @@ public class SiegeController {
         model.addAttribute("primaryGroup", primaryGroup);
         model.addAttribute("currentUser", activeMember);
 
-        // ADDED: Centralized privilege calculation for Overview
-        boolean isPrivileged = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(r -> r.equals("ROLE_COORDINATOR") || r.equals("ROLE_ADMIN") || r.equals("ROLE_OWNER"));
-        model.addAttribute("isPrivileged", isPrivileged);
+        model.addAttribute("isPrivileged", securityService.isCoordinator(authentication));
 
-        // ADDED: Default check for history view
         if (!model.containsAttribute("isHistoryView")) {
             model.addAttribute("isHistoryView", false);
         }

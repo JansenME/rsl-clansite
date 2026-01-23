@@ -3,6 +3,7 @@ package com.rsl.clansite.service;
 import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.enums.QuickLink;
+import com.rsl.clansite.security.SecurityService;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,14 +31,14 @@ public class CommonsService {
 
     private final ClanmemberService clanmemberService;
     private final BuildProperties buildProperties;
-    private final RoleHierarchy roleHierarchy;
+    private final SecurityService securityService;
 
     public CommonsService(ClanmemberService clanmemberService,
                           @Autowired(required = false) BuildProperties buildProperties,
-                          RoleHierarchy roleHierarchy) {
+                          SecurityService securityService) {
         this.clanmemberService = clanmemberService;
         this.buildProperties = buildProperties;
-        this.roleHierarchy = roleHierarchy;
+        this.securityService = securityService;
     }
 
     public String generateImageFilename(String championName) {
@@ -48,10 +49,6 @@ public class CommonsService {
         String cleanName = championName.toLowerCase().replaceAll("[^a-z0-9\\s]", "");
 
         return cleanName.replaceAll("\\s+", " ").trim().replace(" ", "-") + ".png";
-    }
-
-    public String getDiscordAvatarUrl(String discordId, String avatarHash) {
-        return clanmemberService.buildAvatarUrl(discordId, avatarHash);
     }
 
     public void fillModel(Model model, Authentication authentication) {
@@ -89,7 +86,7 @@ public class CommonsService {
         }
 
         Collection<? extends GrantedAuthority> reachableAuthorities =
-                roleHierarchy.getReachableGrantedAuthorities(authentication.getAuthorities());
+                securityService.getReachableAuthorities(authentication);
 
         String activeMemberId = "";
         if (session != null) {

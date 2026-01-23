@@ -98,16 +98,4 @@ public class SecurityConfig {
 
         return http.build();
     }
-
-    @Bean
-    public RoleHierarchy roleHierarchy() {
-        String hierarchy = """
-                ROLE_OWNER > ROLE_ADMIN
-                ROLE_ADMIN > ROLE_COORDINATOR
-                ROLE_COORDINATOR > ROLE_MEMBER
-                ROLE_MEMBER > ROLE_USER
-                """;
-
-        return RoleHierarchyImpl.fromHierarchy(hierarchy);
-    }
 }

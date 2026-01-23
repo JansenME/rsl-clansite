@@ -18,6 +18,8 @@ import com.rsl.clansite.model.enums.MemberStatus;
 import com.rsl.clansite.repository.ChampionRepository;
 import com.rsl.clansite.repository.ClanmemberRepository;
 import com.rsl.clansite.repository.VisitorLogRepository;
+import com.rsl.clansite.security.SecurityConfig;
+import com.rsl.clansite.security.SecurityService;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
@@ -54,6 +56,7 @@ public class ClanmemberService {
     private final SiteAssetService siteAssetService;
     private final ChampionRepository championRepository;
     private final SiegeConditionService siegeConditionService;
+    private final SecurityService securityService;
 
     @Autowired
     public ClanmemberService(final ClanmemberRepository clanmemberRepository,
@@ -63,7 +66,8 @@ public class ClanmemberService {
                              final DiscordApiClient discordApiClient,
                              final SiteAssetService siteAssetService,
                              final ChampionRepository championRepository,
-                             final SiegeConditionService siegeConditionService) {
+                             final SiegeConditionService siegeConditionService,
+                             final SecurityService securityService) {
         this.clanmemberRepository = clanmemberRepository;
         this.visitorLogRepository = visitorLogRepository;
         this.discordRoleService = discordRoleService;
@@ -72,6 +76,7 @@ public class ClanmemberService {
         this.siteAssetService = siteAssetService;
         this.championRepository = championRepository;
         this.siegeConditionService = siegeConditionService;
+        this.securityService = securityService;
     }
 
     public record AccountDetailDTO(String ingameName, ClanRank clanRank, ClanGroup clanGroup) {}
@@ -92,8 +97,7 @@ public class ClanmemberService {
         if (StringUtils.hasText(targetMemberId)) {
             targetMember = getMemberById(targetMemberId);
 
-            // Check: Is this ME or am I a COORDINATOR?
-            if (!isOwnProfile(targetMember, authentication) && !canManageOthers(authentication)) {
+            if (!isOwnProfile(targetMember, authentication) && !securityService.isCoordinator(authentication)) {
                 throw new AccessDeniedException("You do not have permission to delete teams for other members.");
             }
         } else {
@@ -114,11 +118,6 @@ public class ClanmemberService {
                 throw new IllegalArgumentException("Team not found in profile.");
             }
         }
-    }
-
-    private boolean canManageOthers(Authentication authentication) {
-        return authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_COORDINATOR") || a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_OWNER"));
     }
 
     public boolean isOwnProfile(ClanmemberEntity member, Authentication authentication) {
@@ -819,7 +818,7 @@ public class ClanmemberService {
         if (StringUtils.hasText(targetMemberId)) {
             targetMember = getMemberById(targetMemberId);
 
-            if (!isOwnProfile(targetMember, authentication) && !canManageOthers(authentication)) {
+            if (!isOwnProfile(targetMember, authentication) && !securityService.isCoordinator(authentication)) {
                 throw new AccessDeniedException("You do not have permission to manage teams for other members.");
             }
 

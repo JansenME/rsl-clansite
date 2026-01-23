@@ -4,6 +4,8 @@ import com.rsl.clansite.model.Team;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.entity.SiegeConditionEntity;
 import com.rsl.clansite.repository.ChampionRepository;
+import com.rsl.clansite.security.SecurityConfig;
+import com.rsl.clansite.security.SecurityService;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
 import com.rsl.clansite.service.SiegeConditionService;
@@ -38,15 +40,18 @@ public class TeamController {
     private final ClanmemberService clanmemberService;
     private final ChampionRepository championRepository;
     private final SiegeConditionService siegeConditionService;
+    private final SecurityService securityService;
 
     public TeamController(CommonsService commonsService,
                           ClanmemberService clanmemberService,
                           ChampionRepository championRepository,
-                          SiegeConditionService siegeConditionService) {
+                          SiegeConditionService siegeConditionService,
+                          SecurityService securityService) {
         this.commonsService = commonsService;
         this.clanmemberService = clanmemberService;
         this.championRepository = championRepository;
         this.siegeConditionService = siegeConditionService;
+        this.securityService = securityService;
     }
 
     public record ConditionDropdownItem(String id, String label, String category, String value) {}
@@ -64,7 +69,7 @@ public class TeamController {
             ClanmemberEntity target = clanmemberService.getMemberById(targetMemberId);
             boolean isOwnProfile = clanmemberService.isOwnProfile(target, authentication);
 
-            if (isOwnProfile || canManageOthers(authentication)) {
+            if (isOwnProfile || securityService.isCoordinator(authentication)) {
                 activeMember = target;
             } else {
                 return "redirect:/";
@@ -192,10 +197,5 @@ public class TeamController {
             return entity.getConditionKey();
         }
         return entity.getConditionKey();
-    }
-
-    private boolean canManageOthers(Authentication authentication) {
-        return authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_COORDINATOR") || a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_OWNER"));
     }
 }

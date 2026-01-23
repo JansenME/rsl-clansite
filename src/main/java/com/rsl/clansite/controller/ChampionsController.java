@@ -13,6 +13,8 @@ import com.rsl.clansite.model.enums.Faction;
 import com.rsl.clansite.model.enums.Rarity;
 import com.rsl.clansite.model.enums.Type;
 import com.rsl.clansite.repository.ChampionRepository;
+import com.rsl.clansite.security.SecurityConfig;
+import com.rsl.clansite.security.SecurityService;
 import com.rsl.clansite.service.ChampionsService;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
@@ -36,17 +38,20 @@ public class ChampionsController {
     private final ChampionsService championsService;
     private final ClanmemberService clanmemberService;
     private final RosterService rosterService;
+    private final SecurityService securityService;
     private final ChampionRepository championRepository;
 
     public ChampionsController(final CommonsService commonsService,
                                final ChampionsService championsService,
                                final ClanmemberService clanmemberService,
                                final RosterService rosterService,
+                               final SecurityService securityService,
                                final ChampionRepository championRepository) {
         this.commonsService = commonsService;
         this.championsService = championsService;
         this.clanmemberService = clanmemberService;
         this.rosterService = rosterService;
+        this.securityService = securityService;
         this.championRepository = championRepository;
     }
 
@@ -66,12 +71,7 @@ public class ChampionsController {
             if (activeMember.getId().toHexString().equals(editingMemberId)) {
                 autoOpenEditMode = true;
             } else {
-                boolean isCoordinator = authentication.getAuthorities().stream()
-                        .anyMatch(a -> a.getAuthority().equals("ROLE_COORDINATOR")
-                                || a.getAuthority().equals("ROLE_ADMIN")
-                                || a.getAuthority().equals("ROLE_OWNER"));
-
-                if (isCoordinator) {
+                if (securityService.isCoordinator(authentication)) {
                     try {
                         targetMember = clanmemberService.getMemberById(editingMemberId);
                         if (!targetMember.getId().equals(activeMember.getId())) {
