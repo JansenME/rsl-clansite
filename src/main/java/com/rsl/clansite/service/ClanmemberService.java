@@ -90,10 +90,12 @@ public class ClanmemberService {
         ClanmemberEntity targetMember;
 
         if (StringUtils.hasText(targetMemberId)) {
-            if (!canManageOthers(authentication)) {
+            targetMember = getMemberById(targetMemberId);
+
+            // Check: Is this ME or am I a COORDINATOR?
+            if (!isOwnProfile(targetMember, authentication) && !canManageOthers(authentication)) {
                 throw new AccessDeniedException("You do not have permission to delete teams for other members.");
             }
-            targetMember = getMemberById(targetMemberId);
         } else {
             targetMember = getActiveClanmember(session, authentication);
         }
@@ -119,6 +121,12 @@ public class ClanmemberService {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_COORDINATOR") || a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_OWNER"));
     }
 
+    public boolean isOwnProfile(ClanmemberEntity member, Authentication authentication) {
+        if (member == null || authentication == null) return false;
+        String currentDiscordId = authentication.getName();
+        return currentDiscordId.equals(member.getDiscordId());
+    }
+
     public List<LoginHistoryDTO> getDeduplicatedLoginHistory() {
         List<ClanmemberEntity> allLogins = clanmemberRepository.findAll().stream()
                 .filter(m -> m.getLastLogin() != null)
@@ -141,7 +149,6 @@ public class ClanmemberService {
                 continue;
             }
 
-            // Find the account with the most recent login to get the timestamp AND location
             ClanmemberEntity latestActivityMember = allAccounts.stream()
                     .filter(m -> m.getLastLogin() != null)
                     .max((m1, m2) -> m1.getLastLogin().compareTo(m2.getLastLogin()))
@@ -164,7 +171,7 @@ public class ClanmemberService {
                     primary.getDiscordName(),
                     avatarUrl,
                     latestLogin,
-                    latestActivityMember.getLastLocation(), // Get location from the latest active entity
+                    latestActivityMember.getLastLocation(),
                     activeAccountDetails
             ));
         }
@@ -768,7 +775,6 @@ public class ClanmemberService {
         }
     }
 
-    // UPDATED: Now accepts location and saves it to Entities
     @Transactional
     public void updateLastSeen(String discordId, String location) {
         if (!StringUtils.hasText(discordId)) return;
@@ -778,7 +784,7 @@ public class ClanmemberService {
             for (ClanmemberEntity member : members) {
                 if (shouldUpdateTimestamp(member.getLastLogin())) {
                     member.setLastLogin(LocalDateTime.now());
-                    member.setLastLocation(location); // Update Location
+                    member.setLastLocation(location);
                     clanmemberRepository.save(member);
                 }
             }
@@ -790,7 +796,7 @@ public class ClanmemberService {
             VisitorLogEntity visitor = visitorOpt.get();
             if (shouldUpdateTimestamp(visitor.getLastLogin())) {
                 visitor.updateLogin();
-                visitor.setLastLocation(location); // Update Location
+                visitor.setLastLocation(location);
                 visitorLogRepository.save(visitor);
             }
         }
@@ -811,17 +817,13 @@ public class ClanmemberService {
         ClanmemberEntity targetMember;
 
         if (StringUtils.hasText(targetMemberId)) {
-            targetMember = getMemberById(targetMemberId); // Fetch first to check ownership
+            targetMember = getMemberById(targetMemberId);
 
-            boolean isMyOwnProfile = targetMember.getDiscordId().equals(activeUser.getDiscordId());
-            boolean isCoordinator = canManageOthers(authentication);
-
-            if (!isMyOwnProfile && !isCoordinator) {
+            if (!isOwnProfile(targetMember, authentication) && !canManageOthers(authentication)) {
                 throw new AccessDeniedException("You do not have permission to manage teams for other members.");
             }
 
         } else {
-            // No ID provided? Default to the currently active profile session
             targetMember = activeUser;
         }
 
@@ -829,11 +831,9 @@ public class ClanmemberService {
             throw new UnlinkedAccountException("No active profile session found.");
         }
 
-        // --- Previously abbreviated logic (Restored standard ID generation) ---
         if (team.getId() == null) {
             team.setId(new ObjectId().toHexString());
         }
-        // --------------------------------------------------------------------
 
         if (!StringUtils.hasText(team.getTeamName())) {
             throw new IllegalArgumentException("Team Name is required.");
@@ -863,6 +863,13 @@ public class ClanmemberService {
         clanmemberRepository.save(targetMember);
 
         String actorName = authentication.getName();
+
+        auditLogService.logAction(
+                authentication,
+                AuditAction.MEMBER_UPDATE,
+                targetMember.getIngameName(),
+                "Saved Known Team: " + team.getTeamName() + " for " + targetMember.getIngameName()
+        );
         log.info("Saved Known Team '{}' for member {} (Actor: {})",
                 team.getTeamName(), targetMember.getIngameName(), actorName);
     }

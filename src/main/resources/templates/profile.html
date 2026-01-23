@@ -374,8 +374,9 @@
 										<i class="fas fa-edit"></i>
 									</a>
 
-									<form th:action="@{/teams/delete/{id}(id=${team.id}, targetMemberId=${member.id})}" method="POST" style="margin:0;"
+									<form th:action="@{/teams/delete/{id}(id=${team.id})}" method="POST" style="margin:0;"
 										  onsubmit="return confirm('Are you sure you want to delete this team?');">
+										<input type="hidden" name="targetMemberId" th:value="${member.id}" />
 										<button type="submit" class="team-action-btn btn-delete" title="Delete Team">
 											<i class="fas fa-trash-alt"></i>
 										</button>

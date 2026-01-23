@@ -60,10 +60,15 @@ public class TeamController {
 
         ClanmemberEntity activeMember;
 
-        // 1. Determine Context: Are we editing for ourselves or someone else?
-        // Hierarchy Check: ROLE_COORDINATOR is sufficient as it includes ADMIN/OWNER
-        if (StringUtils.hasText(targetMemberId) && canManageOthers(authentication)) {
-            activeMember = clanmemberService.getMemberById(targetMemberId);
+        if (StringUtils.hasText(targetMemberId)) {
+            ClanmemberEntity target = clanmemberService.getMemberById(targetMemberId);
+            boolean isOwnProfile = clanmemberService.isOwnProfile(target, authentication);
+
+            if (isOwnProfile || canManageOthers(authentication)) {
+                activeMember = target;
+            } else {
+                return "redirect:/";
+            }
         } else {
             activeMember = clanmemberService.getActiveClanmember(session, authentication);
         }
@@ -124,7 +129,6 @@ public class TeamController {
                            @RequestParam(required = false) String targetMemberId,
                            Authentication authentication, HttpSession session, RedirectAttributes redirectAttributes) {
         try {
-            // Updated service call to include targetMemberId
             clanmemberService.saveKnownTeam(session, authentication, team, targetMemberId);
             redirectAttributes.addFlashAttribute("successMessage", "Team saved successfully!");
 
@@ -134,10 +138,12 @@ public class TeamController {
             return "redirect:/profile";
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Error saving team: " + e.getMessage());
+
+            String redirectUrl = "redirect:/teams/builder";
             if (StringUtils.hasText(targetMemberId)) {
-                return "redirect:/teams/builder?targetMemberId=" + targetMemberId;
+                redirectUrl += "?targetMemberId=" + targetMemberId;
             }
-            return "redirect:/teams/builder";
+            return redirectUrl;
         }
     }
 
@@ -147,7 +153,6 @@ public class TeamController {
                              @RequestParam(required = false) String targetMemberId,
                              Authentication authentication, HttpSession session, RedirectAttributes redirectAttributes) {
         try {
-            // Updated service call to include targetMemberId
             clanmemberService.deleteKnownTeam(session, authentication, teamId, targetMemberId);
             redirectAttributes.addFlashAttribute("successMessage", "Team deleted successfully.");
         } catch (Exception e) {
