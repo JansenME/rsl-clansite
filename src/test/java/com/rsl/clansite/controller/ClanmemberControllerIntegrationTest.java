@@ -1,18 +1,15 @@
 package com.rsl.clansite.controller;
 
-import com.rsl.clansite.model.DashboardRow;
 import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.entity.VisitorLogEntity;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.service.ClanmemberService;
-import jakarta.servlet.http.HttpSession;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
