@@ -47,17 +47,17 @@
 						</thead>
 						<tbody>
 						<tr th:each="member : ${pendingMembers}">
-							<td>
+							<td data-label="Avatar" style="text-align: center;">
 								<img th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
 									 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
 							</td>
-							<td th:text="${member.discordName}">Global Name</td>
-							<td th:text="${member.playerNickname}">Server Nickname</td>
-							<td>
+							<td data-label="Discord Name" th:text="${member.discordName}">Global Name</td>
+							<td data-label="Discord Nickname" th:text="${member.playerNickname}">Server Nickname</td>
+							<td data-label="Suggested Clan">
 								<span th:if="${member.clanGroup != null}" th:text="${member.clanGroup}"></span>
 								<span th:if="${member.clanGroup == null}" style="color: #999;">Unknown</span>
 							</td>
-							<td>
+							<td data-label="Actions">
 								<a th:href="@{/clanmembers/edit/{id}(id=${member.id})}"
 								   class="button primary small"
 								   style="padding: 5px 15px; font-size: 0.8em;">Finalize Setup</a>
@@ -87,24 +87,25 @@
 						th:attr="onclick=${#authorization.expression('hasRole(''MEMBER'')')} ? 'window.location.href=\'' + @{/profile/{id}(id=${member.id})} + '\'' : ''"
 						th:style="${!#authorization.expression('hasRole(''MEMBER'')')} ? 'cursor: default;' : ''">
 
-						<td sec:authorize="isAuthenticated()">
+						<td sec:authorize="isAuthenticated()" data-label="Avatar">
 							<img th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
 								 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
 						</td>
-						<td sec:authorize="isAuthenticated()" th:text="${member.discordName}">Global Name</td>
-						<td sec:authorize="isAuthenticated()" th:text="${member.playerNickname}">Server Nickname</td>
-						<td th:text="${(member.ingameName != null) ? member.ingameName : 'Unassigned'}">In-Game Name</td>
-						<td th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
-						<td sec:authorize="isAuthenticated()" th:text="${member.rosterChampionIds != null ? member.rosterChampionIds.size() : 0}">0</td>
+						<td sec:authorize="isAuthenticated()" data-label="Discord Name" th:text="${member.discordName}">Global Name</td>
+						<td sec:authorize="isAuthenticated()" data-label="Discord Nickname" th:text="${member.playerNickname}">Server Nickname</td>
+						<td data-label="In-Game Name" th:text="${(member.ingameName != null) ? member.ingameName : 'Unassigned'}">In-Game Name</td>
+						<td data-label="Rank" th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
+						<td sec:authorize="isAuthenticated()" data-label="Champions" th:text="${member.rosterChampionIds != null ? member.rosterChampionIds.size() : 0}">0</td>
 
-						<td sec:authorize="hasRole('ADMIN')" onclick="event.stopPropagation()" style="white-space: nowrap;">
+						<td sec:authorize="hasRole('ADMIN')" data-label="Actions" onclick="event.stopPropagation()" style="white-space: nowrap;">
 							<a th:href="@{/clanmembers/edit/{id}(id=${member.id})}"
+							   class="button-edit-mobile"
 							   style="background: #007bff; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 5px; text-decoration: none; font-size: 13.33px; border: none;">Edit</a>
 							<form th:action="@{/clanmembers/{id}/delete(id=${member.id})}" method="POST"
 								  th:data-name="${member.ingameName}"
 								  style="display: inline-block; margin: 0;"
 								  onsubmit="return confirm('Are you sure you want to remove ' + this.getAttribute('data-name') + ' from the active roster? (They will be moved to Archive)');">
-								<button type="submit" style="background: #cc0000; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Delete</button>
+								<button type="submit" class="button-delete-mobile" style="background: #cc0000; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Delete</button>
 							</form>
 						</td>
 					</tr>
@@ -132,24 +133,25 @@
 						th:attr="onclick=${#authorization.expression('hasRole(''MEMBER'')')} ? 'window.location.href=\'' + @{/profile/{id}(id=${member.id})} + '\'' : ''"
 						th:style="${!#authorization.expression('hasRole(''MEMBER'')')} ? 'cursor: default;' : ''">
 
-						<td sec:authorize="isAuthenticated()">
+						<td sec:authorize="isAuthenticated()" data-label="Avatar">
 							<img th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
 								 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
 						</td>
-						<td sec:authorize="isAuthenticated()" th:text="${member.discordName}">Global Name</td>
-						<td sec:authorize="isAuthenticated()" th:text="${member.playerNickname}">Server Nickname</td>
-						<td th:text="${(member.ingameName != null) ? member.ingameName : 'Unassigned'}">In-Game Name</td>
-						<td th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
-						<td sec:authorize="isAuthenticated()" th:text="${member.rosterChampionIds != null ? member.rosterChampionIds.size() : 0}">0</td>
+						<td sec:authorize="isAuthenticated()" data-label="Discord Name" th:text="${member.discordName}">Global Name</td>
+						<td sec:authorize="isAuthenticated()" data-label="Discord Nickname" th:text="${member.playerNickname}">Server Nickname</td>
+						<td data-label="In-Game Name" th:text="${(member.ingameName != null) ? member.ingameName : 'Unassigned'}">In-Game Name</td>
+						<td data-label="Rank" th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
+						<td sec:authorize="isAuthenticated()" data-label="Champions" th:text="${member.rosterChampionIds != null ? member.rosterChampionIds.size() : 0}">0</td>
 
-						<td sec:authorize="hasRole('ADMIN')" onclick="event.stopPropagation()" style="white-space: nowrap;">
+						<td sec:authorize="hasRole('ADMIN')" data-label="Actions" onclick="event.stopPropagation()" style="white-space: nowrap;">
 							<a th:href="@{/clanmembers/edit/{id}(id=${member.id})}"
+							   class="button-edit-mobile"
 							   style="background: #007bff; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 5px; text-decoration: none; font-size: 13.33px; border: none;">Edit</a>
 							<form th:action="@{/clanmembers/{id}/delete(id=${member.id})}" method="POST"
 								  th:data-name="${member.ingameName}"
 								  style="display: inline-block; margin: 0;"
 								  onsubmit="return confirm('Are you sure you want to remove ' + this.getAttribute('data-name') + ' from the active roster? (They will be moved to Archive)');">
-								<button type="submit" style="background: #cc0000; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Delete</button>
+								<button type="submit" class="button-delete-mobile" style="background: #cc0000; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Delete</button>
 							</form>
 						</td>
 					</tr>
@@ -182,18 +184,18 @@
 						</thead>
 						<tbody>
 						<tr th:each="member : ${inactiveMembers}">
-							<td>
+							<td data-label="Avatar">
 								<img th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
 									 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; filter: grayscale(100%);" />
 							</td>
-							<td th:text="${member.discordName}">Global Name</td>
-							<td th:text="${member.ingameName}">IGN</td>
-							<td th:text="${member.clanGroup}">Clan</td>
-							<td th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
-							<td th:text="${member.rosterChampionIds != null ? member.rosterChampionIds.size() : 0}">0</td>
-							<td th:text="${member.statusChangedDate != null ? #temporals.format(member.statusChangedDate, 'dd-MM-yyyy') : '-'}">Date</td>
+							<td data-label="Discord Name" th:text="${member.discordName}">Global Name</td>
+							<td data-label="In-Game Name" th:text="${member.ingameName}">IGN</td>
+							<td data-label="Clan" th:text="${member.clanGroup}">Clan</td>
+							<td data-label="Former Rank" th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
+							<td data-label="Champions" th:text="${member.rosterChampionIds != null ? member.rosterChampionIds.size() : 0}">0</td>
+							<td data-label="Left Date" th:text="${member.statusChangedDate != null ? #temporals.format(member.statusChangedDate, 'dd-MM-yyyy') : '-'}">Date</td>
 
-							<td>
+							<td data-label="Actions">
 								<form th:action="@{/clanmembers/{id}/restore(id=${member.id})}" method="POST"
 									  th:data-name="${member.ingameName}"
 									  onsubmit="return confirm('Restore ' + this.getAttribute('data-name') + ' to the active roster?');">

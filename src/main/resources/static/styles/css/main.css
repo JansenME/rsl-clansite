@@ -2,12 +2,12 @@
 
 html, body,  span, h1, h2, h3, h4, h5, h6,
 p, a, img, header, nav, section {
-	margin: 0;
-	padding: 0;
-	border: 0;
-	font-size: 100%;
-	font: inherit;
-	vertical-align: baseline;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 100%;
+    font: inherit;
+    vertical-align: baseline;
 }
 
 h4 {
@@ -657,4 +657,286 @@ tr.clickable-row:hover {
     font-weight: bold;
     font-family: 'Roboto', sans-serif;
     text-shadow: 1px 1px 2px black;
+}
+
+/* --- Filter Section Styling (Common) --- */
+/* Top row: Buttons, Sort, Search */
+.filter-controls-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.filter-control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* The clickable label row */
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.checkbox-row:hover {
+    color: #3498db; /* Blue highlight on hover */
+}
+
+.checkbox-row input[type="checkbox"] {
+    transform: scale(1.2); /* Make checkbox slightly larger */
+    cursor: pointer;
+}
+
+
+/* --- Mobile Responsive Header --- */
+@media screen and (max-width: 980px) {
+
+    #header > .container {
+        min-height: auto; /* Let the container grow with content */
+        padding: 20px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    #header h1 {
+        position: static; /* Remove absolute positioning */
+        margin-bottom: 20px;
+        font-size: 2.2em; /* Slightly smaller for mobile */
+    }
+
+    #header nav {
+        position: static; /* Remove absolute positioning */
+        display: flex;
+        flex-wrap: wrap; /* Allow links to wrap to multiple lines if needed */
+        justify-content: center;
+        width: 100%;
+    }
+
+    #header nav a {
+        margin: 5px 15px; /* Adjust spacing for thumbs */
+        font-size: 1.2em;
+        display: inline-block;
+    }
+
+    /* Mobile Filter Controls Adjustments */
+    .filter-controls-top {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    /* Fix Profile Quick Links (Mobile) */
+    .profile-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .quick-links-sidebar {
+        width: 100%;       /* Take full width */
+        border-left: none; /* Remove side border */
+        border-top: 1px solid #eee; /* Add top border instead */
+        padding-left: 0;   /* Reset padding */
+        margin-left: 0;    /* Reset margin */
+        margin-top: 30px;  /* Space it out from the content above */
+        padding-top: 20px;
+    }
+
+    .quick-links-sidebar h2 {
+        text-align: center;
+    }
+}
+
+/* Extra small screens (Phones) */
+@media screen and (max-width: 480px) {
+    #header h1 {
+        font-size: 1.8em;
+    }
+
+    #header nav a {
+        margin: 5px 10px;
+        font-size: 1.1em;
+    }
+}
+
+/* --- Responsive Table to Cards (For Clanmembers/Audit) --- */
+@media screen and (max-width: 768px) {
+    /* Force table to not be a table anymore */
+    table, thead, tbody, th, td, tr {
+        display: block;
+        width: 100% !important;
+        box-sizing: border-box; /* Fixes the width calculation */
+    }
+
+    /* Unset the fixed height from the desktop table styles */
+    tbody tr {
+        height: auto !important;
+    }
+
+    /* Remove overflow hidden so shadows/content aren't clipped */
+    table {
+        overflow: visible !important;
+        background: transparent !important; /* Let body bg show through gaps */
+        box-shadow: none !important; /* Remove desktop table shadow */
+    }
+
+    /* Hide table headers (but keep for screen readers) */
+    thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+
+    tr {
+        margin-bottom: 20px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        padding: 10px 0;
+    }
+
+    td {
+        /* Behave like a "row" */
+        border: none;
+        border-bottom: 1px solid #eee;
+        position: relative;
+        padding-left: 50% !important; /* Push text to the right half */
+        text-align: right !important;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end; /* Align text to the right */
+        padding-right: 15px; /* Add some breathing room on the right */
+    }
+
+    td:last-child {
+        border-bottom: 0;
+    }
+
+    /* Label generation */
+    td:before {
+        content: attr(data-label);
+        position: absolute;
+        left: 15px;
+        width: 40%;
+        padding-right: 10px;
+        white-space: nowrap;
+        text-align: left;
+        font-weight: bold;
+        color: #333;
+        font-family: 'Yanone Kaffeesatz';
+        font-size: 1.1em;
+    }
+
+    /* Adjusting the Action buttons for touch */
+    .button-edit-mobile, .button-delete-mobile {
+        padding: 8px 15px !important;
+        font-size: 0.9em !important;
+        margin: 5px 2px;
+        display: inline-block;
+    }
+
+    /* Center the avatar specifically */
+    td[data-label="Avatar"] {
+        justify-content: center;
+        padding-left: 0 !important; /* Reset the 50% push */
+        padding-right: 0 !important;
+        background-color: #f9f9f9; /* Slight highlight for the header/avatar area */
+        border-radius: 10px 10px 0 0;
+    }
+    td[data-label="Avatar"]:before {
+        display: none; /* Hide 'Avatar' text label */
+    }
+}
+
+
+/* --- Filter Section Mobile Overrides --- */
+/* This only activates on mobile/tablet. Desktop remains untouched. */
+@media screen and (max-width: 980px) {
+
+    /* 1. Fix the "White Space" & Scrolling */
+    #filter-wrapper form {
+        max-height: 60vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    /* 2. Break the Table Structure for Stacking */
+    #filter-wrapper table,
+    #filter-wrapper tbody,
+    #filter-wrapper tr,
+    #filter-wrapper td {
+        display: block;
+        width: 100% !important;
+        border: none;
+    }
+
+    /* 3. Hide the Purple Header Row */
+    #filter-wrapper thead {
+        display: none;
+    }
+
+    /* 4. Style the Columns (td) to look like Sections */
+    #filter-wrapper td {
+        display: block !important;
+        text-align: left !important;
+        padding-left: 10px !important; /* Add slight padding for content */
+        padding-right: 0 !important;
+        margin-bottom: 25px;
+        border-bottom: 1px solid #eee;
+    }
+
+    /* 5. Inject Headers (Rarity, Faction, etc.) using data-label */
+    #filter-wrapper td::before {
+        content: attr(data-label);
+        display: block;
+        position: relative !important; /* CRITICAL: Stops it from floating over content */
+        font-weight: bold;
+        font-size: 1.3em;
+        margin-bottom: 10px; /* Pushes the checkboxes down */
+        color: #333;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 5px;
+        width: 100%;
+        background-color: #f9f9f9;
+        padding-left: 5px;
+        left: auto !important; /* Reset left positioning */
+    }
+
+    /* 6. Fix Checkboxes (Vertical Stack) */
+    #filter-wrapper td > span {
+        display: block;
+        width: 100%;
+        margin-bottom: 8px;
+        padding: 5px 0;
+        border-bottom: 1px dashed #f0f0f0;
+    }
+
+    /* Align checkbox and text */
+    #filter-wrapper input[type="checkbox"] {
+        transform: scale(1.3);
+        margin-right: 15px;
+        vertical-align: middle;
+    }
+
+    /* Search bar full width */
+    #filter-wrapper input[type="text"] {
+        width: 100% !important;
+        margin-top: 10px;
+    }
+
+    #filter-wrapper label {
+        display: block;
+        margin-bottom: 10px;
+    }
 }
