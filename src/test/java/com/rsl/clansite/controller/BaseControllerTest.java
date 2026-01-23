@@ -31,6 +31,7 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.session.MapSessionRepository;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -56,6 +57,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
         "DISCORD_CLIENT_ID=dummy-id",
         "DISCORD_CLIENT_SECRET=dummy-secret"
 })
+@ActiveProfiles("test")
 public abstract class BaseControllerTest {
     @Autowired
     protected MockMvc mockMvc;
