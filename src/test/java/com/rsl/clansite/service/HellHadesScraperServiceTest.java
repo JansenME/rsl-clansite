@@ -44,6 +44,8 @@ class HellHadesScraperServiceTest {
     @Mock
     private CommonsService commonsService;
     @Mock
+    private AuditLogService auditLogService;
+    @Mock
     private Authentication authentication;
 
     private HellHadesScraperService scraperService;
@@ -51,7 +53,7 @@ class HellHadesScraperServiceTest {
     @BeforeEach
     void setUp() {
         // FIX: Use the Testable subclass that handles the "Alaric" JSON logic correctly
-        scraperService = new TestableHellHadesScraperService(championRepository, commonsService);
+        scraperService = new TestableHellHadesScraperService(championRepository, commonsService, auditLogService);
     }
 
     @Test
@@ -96,7 +98,7 @@ class HellHadesScraperServiceTest {
     @Test
     void testScrape_UncommonChampion_WithNoise_ShouldBeUncommon() throws Exception {
         // This test defines its own specific service behavior, so we overwrite the one from setUp()
-        scraperService = new HellHadesScraperService(championRepository, commonsService) {
+        scraperService = new HellHadesScraperService(championRepository, commonsService, auditLogService) {
             @Override
             protected Document fetchDocument(String url) {
                 String html = "<html><head><title>Archer - Fury of the Fallen</title>" +
@@ -211,8 +213,8 @@ class HellHadesScraperServiceTest {
     // --- TEST SUBCLASS TO OVERRIDE NETWORK CALLS ---
     static class TestableHellHadesScraperService extends HellHadesScraperService {
 
-        public TestableHellHadesScraperService(ChampionRepository repo, CommonsService commons) {
-            super(repo, commons);
+        public TestableHellHadesScraperService(ChampionRepository repo, CommonsService commons, AuditLogService auditLogService) {
+            super(repo, commons, auditLogService);
         }
 
         @Override

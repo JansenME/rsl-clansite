@@ -1096,7 +1096,7 @@ class ClanmemberServiceTest {
 
         when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of(member));
 
-        clanmemberService.updateLastSeen(discordId);
+        clanmemberService.updateLastSeen(discordId, "");
 
         verify(clanmemberRepository).save(member);
         assertNotNull(member.getLastLogin());
@@ -1112,7 +1112,7 @@ class ClanmemberServiceTest {
 
         when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of(member));
 
-        clanmemberService.updateLastSeen(discordId);
+        clanmemberService.updateLastSeen(discordId, "");
 
         verify(clanmemberRepository).save(member);
     }
@@ -1127,7 +1127,7 @@ class ClanmemberServiceTest {
 
         when(clanmemberRepository.findAllByDiscordId(discordId)).thenReturn(List.of(member));
 
-        clanmemberService.updateLastSeen(discordId);
+        clanmemberService.updateLastSeen(discordId, "");
 
         // Verify save was NEVER called
         verify(clanmemberRepository, never()).save(any());

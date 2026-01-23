@@ -470,7 +470,7 @@ class ClanmemberControllerIntegrationTest extends BaseControllerTest {
         VisitorLogEntity visitor = new VisitorLogEntity("v1", "VisitorOne", "hash");
         visitor.setLastLogin(LocalDateTime.now());
 
-        ClanmemberService.LoginHistoryDTO loginHistoryDTO = new ClanmemberService.LoginHistoryDTO(adminId, "ActiveMember", "", LocalDateTime.now(), null);
+        ClanmemberService.LoginHistoryDTO loginHistoryDTO = new ClanmemberService.LoginHistoryDTO(adminId, "ActiveMember", "", LocalDateTime.now(), "", null);
 
         when(clanmemberService.getDeduplicatedLoginHistory()).thenReturn(List.of(loginHistoryDTO));
 
