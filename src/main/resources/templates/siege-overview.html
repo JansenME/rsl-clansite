@@ -72,7 +72,7 @@
             transition: background-color 0.3s ease; /* Smooth transition for AJAX updates */
         }
 
-        /* NEW: Winning/Losing Backgrounds */
+        /* Winning/Losing Backgrounds */
         .ribbon-win {
             background-color: #d4edda !important;
             border-color: #c3e6cb !important;
@@ -146,12 +146,25 @@
             color: #555;
         }
 
-        tr.structure-cleared,
-        tr.structure-cleared td {
+        /* --- STATE CLASSES --- */
+
+        /* 1. BAD: We lost a defensive structure (RED) */
+        tr.structure-lost,
+        tr.structure-lost td {
             background-color: #ffebee !important;
             color: #c0392b !important;
         }
-        tr.structure-cleared .name-cell {
+        tr.structure-lost .name-cell {
+            text-decoration: line-through;
+        }
+
+        /* 2. GOOD: We captured a target structure (GREEN) */
+        tr.structure-captured,
+        tr.structure-captured td {
+            background-color: #d4edda !important;
+            color: #155724 !important;
+        }
+        tr.structure-captured .name-cell {
             text-decoration: line-through;
         }
 
@@ -281,7 +294,7 @@
                             </thead>
                             <tbody>
                             <tr th:each="struct : ${siege.defensiveStructures}"
-                                th:classappend="${struct.isCleared} ? 'structure-cleared' : ''"
+                                th:classappend="${struct.isCleared} ? 'structure-lost' : ''"
                                 th:id="'struct-row-' + ${struct.id}">
                                 <td class="name-cell" th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
                                 <td th:text="${struct.defensePoints}">0</td>
@@ -326,7 +339,7 @@
                             </thead>
                             <tbody>
                             <tr th:each="struct : ${siege.targetStructures}"
-                                th:classappend="${struct.isCleared} ? 'structure-cleared' : ''"
+                                th:classappend="${struct.isCleared} ? 'structure-captured' : ''"
                                 th:id="'struct-row-' + ${struct.id}">
                                 <td class="name-cell" th:text="${struct.name}" style="text-align: left; padding-left: 15px;">Name</td>
                                 <td th:text="${struct.attackPoints}">0</td>
@@ -351,7 +364,7 @@
 
                                     <div th:if="!${isPrivileged} or ${isHistoryView}">
                                         <span th:if="${!struct.isCleared}" style="color: #e74c3c;">Active</span>
-                                        <span th:if="${struct.isCleared}" class="structure-ok"><i class="fas fa-flag"></i> Captured</span>
+                                        <span th:if="${struct.isCleared}"><i class="fas fa-flag"></i> Captured</span>
                                     </div>
                                 </td>
                             </tr>
@@ -410,10 +423,18 @@
             const mapType = form.querySelector('input[name="mapType"]').value;
 
             const row = document.getElementById('struct-row-' + structureId);
+
+            // NEW LOGIC: Apply different classes based on map type
             if (wasClearing) {
-                row.classList.add('structure-cleared');
+                if (mapType === 'DEFENSE') {
+                    row.classList.add('structure-lost');
+                } else {
+                    row.classList.add('structure-captured');
+                }
             } else {
-                row.classList.remove('structure-cleared');
+                // Restore means removing both possible status classes
+                row.classList.remove('structure-lost');
+                row.classList.remove('structure-captured');
             }
 
             const button = form.querySelector('button');
@@ -453,10 +474,9 @@
             if (oppAtkEl) oppAtkEl.innerText = data.oppAttackPoints;
             if (oppTotEl) oppTotEl.innerText = data.oppTotalPoints;
 
-            // NEW: Update Ribbon Color Class based on AJAX data
+            // Update Ribbon Color Class based on AJAX data
             const ribbon = document.getElementById('ribbon-' + siegeId);
             if (ribbon) {
-                // Remove existing classes
                 ribbon.classList.remove('ribbon-win', 'ribbon-lose');
 
                 const ourTotal = data.newTotalPoints;
