@@ -7,237 +7,6 @@
     <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
     <script th:src="@{/styles/js/main.js}"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-    <style>
-        .siege-section {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 40px;
-            margin-top: 25px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            position: relative;
-        }
-
-        /* The Sticky Container */
-        .sticky-header-wrapper {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background-color: #ffffff;
-            padding-top: 20px;
-            margin: -20px -20px 20px -20px;
-            padding-left: 20px;
-            padding-right: 20px;
-            border-bottom: 1px solid #f0f0f0;
-            box-shadow: 0 4px 6px -4px rgba(0,0,0,0.1);
-        }
-
-        .siege-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
-        }
-        .siege-title {
-            margin: 0;
-            font-size: 1.5em;
-            color: #333;
-            margin-top: 5px;
-        }
-        .siege-status {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8em;
-            font-weight: bold;
-            color: white;
-            text-transform: uppercase;
-        }
-        .status-PREP { background-color: #f39c12; }
-        .status-MATCHMAKING { background-color: #3498db; }
-        .status-BATTLE { background-color: #e74c3c; }
-        .status-FINISHED { background-color: #95a5a6; }
-
-        /* Points Ribbon */
-        .siege-stats-ribbon {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #f8f9fa;
-            border-radius: 5px;
-            padding: 10px 20px;
-            margin-bottom: 15px;
-            border: 1px solid #eee;
-            transition: background-color 0.3s ease; /* Smooth transition for AJAX updates */
-        }
-
-        /* Winning/Losing Backgrounds */
-        .ribbon-win {
-            background-color: #d4edda !important;
-            border-color: #c3e6cb !important;
-        }
-        .ribbon-lose {
-            background-color: #f8d7da !important;
-            border-color: #f5c6cb !important;
-        }
-
-        .score-side {
-            display: flex;
-            gap: 25px;
-            width: 45%;
-            justify-content: center;
-        }
-
-        .vs-divider {
-            font-weight: bold;
-            font-size: 1.2em;
-            color: #ccc;
-            text-transform: uppercase;
-        }
-
-        .stat-box {
-            text-align: center;
-        }
-        .stat-label { font-size: 0.75em; color: #777; text-transform: uppercase; letter-spacing: 1px; }
-        .stat-value { font-size: 1.2em; font-weight: bold; color: #333; }
-        .stat-total { color: #2980b9; }
-        .stat-total-opp { color: #c0392b; }
-
-        /* Grid for Map Tables */
-        .map-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-top: 20px;
-        }
-        .map-box h3 {
-            text-align: center;
-            background-color: #f9f9f9;
-            padding: 10px;
-            border: 1px solid #eee;
-            margin-bottom: 0;
-            font-size: 1.1em;
-        }
-        .def-header { border-bottom: 3px solid #3498db !important; color: #2c3e50; }
-        .atk-header { border-bottom: 3px solid #e74c3c !important; color: #c0392b; }
-
-        table.siege-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85em;
-            margin-bottom: 0;
-        }
-        table.siege-table th, table.siege-table td {
-            border: 1px solid #eee;
-            padding: 8px;
-            text-align: center;
-            vertical-align: middle;
-        }
-        table.siege-table th {
-            background-color: #fcfcfc;
-            font-weight: bold;
-            color: #555;
-        }
-
-        /* --- STATE CLASSES --- */
-
-        /* 1. BAD: We lost a defensive structure (RED) */
-        tr.structure-lost,
-        tr.structure-lost td {
-            background-color: #ffebee !important;
-            color: #c0392b !important;
-        }
-        tr.structure-lost .name-cell {
-            text-decoration: line-through;
-        }
-
-        /* 2. GOOD: We captured a target structure (GREEN) */
-        tr.structure-captured,
-        tr.structure-captured td {
-            background-color: #d4edda !important;
-            color: #155724 !important;
-        }
-        tr.structure-captured .name-cell {
-            text-decoration: line-through;
-        }
-
-        .structure-ok {
-            color: #27ae60;
-        }
-
-        .primary-highlight {
-            border: 2px solid #3498db;
-        }
-
-        .primary-badge {
-            position: absolute;
-            top: -12px;
-            left: 20px;
-            background: #3498db;
-            color: white;
-            padding: 3px 12px;
-            font-size: 0.75em;
-            border-radius: 4px;
-            font-weight: bold;
-            z-index: 101;
-        }
-
-        /* Action Buttons */
-        .btn-action {
-            border: none;
-            background: none;
-            cursor: pointer;
-            padding: 5px;
-            transition: transform 0.2s;
-        }
-        .btn-action:hover { transform: scale(1.1); }
-        .btn-destroy { color: #e74c3c; }
-        .btn-restore { color: #27ae60; }
-        .btn-capture { color: #2980b9; }
-
-        /* --- MOBILE OPTIMIZATION --- */
-        @media screen and (max-width: 980px) {
-            /* 1. Force Side-by-Side Grid */
-            .map-grid {
-                grid-template-columns: 1fr 1fr !important; /* Force 2 columns */
-                gap: 4px !important; /* Tiny gap between the two tables */
-            }
-
-            /* 2. Shrink Tables to Fit Side-by-Side */
-            .map-box h3 {
-                font-size: 0.8em;
-                padding: 5px 2px;
-
-                /* ALIGNMENT FIX START */
-                height: 50px;            /* Force enough height for 2 lines of text */
-                display: flex;           /* Use Flexbox */
-                align-items: center;     /* Vertically center the text */
-                justify-content: center; /* Horizontally center the text */
-                line-height: 1.2;        /* Tighten line spacing */
-                /* ALIGNMENT FIX END */
-            }
-
-            table.siege-table {
-                font-size: 0.7em; /* Much smaller font for the data */
-            }
-
-            table.siege-table th,
-            table.siege-table td {
-                padding: 4px 2px !important; /* Minimal padding to remove whitespace */
-            }
-
-            /* 3. Make Buttons Compact */
-            .btn-action {
-                padding: 2px 4px;
-                font-size: 0.9em; /* Keep icons readable */
-            }
-
-            /* 4. Keep Ribbon Stacked (So it doesn't break the layout above) */
-            .siege-stats-ribbon { flex-direction: column; gap: 15px; }
-            .score-side { width: 100%; justify-content: space-around; }
-        }
-    </style>
 </head>
 <body>
 <div id="page-wrapper">
@@ -247,13 +16,11 @@
 
     <section id="content">
         <div class="container">
-            <div class="row">
-                <div class="col-8">
-                    <h2><i class="fas fa-binoculars"></i> Live Battlefield</h2>
-                </div>
-                <div class="col-4" style="text-align: right;">
-                    <a th:href="@{/siege}" class="button alt small">Back to Siege Hub</a>
-                </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2><i class="fas fa-binoculars"></i> Live Battlefield</h2>
+                <a th:href="@{/siege}" class="button alt small">
+                    <i class="fas fa-arrow-left"></i> Back to Siege Hub
+                </a>
             </div>
 
             <div th:each="siege, iterStat : ${siegeList}"
@@ -411,7 +178,7 @@
             </div>
 
             <div style="text-align: center; margin-top: 2em;">
-                <a th:href="@{/siege}" class="button">Back to Siege Hub</a>
+                <a th:href="@{/siege}" class="button alt">Back to Siege Hub</a>
             </div>
         </div>
     </section>
@@ -460,7 +227,7 @@
 
             const row = document.getElementById('struct-row-' + structureId);
 
-            // NEW LOGIC: Apply different classes based on map type
+            // Apply different classes based on map type
             if (wasClearing) {
                 if (mapType === 'DEFENSE') {
                     row.classList.add('structure-lost');
@@ -468,7 +235,6 @@
                     row.classList.add('structure-captured');
                 }
             } else {
-                // Restore means removing both possible status classes
                 row.classList.remove('structure-lost');
                 row.classList.remove('structure-captured');
             }
@@ -492,35 +258,22 @@
                 }
             }
 
-            // Update Our Scores
-            const defEl = document.getElementById('def-points-' + siegeId);
-            const atkEl = document.getElementById('atk-points-' + siegeId);
-            const totEl = document.getElementById('total-points-' + siegeId);
+            // Update Scores
+            if (document.getElementById('def-points-' + siegeId)) document.getElementById('def-points-' + siegeId).innerText = data.newDefensePoints;
+            if (document.getElementById('atk-points-' + siegeId)) document.getElementById('atk-points-' + siegeId).innerText = data.newAttackPoints;
+            if (document.getElementById('total-points-' + siegeId)) document.getElementById('total-points-' + siegeId).innerText = data.newTotalPoints;
 
-            if (defEl) defEl.innerText = data.newDefensePoints;
-            if (atkEl) atkEl.innerText = data.newAttackPoints;
-            if (totEl) totEl.innerText = data.newTotalPoints;
+            if (document.getElementById('opp-def-' + siegeId)) document.getElementById('opp-def-' + siegeId).innerText = data.oppDefensePoints;
+            if (document.getElementById('opp-atk-' + siegeId)) document.getElementById('opp-atk-' + siegeId).innerText = data.oppAttackPoints;
+            if (document.getElementById('opp-total-' + siegeId)) document.getElementById('opp-total-' + siegeId).innerText = data.oppTotalPoints;
 
-            // Update Opponent Scores
-            const oppDefEl = document.getElementById('opp-def-' + siegeId);
-            const oppAtkEl = document.getElementById('opp-atk-' + siegeId);
-            const oppTotEl = document.getElementById('opp-total-' + siegeId);
-
-            if (oppDefEl) oppDefEl.innerText = data.oppDefensePoints;
-            if (oppAtkEl) oppAtkEl.innerText = data.oppAttackPoints;
-            if (oppTotEl) oppTotEl.innerText = data.oppTotalPoints;
-
-            // Update Ribbon Color Class based on AJAX data
+            // Update Ribbon Color
             const ribbon = document.getElementById('ribbon-' + siegeId);
             if (ribbon) {
                 ribbon.classList.remove('ribbon-win', 'ribbon-lose');
-
-                const ourTotal = data.newTotalPoints;
-                const oppTotal = data.oppTotalPoints;
-
-                if (ourTotal > oppTotal) {
+                if (data.newTotalPoints > data.oppTotalPoints) {
                     ribbon.classList.add('ribbon-win');
-                } else if (ourTotal < oppTotal) {
+                } else if (data.newTotalPoints < data.oppTotalPoints) {
                     ribbon.classList.add('ribbon-lose');
                 }
             }

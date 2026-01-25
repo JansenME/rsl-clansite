@@ -1,127 +1,132 @@
 <!DOCTYPE HTML>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-	<head>
-		<title>Audit Log</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
-		<script th:src="@{/styles/js/main.js}"></script>
-	</head>
-	<body>
-		<div id="page-wrapper">
-			<section id="header">
-				<div th:insert="~{inserts/nav :: nav}" class="container">
-				</div>
-			</section>
-
-			<section id="content">
-				<div class="container">
-					<section>
-						<h2>Audit Log</h2>
-						<p>Tracking administrative actions performed on the roster.</p>
-
-						<div class="filter-container">
-							<form th:action="@{/audit-log}" method="get">
-								<div class="filter-row">
-
-									<div class="filter-group">
-										<label for="startDate">From Date:</label>
-										<input type="date" id="startDate" name="startDate" th:value="${startDate}" />
-									</div>
-
-									<div class="filter-group">
-										<label for="endDate">To Date:</label>
-										<input type="date" id="endDate" name="endDate" th:value="${endDate}" />
-									</div>
-
-									<div class="filter-group">
-										<label for="actor">Admin Name:</label>
-										<input type="text" id="actor" name="actor" th:value="${actor}" placeholder="Search Admin..." />
-									</div>
-
-									<div class="filter-group">
-										<label for="action">Action:</label>
-										<select id="action" name="action">
-											<option value="">-- All Actions --</option>
-											<option th:each="act : ${auditActions}"
-													th:value="${act}"
-													th:text="${act.description != null ? act.description : act}"
-													th:selected="${act == selectedAction}">
-												Action Name
-											</option>
-										</select>
-									</div>
-
-									<div class="filter-group">
-										<label for="target">Target Name:</label>
-										<input type="text" id="target" name="target" th:value="${target}" placeholder="Search Target..." />
-									</div>
-
-									<div class="filter-actions" style="padding-bottom: 2px;">
-										<button type="submit" class="button small">Filter</button>
-										<a th:href="@{/audit-log}" class="button small alt">Reset</a>
-									</div>
-								</div>
-							</form>
-						</div>
-
-						<div th:replace="~{inserts/alerts :: warning-box(${limitWarning})}"></div>
-
-						<table style="width: 100%;">
-							<thead>
-							<tr>
-								<th>Date & Time</th>
-								<th>Admin</th>
-								<th>Action</th>
-								<th>Target</th>
-								<th>Details</th>
-								<th sec:authorize="hasRole('OWNER')" style="text-align: center;">Delete</th>
-							</tr>
-							</thead>
-							<tbody>
-							<tr th:each="log : ${logs}">
-								<td th:text="${#temporals.format(log.timestamp, 'dd-MM-yyyy HH:mm')}">Date</td>
-
-								<td th:text="${log.actorDiscordName}">Admin Name</td>
-
-								<td th:text="${log.action.description != null ? log.action.description : log.action}">Action</td>
-
-								<td th:text="${log.target}">Target Name</td>
-
-								<td th:title="${log.details}"
-									th:text="${#strings.length(log.details) > 35 ? #strings.substring(log.details, 0, 32) + '...' : log.details}"
-									style="cursor: help;">
-									Details
-								</td>
-
-								<td sec:authorize="hasRole('OWNER')" style="text-align: center;">
-									<form th:action="@{/audit-log/{id}/delete(id=${log.id})}" method="post"
-										  onsubmit="return confirm('Are you sure you want to delete this log entry? This cannot be undone.');">
-
-										<button type="submit"
-												style="background-color: #c0392b; color: white; border: none;
-                                                    border-radius: 50%; width: 30px; height: 30px; line-height: 30px;
-                                                    padding: 0; font-weight: bold; cursor: pointer;">
-											X
-										</button>
-									</form>
-								</td>
-							</tr>
-							</tbody>
-						</table>
-
-						<div th:if="${logs.isEmpty()}">
-							<p>No audit records found.</p>
-						</div>
-
-						<br />
-						<a th:href="@{/profile}" class="button">Back to Profile</a>
-					</section>
-				</div>
-			</section>
-
-			<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
-			</div>
+<head>
+	<title>Audit Log</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+	<script th:src="@{/styles/js/main.js}"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+</head>
+<body>
+<div id="page-wrapper">
+	<section id="header">
+		<div th:insert="~{inserts/nav :: nav}" class="container">
 		</div>
-	</body>
+	</section>
+
+	<section id="content">
+		<div class="container">
+			<section>
+				<h2>Audit Log</h2>
+				<p>Tracking administrative actions performed on the roster.</p>
+
+				<div class="filter-container">
+					<form th:action="@{/audit-log}" method="get">
+						<div class="filter-row">
+
+							<div class="filter-group">
+								<label for="startDate">From Date:</label>
+								<input type="date" id="startDate" name="startDate" th:value="${startDate}" />
+							</div>
+
+							<div class="filter-group">
+								<label for="endDate">To Date:</label>
+								<input type="date" id="endDate" name="endDate" th:value="${endDate}" />
+							</div>
+
+							<div class="filter-group">
+								<label for="actor">Admin Name:</label>
+								<input type="text" id="actor" name="actor" th:value="${actor}" placeholder="Search Admin..." />
+							</div>
+
+							<div class="filter-group">
+								<label for="action">Action:</label>
+								<select id="action" name="action">
+									<option value="">-- All Actions --</option>
+									<option th:each="act : ${auditActions}"
+											th:value="${act}"
+											th:text="${act.description != null ? act.description : act}"
+											th:selected="${act == selectedAction}">
+										Action Name
+									</option>
+								</select>
+							</div>
+
+							<div class="filter-group">
+								<label for="target">Target Name:</label>
+								<input type="text" id="target" name="target" th:value="${target}" placeholder="Search Target..." />
+							</div>
+
+							<div class="filter-actions" style="padding-bottom: 2px;">
+								<button type="submit" class="button small primary">
+									<i class="fas fa-filter"></i> <span>Filter</span>
+								</button>
+								<a th:href="@{/audit-log}" class="button small alt">
+									<i class="fas fa-undo"></i> <span>Reset</span>
+								</a>
+							</div>
+						</div>
+					</form>
+				</div>
+
+				<div th:replace="~{inserts/alerts :: warning-box(${limitWarning})}"></div>
+
+				<table style="width: 100%;">
+					<thead>
+					<tr>
+						<th>Date & Time</th>
+						<th>Admin</th>
+						<th>Action</th>
+						<th>Target</th>
+						<th>Details</th>
+						<th sec:authorize="hasRole('OWNER')" style="text-align: center;">Delete</th>
+					</tr>
+					</thead>
+					<tbody>
+					<tr th:each="log : ${logs}">
+						<td data-label="Date & Time" th:text="${#temporals.format(log.timestamp, 'dd-MM-yyyy HH:mm')}">Date</td>
+
+						<td data-label="Admin" th:text="${log.actorDiscordName}">Admin Name</td>
+
+						<td data-label="Action" th:text="${log.action.description != null ? log.action.description : log.action}">Action</td>
+
+						<td data-label="Target" th:text="${log.target}">Target Name</td>
+
+						<td data-label="Details" th:title="${log.details}"
+							th:text="${#strings.length(log.details) > 35 ? #strings.substring(log.details, 0, 32) + '...' : log.details}"
+							style="cursor: help;">
+							Details
+						</td>
+
+						<td sec:authorize="hasRole('OWNER')" data-label="Delete" style="text-align: center;">
+							<form th:action="@{/audit-log/{id}/delete(id=${log.id})}" method="post"
+								  onsubmit="return confirm('Are you sure you want to delete this log entry? This cannot be undone.');">
+
+								<button type="submit" class="button small"
+										style="background-color: #c0392b; color: white;">
+									<i class="fas fa-trash"></i>
+								</button>
+							</form>
+						</td>
+					</tr>
+					</tbody>
+				</table>
+
+				<div th:if="${logs.isEmpty()}">
+					<p>No audit records found.</p>
+				</div>
+
+				<br />
+				<a th:href="@{/profile}" class="button alt">
+					<i class="fas fa-arrow-left"></i> Back to Profile
+				</a>
+			</section>
+		</div>
+	</section>
+
+	<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+	</div>
+</div>
+</body>
 </html>

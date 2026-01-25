@@ -1,42 +1,43 @@
 <!DOCTYPE HTML>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-	<head>
-		<title>Login - Fury of the Fallen</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
-		<script th:src="@{/styles/js/main.js}"></script>
-	</head>
-	<body>
-		<div id="page-wrapper">
-			<section id="header">
-				<div th:insert="~{inserts/nav :: nav}" class="container">
-				</div>
-			</section>
-
-			<section id="content">
-				<div class="container">
-					<section>
-						<div th:replace="~{inserts/alerts :: error-box(${loginError})}"></div>
-
-						<h2>Login via Discord</h2>
-						<p>Here you can log in via Discord. When you log in, we will check whether you are a member of the Clan Discord. If not, you won't be able to log in. After logging in, depending on your Discord roles, you might have access to certain areas of the website. You will also be able to add Champions to your own Roster.</p>
-
-						<a th:unless="${clanmemberViewData}"
-						   th:href="@{/oauth2/authorization/discord}"
-						   title="Login with Discord">
-
-							<img th:src="@{/images/discord.png}"
-								 alt="Login with Discord"
-								 style="vertical-align: middle; margin-top: -3px;" />
-
-						</a>
-					</section>
-				</div>
-			</section>
-
-			<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
-			</div>
+<head>
+	<title>Login - Fury of the Fallen</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+	<script th:src="@{/styles/js/main.js}"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+</head>
+<body>
+<div id="page-wrapper">
+	<section id="header">
+		<div th:insert="~{inserts/nav :: nav}" class="container">
 		</div>
-	</body>
+	</section>
+
+	<section id="content">
+		<div class="container">
+			<section>
+				<div th:replace="~{inserts/alerts :: error-box(${loginError})}"></div>
+
+				<h2>Login via Discord</h2>
+				<p>Here you can log in via Discord. When you log in, we will check whether you are a member of the Clan Discord. If not, you won't be able to log in. After logging in, depending on your Discord roles, you might have access to certain areas of the website. You will also be able to add Champions to your own Roster.</p>
+
+				<a th:unless="${clanmemberViewData}"
+				   th:href="@{/oauth2/authorization/discord}"
+				   title="Login with Discord">
+
+					<img th:src="@{/images/discord.png}"
+						 alt="Login with Discord"
+						 class="discord-login-img" />
+
+				</a>
+			</section>
+		</div>
+	</section>
+
+	<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+	</div>
+</div>
+</body>
 </html>

@@ -7,94 +7,6 @@
     <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
     <script th:src="@{/styles/js/main.js}"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-    <style>
-        .history-container {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 30px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            margin-bottom: 40px;
-        }
-
-        h3.clan-header {
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        table.history-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        table.history-table th, table.history-table td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-            vertical-align: middle;
-        }
-        table.history-table th {
-            background-color: #f8f9fa;
-            color: #555;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 0.85em;
-        }
-        table.history-table tr:hover {
-            background-color: #fcfcfc;
-        }
-
-        .score-pill {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-weight: bold;
-            background: #eef2f5;
-            color: #2c3e50;
-        }
-        .score-breakdown {
-            font-size: 0.8em;
-            color: #7f8c8d;
-            margin-left: 10px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 30px;
-            color: #999;
-            font-style: italic;
-        }
-
-        .clan-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.75em;
-            margin-right: 8px;
-            font-weight: bold;
-        }
-        .badge-T1 { background-color: #3498db; color: white; }
-        .badge-T2 { background-color: #e67e22; color: white; }
-
-        /* NEW: Outcome Badges */
-        .outcome-badge {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 4px;
-            font-size: 0.75em;
-            font-weight: bold;
-            text-transform: uppercase;
-            color: white;
-            min-width: 70px;
-            text-align: center;
-        }
-        .outcome-win { background-color: #27ae60; }
-        .outcome-loss { background-color: #e74c3c; }
-        .outcome-draw { background-color: #95a5a6; }
-
-    </style>
 </head>
 <body>
 <div id="page-wrapper">
@@ -104,13 +16,11 @@
 
     <section id="content">
         <div class="container">
-            <div class="row">
-                <div class="col-8">
-                    <h2><i class="fas fa-history"></i> Siege Archives</h2>
-                </div>
-                <div class="col-4" style="text-align: right;">
-                    <a th:href="@{/siege}" class="button alt small">Back to Siege Hub</a>
-                </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2><i class="fas fa-history"></i> Siege Archives</h2>
+                <a th:href="@{/siege}" class="button alt small">
+                    <i class="fas fa-arrow-left"></i> Back to Siege Hub
+                </a>
             </div>
 
             <p>Historical record of past battles and outcomes.</p>
@@ -128,23 +38,28 @@
                         <th>Date</th>
                         <th>Opponent</th>
                         <th>Score (Us vs Them)</th>
-                        <th>Outcome</th> <th>Actions</th>
+                        <th>Outcome</th>
+                        <th>Actions</th>
                     </tr>
                     </thead>
                     <tbody>
                     <tr th:each="siege : ${t1History}">
-                        <td th:text="${#temporals.format(siege.startDate, 'dd MMM yyyy')}">Date</td>
-                        <td style="font-weight: bold; color: #333;" th:text="${siege.opponentClanName}">Opponent</td>
-                        <td>
+                        <td data-label="Date" th:text="${#temporals.format(siege.startDate, 'dd MMM yyyy')}">Date</td>
+
+                        <td data-label="Opponent" style="font-weight: bold; color: #333;" th:text="${siege.opponentClanName}">Opponent</td>
+
+                        <td data-label="Score">
                             <span class="score-pill" th:text="${siege.totalPoints + ' - ' + siege.opponentTotalPoints}">2500 - 2000</span>
                         </td>
-                        <td>
+
+                        <td data-label="Outcome">
                             <span th:if="${siege.totalPoints > siege.opponentTotalPoints}" class="outcome-badge outcome-win">Victory</span>
                             <span th:if="${siege.totalPoints < siege.opponentTotalPoints}" class="outcome-badge outcome-loss">Defeat</span>
                             <span th:if="${siege.totalPoints == siege.opponentTotalPoints}" class="outcome-badge outcome-draw">Draw</span>
                         </td>
-                        <td>
-                            <a th:href="@{/siege/history/{id}(id=${siege.id})}" class="button small">
+
+                        <td data-label="Actions">
+                            <a th:href="@{/siege/history/{id}(id=${siege.id})}" class="button small primary">
                                 <i class="fas fa-eye"></i> View Recap
                             </a>
                         </td>
@@ -166,23 +81,28 @@
                         <th>Date</th>
                         <th>Opponent</th>
                         <th>Score (Us vs Them)</th>
-                        <th>Outcome</th> <th>Actions</th>
+                        <th>Outcome</th>
+                        <th>Actions</th>
                     </tr>
                     </thead>
                     <tbody>
                     <tr th:each="siege : ${t2History}">
-                        <td th:text="${#temporals.format(siege.startDate, 'dd MMM yyyy')}">Date</td>
-                        <td style="font-weight: bold; color: #333;" th:text="${siege.opponentClanName}">Opponent</td>
-                        <td>
+                        <td data-label="Date" th:text="${#temporals.format(siege.startDate, 'dd MMM yyyy')}">Date</td>
+
+                        <td data-label="Opponent" style="font-weight: bold; color: #333;" th:text="${siege.opponentClanName}">Opponent</td>
+
+                        <td data-label="Score">
                             <span class="score-pill" th:text="${siege.totalPoints + ' - ' + siege.opponentTotalPoints}">2500 - 2000</span>
                         </td>
-                        <td>
+
+                        <td data-label="Outcome">
                             <span th:if="${siege.totalPoints > siege.opponentTotalPoints}" class="outcome-badge outcome-win">Victory</span>
                             <span th:if="${siege.totalPoints < siege.opponentTotalPoints}" class="outcome-badge outcome-loss">Defeat</span>
                             <span th:if="${siege.totalPoints == siege.opponentTotalPoints}" class="outcome-badge outcome-draw">Draw</span>
                         </td>
-                        <td>
-                            <a th:href="@{/siege/history/{id}(id=${siege.id})}" class="button small">
+
+                        <td data-label="Actions">
+                            <a th:href="@{/siege/history/{id}(id=${siege.id})}" class="button small primary">
                                 <i class="fas fa-eye"></i> View Recap
                             </a>
                         </td>

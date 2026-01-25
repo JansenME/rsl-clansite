@@ -7,89 +7,6 @@
 	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
 	<script th:src="@{/styles/js/main.js}"></script>
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-
-	<style>
-		/* Shared Button Style for consistency with Champions page */
-           .button-blue {
-               background: #0c2ccc !important;
-               color: white !important;
-               border: none;
-               box-shadow: none;
-           }
-           .button-blue:hover {
-               background-color: #0a25b0 !important;
-           }
-
-           /* KNOWN TEAM STYLES */
-           .known-team-card {
-               background: #fff;
-               border: 1px solid #ddd;
-               border-radius: 8px;
-               padding: 15px;
-               margin-bottom: 20px;
-               box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-               position: relative;
-           }
-
-           .known-team-header {
-               display: flex;
-               justify-content: space-between;
-               align-items: center;
-               margin-bottom: 10px;
-               border-bottom: 1px solid #eee;
-               padding-bottom: 10px;
-           }
-
-           .team-condition-badge {
-               background-color: #f39c12;
-               color: white;
-               padding: 3px 8px;
-               border-radius: 4px;
-               font-size: 0.8em;
-               font-weight: bold;
-           }
-
-           .team-portraits {
-               display: flex;
-               gap: 10px;
-               justify-content: center; /* Center the team */
-           }
-
-           .team-mini-portrait {
-               width: 60px;
-               height: 60px;
-               border-radius: 4px;
-               border: 2px solid #ccc;
-               object-fit: cover;
-           }
-
-           .team-mini-portrait.leader {
-               border-color: #f1c40f;
-               box-shadow: 0 0 5px rgba(241, 196, 15, 0.5);
-           }
-
-           /* Action Buttons on Team Card */
-           .team-actions {
-               display: flex;
-               gap: 10px;
-           }
-
-           .team-action-btn {
-               background: none;
-               border: none;
-               cursor: pointer;
-               font-size: 1.1em;
-               padding: 0 5px;
-               transition: color 0.2s;
-               text-decoration: none; /* For the link */
-           }
-
-           .btn-edit { color: #3498db; }
-           .btn-edit:hover { color: #2980b9; }
-
-           .btn-delete { color: #e74c3c; }
-           .btn-delete:hover { color: #c0392b; }
-	</style>
 </head>
 <body>
 <div id="page-wrapper">
@@ -102,17 +19,17 @@
 		<div class="container">
 			<section>
 
-				<div style="display: flex; flex-wrap: wrap; justify-content: space-between; text-align: left;">
+				<div class="profile-container">
 
-					<div style="flex: 1; min-width: 300px;">
+					<div class="profile-main">
 						<h2>
 							<span th:text="${isOwnProfile ? 'My Profile & Roles' : 'Member Profile'}">Profile</span>
 						</h2>
 
-						<div th:if="${successMessage}" class="alert alert-success" style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
+						<div th:if="${successMessage}" class="alert alert-success">
 							<span th:text="${successMessage}"></span>
 						</div>
-						<div th:if="${errorMessage}" class="alert alert-error" style="background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
+						<div th:if="${errorMessage}" class="alert alert-danger">
 							<span th:text="${errorMessage}"></span>
 						</div>
 
@@ -124,8 +41,11 @@
 										 alt="Discord Avatar"
 										 style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
 								</div>
-								<div style="margin-left: 0; padding-left: 0;"><p style="margin: 0 0 10px 0; padding-left: 0;"><span th:text="${isOwnProfile ? 'Logged in as:' : 'Member:'}">User:</span><br /><strong th:text="${clanmemberViewData != null ? clanmemberViewData.discordUserName : 'User'}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong>
-								</p>
+								<div style="margin-left: 0; padding-left: 0;">
+									<p style="margin: 0 0 10px 0; padding-left: 0;">
+										<span th:text="${isOwnProfile ? 'Logged in as:' : 'Member:'}">User:</span><br />
+										<strong th:text="${clanmemberViewData != null ? clanmemberViewData.discordUserName : 'User'}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong>
+									</p>
 
 									<p style="font-weight: bold; margin-bottom: 5px; margin-left: 0; padding-left: 0;">Roles:</p>
 
@@ -141,8 +61,10 @@
 							<div th:if="${isOwnProfile and linkedMembers != null and #lists.size(linkedMembers) > 1}"
 								 style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
 
-								<h3>Linked Game Accounts</h3><p style="font-size: 0.9em; color: #666; margin-bottom: 1em;">Currently acting as: <strong style="color: #27ae60;" th:text="${activeMember != null ? activeMember.ingameName : 'Unknown'}">Name</strong>
-							</p>
+								<h3>Linked Game Accounts</h3>
+								<p style="font-size: 0.9em; color: #666; margin-bottom: 1em;">
+									Currently acting as: <strong style="color: #27ae60;" th:text="${activeMember != null ? activeMember.ingameName : 'Unknown'}">Name</strong>
+								</p>
 
 								<div class="table-wrapper">
 									<table class="alt">
@@ -158,18 +80,18 @@
 										<tr th:each="linked : ${linkedMembers}">
 											<td th:text="${linked.ingameName}" style="font-weight: bold;">Name</td>
 											<td>
-                                              <span th:if="${linked.clanGroup != null}"
-													th:text="${linked.clanGroup}"
-													style="background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">T1</span>
+                                      <span th:if="${linked.clanGroup != null}"
+											th:text="${linked.clanGroup}"
+											style="background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">T1</span>
 												<span th:if="${linked.clanGroup == null}">-</span>
 											</td>
 											<td th:text="${linked.clanRank}">Soldier</td>
 
 											<td style="text-align: center;">
 												<div th:if="${activeMember != null and linked.id == activeMember.id}">
-                                                  <span style="color: #27ae60; font-weight: bold; font-size: 0.9em;">
-                                                      <i class="fas fa-check-circle"></i> Active
-                                                  </span>
+                                          <span class="status-ok" style="font-size: 0.9em;">
+                                              <i class="fas fa-check-circle"></i> Active
+                                          </span>
 												</div>
 
 												<div th:if="${activeMember == null or linked.id != activeMember.id}">
@@ -193,8 +115,7 @@
 						</div>
 					</div>
 
-					<div th:if="${isOwnProfile}"
-						 style="width: 250px; border-left: 1px solid #eee; padding-left: 30px; margin-left: 20px;">
+					<div th:if="${isOwnProfile}" class="profile-sidebar">
 						<h2 style="font-size: 1.4em;">Quick Links</h2>
 						<ul style="list-style: none; padding: 0; margin: 0;">
 							<th:block th:each="link, iterStat : ${quickLinks}">
@@ -232,8 +153,7 @@
 
 						<a th:if="${isOwnProfile or #authorization.expression('hasRole(''ROLE_COORDINATOR'')')}"
 						   th:href="@{/champions(editingMemberId=${member.id})}"
-						   class="button small button-blue"
-						   style="display: inline-flex; align-items: center; gap: 5px; text-decoration: none;">
+						   class="button small primary">
 							<i class="fas fa-edit"></i>
 							<span th:text="${isOwnProfile ? 'Edit Personal Roster' : 'Edit Member Roster'}">Edit Roster</span>
 						</a>
@@ -250,9 +170,7 @@
 							Showing <strong id="visible-champion-count" th:text="${champions.size()}">0</strong> / <strong th:text="${champions.size()}">0</strong> Owned Champions
 						</div>
 
-						<button type="button" onclick="toggleFilter()"
-								class="button-blue"
-								style="display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold;">
+						<button type="button" onclick="toggleFilter()" class="button primary">
 							<span id="filter-text">Show Filters & Sorting</span>
 							<span id="filter-arrow">▼</span>
 						</button>
@@ -354,8 +272,7 @@
 
 						<a th:if="${isOwnProfile or #authorization.expression('hasRole(''ROLE_COORDINATOR'')')}"
 						   th:href="@{/teams/builder(targetMemberId=${member.id})}"
-						   class="button small button-blue"
-						   style="display: inline-flex; align-items: center; gap: 5px; text-decoration: none;">
+						   class="button small primary">
 							<i class="fas fa-plus"></i> Add Siege Team
 						</a>
 					</div>

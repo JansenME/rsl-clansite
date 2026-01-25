@@ -33,14 +33,14 @@
                         <input type="hidden" th:field="*{avatarHash}" />
 
                         <div th:if="${clanmemberRosterDto.discordId != null and !clanmemberRosterDto.discordId.isEmpty()}"
-                             style="background: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 25px; border: 1px solid #e9ecef; text-align: center;">
+                             class="linked-account-box">
 
                             <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1em; color: #495057;">Current Linked Account</h3>
 
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 15px; text-align: left;">
+                            <div class="linked-account-info">
                                 <div th:if="${clanmemberRosterDto.avatarHash != null}">
                                     <img th:src="'https://cdn.discordapp.com/avatars/' + ${clanmemberRosterDto.discordId} + '/' + ${clanmemberRosterDto.avatarHash} + '.png'"
-                                         alt="Avatar" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+                                         alt="Avatar" class="linked-avatar-img" />
                                 </div>
 
                                 <div>
@@ -52,24 +52,22 @@
                             </div>
                         </div>
 
-                        <h3 style="text-align: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">Account Linking</h3>
+                        <h3 class="section-divider-title">Account Linking</h3>
 
-                        <div class="form-group" style="max-width: 500px; margin: 0 auto 30px auto;">
+                        <div class="form-group form-center-narrow" style="margin-bottom: 30px;">
                             <label for="discordId">Discord User ID:</label>
                             <input type="text" id="discordId" th:field="*{discordId}" style="font-family: monospace;" />
                         </div>
 
-                        <h3 style="text-align: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">Roster Details</h3>
+                        <h3 class="section-divider-title">Roster Details</h3>
 
-                        <div class="form-group" style="max-width: 500px; margin: 0 auto 20px auto;">
+                        <div class="form-group form-center-narrow">
                             <label for="ingameName">In-Game Name:</label>
                             <input type="text" id="ingameName" th:field="*{ingameName}" required />
-                            <span th:if="${#fields.hasErrors('ingameName')}"
-                                  th:errors="*{ingameName}"
-                                  style="color: #cc0000; font-weight: bold; display: block; margin-top: 5px;">Error</span>
+                            <span th:if="${#fields.hasErrors('ingameName')}" th:errors="*{ingameName}" class="field-error">Error</span>
                         </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 500px; margin: 0 auto;">
+                        <div class="form-grid-2">
                             <div class="form-group">
                                 <label for="clanRank">Clan Rank:</label>
                                 <select id="clanRank" th:field="*{clanRank}" required>
@@ -92,8 +90,12 @@
                         </div>
 
                         <div style="margin-top: 30px; display: flex; justify-content: center; gap: 15px;">
-                            <button type="submit" class="button primary">Update Member</button>
-                            <a th:href="@{/clanmembers}" class="button">Cancel</a>
+                            <button type="submit" class="button primary">
+                                <i class="fas fa-save"></i> <span>Update Member</span>
+                            </button>
+                            <a th:href="@{/clanmembers}" class="button alt">
+                                <i class="fas fa-times"></i> <span>Cancel</span>
+                            </a>
                         </div>
                     </form>
                 </div>

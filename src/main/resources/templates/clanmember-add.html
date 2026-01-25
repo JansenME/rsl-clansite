@@ -6,6 +6,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
 	<script th:src="@{/styles/js/main.js}"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 </head>
 <body>
 <div id="page-wrapper">
@@ -23,17 +24,28 @@
 					<div th:replace="~{inserts/alerts :: error-box(${lookupError})}"></div>
 				</th:block>
 
-				<form th:action="@{/clanmembers/add}" method="get" style="margin-bottom: 30px; padding-bottom: 30px; border-bottom: 1px solid #ccc;">
+				<form th:action="@{/clanmembers/add}" method="get" class="lookup-form">
 					<h3>Step 1: Discord ID Lookup</h3>
+
 					<label for="discordIdLookup">Discord ID:</label>
-					<input type="text" id="discordIdLookup" name="discordId"
-						   th:value="${clanmemberRosterDto.discordId}" required
-						   placeholder="Paste the user's copied Discord ID here" />
-					<button type="submit" class="button">Lookup User</button>
-					<br />
-					<a th:href="@{/clanmembers/add(skipLookup=true)}" class="button secondary" style="margin-left: 10px;">
-						Skip Discord Lookup
-					</a>
+
+					<div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: center;">
+
+						<input type="text" id="discordIdLookup" name="discordId"
+							   th:value="${clanmemberRosterDto.discordId}" required
+							   placeholder="Paste Discord ID"
+							   style="width: 250px; height: 44px; padding: 0 10px; border: 1px solid #ccc; border-radius: 4px;" />
+
+						<button type="submit" class="button primary" style="margin-bottom: 0; height: 44px; display: inline-flex; align-items: center;">
+							<i class="fas fa-search"></i> <span>Lookup</span>
+						</button>
+					</div>
+
+					<div style="margin-top: 15px;">
+						<a th:href="@{/clanmembers/add(skipLookup=true)}" class="button small alt">
+							<i class="fas fa-forward"></i> <span>Skip Discord Lookup</span>
+						</a>
+					</div>
 				</form>
 
 				<div th:if="${lookupSuccess}">
@@ -53,24 +65,24 @@
 						</div>
 
 						<div th:if="${clanmemberRosterDto.discordName != null and clanmemberRosterDto.discordName.length() > 0}">
-							<div>
+							<div class="form-group">
 								<label>Discord Global Name (Verified):</label>
-								<p style="font-weight: bold;" th:text="*{discordName}"></p>
+								<p class="discord-verified-text" th:text="*{discordName}"></p>
 							</div>
 
-							<div>
+							<div class="form-group">
 								<label for="playerNickname">Server Nickname (Pre-filled from Discord Server Nickname):</label>
 								<input type="text" id="playerNickname" th:field="*{playerNickname}" />
 							</div>
 						</div>
 
-						<div>
+						<div class="form-group">
 							<label for="ingameName">In-Game Name (Required for manual entry):</label>
 							<input type="text" id="ingameName" th:field="*{ingameName}"
 								   th:required="${clanmemberRosterDto.discordId == null || clanmemberRosterDto.discordId.isEmpty()}" />
 						</div>
 
-						<div>
+						<div class="form-group">
 							<label for="clanRank">Clan Rank (Manual Entry):</label>
 							<select id="clanRank" th:field="*{clanRank}">
 								<option value="">-- Select Rank --</option>
@@ -80,13 +92,13 @@
 							</select>
 						</div>
 
-						<div th:if="${clanmemberRosterDto.clanGroup != null and clanmemberRosterDto.discordId != null and !clanmemberRosterDto.discordId.isEmpty()}">
+						<div class="form-group" th:if="${clanmemberRosterDto.clanGroup != null and clanmemberRosterDto.discordId != null and !clanmemberRosterDto.discordId.isEmpty()}">
 							<label>Detected Clan:</label>
-							<p style="font-weight: bold;" th:text="${clanmemberRosterDto.clanGroup}"></p>
+							<p class="discord-verified-text" th:text="${clanmemberRosterDto.clanGroup}"></p>
 							<input type="hidden" th:field="*{clanGroup}" />
 						</div>
 
-						<div th:if="${clanmemberRosterDto.clanGroup == null or clanmemberRosterDto.discordId == null or clanmemberRosterDto.discordId.isEmpty()}">
+						<div class="form-group" th:if="${clanmemberRosterDto.clanGroup == null or clanmemberRosterDto.discordId == null or clanmemberRosterDto.discordId.isEmpty()}">
 							<label for="clanGroupSelect">Clan Group (Please Select):</label>
 							<select id="clanGroupSelect" th:field="*{clanGroup}" required>
 								<option value="">-- Select Clan --</option>
@@ -96,8 +108,14 @@
 							</select>
 						</div>
 
-						<button type="submit" formnovalidate class="button special">Save Roster Entry</button>
-						<a th:href="@{/clanmembers}" class="button">Cancel</a>
+						<div style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
+							<button type="submit" formnovalidate class="button primary">
+								<i class="fas fa-save"></i> <span>Save Roster Entry</span>
+							</button>
+							<a th:href="@{/clanmembers}" class="button alt">
+								<i class="fas fa-times"></i> <span>Cancel</span>
+							</a>
+						</div>
 					</form>
 				</div>
 			</section>

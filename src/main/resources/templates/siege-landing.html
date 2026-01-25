@@ -7,65 +7,6 @@
     <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
     <script th:src="@{/styles/js/main.js}"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-    <style>
-        .hub-container {
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 40px 0;
-        }
-        .hub-card {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 12px;
-            padding: 30px;
-            text-align: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            text-decoration: none;
-            color: inherit;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .hub-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-            border-color: #3498db;
-        }
-        .card-icon {
-            font-size: 3em;
-            color: #3498db;
-            margin-right: 30px;
-            width: 80px;
-        }
-        .card-content {
-            text-align: left;
-            flex-grow: 1;
-        }
-        .card-title {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-        .card-desc {
-            color: #7f8c8d;
-            font-size: 1em;
-            margin: 0;
-        }
-        .card-arrow {
-            font-size: 1.5em;
-            color: #ccc;
-        }
-
-        /* Specific Colors */
-        .card-overview .card-icon { color: #e67e22; }
-        .card-defense .card-icon { color: #27ae60; }
-        .card-history .card-icon { color: #95a5a6; }
-    </style>
 </head>
 <body>
 <div id="page-wrapper">

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
     <script th:src="@{/styles/js/main.js}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 </head>
 <body>
 <div id="page-wrapper">
@@ -47,8 +48,8 @@
                     <div class="details-card" style="text-align: center;">
                         <img th:src="@{/images/champion-cards/{imagename}(imagename=${champion.imagename})}"
                              style="width: 200px; border-radius: 10px; margin-bottom: 20px;"
-                             th:onerror="'this.onerror=null; this.src=\'' + @{/images/champion-cards/placeholder.png} + '\';'" /><p><strong>Type: </strong><span th:text="${champion.type != null ? champion.type.getName() : 'Unknown'}">Attack</span>
-                        </p>
+                             th:onerror="'this.onerror=null; this.src=\'' + @{/images/champion-cards/placeholder.png} + '\';'" />
+                        <p><strong>Type: </strong><span th:text="${champion.type != null ? champion.type.getName() : 'Unknown'}">Attack</span></p>
 
                         <div th:if="${champion.aura != null}" style="background: #f0f8ff; padding: 10px; border-radius: 5px; margin-top: 15px;">
                             <strong>Aura:</strong><br/>
@@ -108,23 +109,23 @@
                     </div>
                 </div>
 
-                <div style="text-align: center; margin-top: 40px;">
-                    <a th:href="@{/champions}" class="button">Back to Champions List</a>
+                <div style="text-align: center; margin-top: 40px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                    <a th:href="@{/champions}" class="button alt">
+                        <i class="fas fa-arrow-left"></i> <span>Back to Champions List</span>
+                    </a>
 
                     <a sec:authorize="hasRole('OWNER')"
                        th:href="@{/champions/{id}/edit(id=${champion.id})}"
-                       style="display: inline-block; background: #0c2ccc; color: #fff; padding: 0 20px; line-height: 2.75em; text-decoration: none; border-radius: 4px; font-weight: bold; margin-left: 10px;">
-                        Edit Champion
+                       class="button primary">
+                        <i class="fas fa-edit"></i> <span>Edit Champion</span>
                     </a>
 
                     <form sec:authorize="hasRole('OWNER')"
                           th:action="@{/champions/{id}/delete(id=${champion.id})}"
                           method="POST"
-                          onsubmit="return confirm('Are you sure you want to DELETE this champion? This action cannot be undone.');"
-                          style="display: inline-block; margin-left: 10px;">
-                        <button type="submit"
-                                style="background: #c0392b; color: #fff; border: none; padding: 0 20px; line-height: 2.75em; border-radius: 4px; font-weight: bold; cursor: pointer;">
-                            Delete Champion
+                          onsubmit="return confirm('Are you sure you want to DELETE this champion? This action cannot be undone.');">
+                        <button type="submit" class="button danger">
+                            <i class="fas fa-trash"></i> <span>Delete Champion</span>
                         </button>
                     </form>
                 </div>

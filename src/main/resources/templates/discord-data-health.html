@@ -17,75 +17,80 @@
     <section id="content">
         <div class="container">
             <section>
-                <h2>Data Health & Sync Dashboard</h2>
-                <a th:href="@{/clanmembers}" class="btn-primary" style="text-decoration: none; padding: 8px 16px;">Back to Roster</a>
-
-
-                <div th:if="${successMessage}" style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
-                    <span th:text="${successMessage}"></span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>Data Health & Sync Dashboard</h2>
+                    <a th:href="@{/clanmembers}" class="button alt">
+                        <i class="fas fa-arrow-left"></i> Back to Roster
+                    </a>
                 </div>
-                <div th:if="${errorMessage}" style="background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
-                    <span th:text="${errorMessage}"></span>
+
+                <div th:if="${successMessage}" class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> <span th:text="${successMessage}"></span>
+                </div>
+                <div th:if="${errorMessage}" class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> <span th:text="${errorMessage}"></span>
                 </div>
 
                 <div class="card">
-                    <h3 style="background-color: #2c3e50; color: white; padding: 10px 15px; margin: 0; border-radius: 5px 5px 0 0;">
-                        Discord Consistency Check
-                    </h3>
+                    <div class="card-header">
+                        <i class="fab fa-discord"></i> Discord Consistency Check
+                    </div>
+
                     <div style="padding: 0;">
-                        <table style="width: 100%; border-collapse: collapse;">
+                        <table style="width: 100%; border-collapse: collapse; margin: 0; border-radius: 0; box-shadow: none;">
                             <thead>
-                            <tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; color: #666">
-                                <th style="padding: 12px; text-align: left;">Discord Identity</th>
-                                <th style="padding: 12px; text-align: center;">Avatar</th>
-                                <th style="padding: 12px; text-align: center;">Roles</th>
-                                <th style="padding: 12px; text-align: left;">Nickname Sync</th>
-                                <th style="padding: 12px; text-align: right;">Action</th>
+                            <tr>
+                                <th style="text-align: left;">Discord Identity</th>
+                                <th style="text-align: center;">Avatar</th>
+                                <th style="text-align: center;">Roles</th>
+                                <th style="text-align: left;">Nickname Sync</th>
+                                <th style="text-align: right; padding-right: 20px;">Action</th>
                             </tr>
                             </thead>
                             <tbody>
                             <tr th:each="row : ${statusList}" style="border-bottom: 1px solid #eee;">
 
-                                <td style="padding: 10px;">
+                                <td data-label="Discord Identity">
                                     <span th:text="${row.discordName}"
-                                          th:style="${row.discordName == 'NOT FOUND' or row.discordName == 'Unknown'} ? 'color: #dc3545; font-weight: bold;' : 'font-weight: bold;'">
+                                          th:classappend="${row.discordName == 'NOT FOUND' or row.discordName == 'Unknown'} ? 'text-danger' : ''"
+                                          style="font-weight: bold;">
                                         Discord Name
                                     </span>
 
-                                    <div style="font-size: 0.75rem; color: #888;" th:text="${row.discordId}">ID</div>
-                                    <div th:if="${row.statusMessage}" style="color: #dc3545; font-size: 0.75rem;" th:text="${row.statusMessage}">Error</div>
+                                    <div class="text-muted" th:text="${row.discordId}">ID</div>
+                                    <div th:if="${row.statusMessage}" class="text-danger" style="font-size: 0.75rem;" th:text="${row.statusMessage}">Error</div>
                                 </td>
 
-                                <td style="padding: 10px; text-align: center;">
-                                    <span th:if="${row.avatarSynced}" class="status-ok">✓</span>
-                                    <span th:unless="${row.avatarSynced}" class="status-bad">✗</span>
+                                <td data-label="Avatar" style="text-align: center;">
+                                    <span th:if="${row.avatarSynced}" class="status-ok"><i class="fas fa-check"></i></span>
+                                    <span th:unless="${row.avatarSynced}" class="status-bad"><i class="fas fa-times"></i></span>
                                 </td>
 
-                                <td style="padding: 10px; text-align: center;">
-                                    <span th:if="${row.rolesSynced}" class="status-ok">✓</span>
-                                    <span th:unless="${row.rolesSynced}" class="status-bad">✗</span>
+                                <td data-label="Roles" style="text-align: center;">
+                                    <span th:if="${row.rolesSynced}" class="status-ok"><i class="fas fa-check"></i></span>
+                                    <span th:unless="${row.rolesSynced}" class="status-bad"><i class="fas fa-times"></i></span>
                                 </td>
 
-                                <td style="padding: 10px;">
+                                <td data-label="Nickname Sync">
                                     <div th:if="${row.nicknameSynced}" class="status-ok">
-                                        ✓ Synced
+                                        <i class="fas fa-check"></i> Synced
                                     </div>
                                     <div th:unless="${row.nicknameSynced}">
-                                        <span class="status-bad">✗ Mismatch</span>
-                                        <div style="font-size: 0.7rem; color: #888;">DB value differs</div>
+                                        <span class="status-bad"><i class="fas fa-times"></i> Mismatch</span>
+                                        <div class="text-muted">DB value differs</div>
                                     </div>
                                 </td>
 
-                                <td style="padding: 10px; text-align: right;">
+                                <td data-label="Action" style="text-align: right; padding-right: 20px;">
 
                                     <div th:if="${#strings.isEmpty(row.discordId)}">
-                                        <span style="color: #999; font-size: 0.8rem; font-style: italic;">No Discord ID</span>
+                                        <span class="text-muted" style="font-style: italic;">No Discord ID</span>
                                     </div>
 
                                     <div th:if="${!#strings.isEmpty(row.discordId) and (!row.avatarSynced or !row.rolesSynced or !row.nicknameSynced)}">
-                                        <form th:action="@{/clanmembers/admin/sync/{id}(id=${row.memberId})}" method="post">
-                                            <button type="submit" class="sync-btn" title="Force update from Discord">
-                                                ⟳ Sync
+                                        <form th:action="@{/clanmembers/admin/sync/{id}(id=${row.memberId})}" method="post" style="margin: 0;">
+                                            <button type="submit" class="button small primary" title="Force update from Discord">
+                                                <i class="fas fa-sync"></i> Sync
                                             </button>
                                         </form>
                                     </div>

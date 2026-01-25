@@ -18,18 +18,18 @@
     <section id="content">
         <div class="container">
             <section>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
                     <h2>Siege Conditions Configuration</h2>
 
-                    <div th:if="${successMessage}" class="alert alert-success" style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-right: 20px;">
+                    <div th:if="${successMessage}" class="alert alert-success">
                         <span th:text="${successMessage}"></span>
                     </div>
-                    <div th:if="${errorMessage}" class="alert alert-error" style="background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin-right: 20px;">
+                    <div th:if="${errorMessage}" class="alert alert-danger">
                         <span th:text="${errorMessage}"></span>
                     </div>
 
                     <form th:action="@{/admin/siege-conditions/sync}" method="POST" style="margin: 0;">
-                        <button type="submit" class="button small" style="background-color: #3498db; color: white;">
+                        <button type="submit" class="button small primary">
                             <i class="fas fa-sync"></i> Scan for new possible conditions
                         </button>
                     </form>
@@ -50,14 +50,14 @@
                     <tr th:each="condition : ${conditions}"
                         th:style="${!condition.isActive} ? 'opacity: 0.6; background: #f9f9f9;' : ''">
 
-                        <td style="font-weight: bold; color: #555;">
+                        <td data-label="Category" style="font-weight: bold; color: #555;">
                             <span th:text="${condition.category.displayName}">Category</span>
                         </td>
 
-                        <td th:text="${#strings.capitalizeWords(#strings.toLowerCase(#strings.replace(condition.conditionKey, '_', ' ')))}">Key</td>
+                        <td data-label="Condition Name" th:text="${#strings.capitalizeWords(#strings.toLowerCase(#strings.replace(condition.conditionKey, '_', ' ')))}">Key</td>
 
-                        <td>
-                       <span th:if="${condition.isActive}" style="color: #27ae60; font-weight: bold;">
+                        <td data-label="Status">
+                       <span th:if="${condition.isActive}" class="status-ok">
                            <i class="fas fa-check-circle"></i> Active
                        </span>
                             <span th:unless="${condition.isActive}" style="color: #7f8c8d;">
@@ -65,10 +65,10 @@
                        </span>
                         </td>
 
-                        <td>
+                        <td data-label="Action">
                             <form th:action="@{/admin/siege-conditions/{id}/toggle(id=${condition.id})}" method="POST" style="margin: 0;">
                                 <button type="submit" class="button small"
-                                        th:style="${condition.isActive} ? 'background-color: #e74c3c; color: white;' : 'background-color: #27ae60; color: white;'">
+                                        th:classappend="${condition.isActive} ? 'danger' : 'success'">
                                     <span th:text="${condition.isActive} ? 'Deactivate' : 'Activate'">Toggle</span>
                                 </button>
                             </form>

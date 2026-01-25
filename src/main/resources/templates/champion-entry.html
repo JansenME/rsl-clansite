@@ -6,6 +6,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
 	<script th:src="@{/styles/js/main.js}"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 </head>
 <body>
 <div id="page-wrapper">
@@ -30,10 +31,10 @@
 
 						<h3>Champion Identity</h3>
 
-						<div class="form-group" th:if="${isEditMode == true and newChampion.currentImageName != null}" style="text-align: center; margin-bottom: 20px;">
+						<div class="form-group champion-preview-wrapper" th:if="${isEditMode == true and newChampion.currentImageName != null}">
 							<img th:src="${newChampion.currentImageName != null and !#strings.isEmpty(newChampion.currentImageName)} ? @{'/images/champion-cards/' + ${newChampion.currentImageName}} : @{/images/champion-cards/placeholder.png}"
 								 alt="Champion Image"
-								 style="width: 100px; height: auto; border-radius: 10px; border: 4px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.1);"
+								 class="champion-preview-img"
 								 title="Current Image"
 								 onerror="this.onerror=null; this.src='/images/champion-cards/placeholder.png';" />
 						</div>
@@ -41,11 +42,7 @@
 						<div class="form-group">
 							<label for="name">Name:</label>
 							<input type="text" id="name" th:field="*{name}" required />
-							<span th:if="${#fields.hasErrors('name')}"
-								  th:errors="*{name}"
-								  style="color: #cc0000; font-weight: bold; display: block; margin-top: 5px;">
-                               Name Error
-                            </span>
+							<span th:if="${#fields.hasErrors('name')}" th:errors="*{name}" class="field-error">Name Error</span>
 						</div>
 
 						<div class="identity-grid-4 form-grid-container">
@@ -53,44 +50,36 @@
 								<label for="rarity">Rarity:</label>
 								<select id="rarity" th:field="*{rarity}" required>
 									<option value="">-- Select Rarity --</option>
-									<option th:each="r : ${rarities}"
-											th:value="${r.name()}"
-											th:text="${r.getName()}"></option>
+									<option th:each="r : ${rarities}" th:value="${r.name()}" th:text="${r.getName()}"></option>
 								</select>
-								<span th:if="${#fields.hasErrors('rarity')}" th:errors="*{rarity}" style="color: #cc0000; font-weight: bold; display: block; margin-top: 5px;">Error</span>
+								<span th:if="${#fields.hasErrors('rarity')}" th:errors="*{rarity}" class="field-error">Error</span>
 							</div>
 
 							<div class="form-group">
 								<label for="type">Type:</label>
 								<select id="type" th:field="*{type}" required>
 									<option value="">-- Select Type --</option>
-									<option th:each="t : ${types}"
-											th:value="${t.name()}"
-											th:text="${t.getName()}"></option>
+									<option th:each="t : ${types}" th:value="${t.name()}" th:text="${t.getName()}"></option>
 								</select>
-								<span th:if="${#fields.hasErrors('type')}" th:errors="*{type}" style="color: #cc0000; font-weight: bold; display: block; margin-top: 5px;">Error</span>
+								<span th:if="${#fields.hasErrors('type')}" th:errors="*{type}" class="field-error">Error</span>
 							</div>
 
 							<div class="form-group">
 								<label for="affinity">Affinity:</label>
 								<select id="affinity" th:field="*{affinity}" required>
 									<option value="">-- Select Affinity --</option>
-									<option th:each="a : ${affinities}"
-											th:value="${a.name()}"
-											th:text="${a.getName()}"></option>
+									<option th:each="a : ${affinities}" th:value="${a.name()}" th:text="${a.getName()}"></option>
 								</select>
-								<span th:if="${#fields.hasErrors('affinity')}" th:errors="*{affinity}" style="color: #cc0000; font-weight: bold; display: block; margin-top: 5px;">Error</span>
+								<span th:if="${#fields.hasErrors('affinity')}" th:errors="*{affinity}" class="field-error">Error</span>
 							</div>
 
 							<div class="form-group">
 								<label for="faction">Faction:</label>
 								<select id="faction" th:field="*{faction}" required>
 									<option value="">-- Select Faction --</option>
-									<option th:each="f : ${factions}"
-											th:value="${f.name()}"
-											th:text="${f.getName()}"></option>
+									<option th:each="f : ${factions}" th:value="${f.name()}" th:text="${f.getName()}"></option>
 								</select>
-								<span th:if="${#fields.hasErrors('faction')}" th:errors="*{faction}" style="color: #cc0000; font-weight: bold; display: block; margin-top: 5px;">Error</span>
+								<span th:if="${#fields.hasErrors('faction')}" th:errors="*{faction}" class="field-error">Error</span>
 							</div>
 						</div>
 						<br />
@@ -109,47 +98,47 @@
 						<hr/>
 
 						<h3>Base Stats (On max level)</h3>
-						<div class="stat-group" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+						<div class="stat-grid">
 							<div class="form-group">
 								<label for="hp">HP:</label>
 								<input type="number" id="hp" th:field="*{hp}" required />
-								<span th:if="${#fields.hasErrors('hp')}" th:errors="*{hp}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+								<span th:if="${#fields.hasErrors('hp')}" th:errors="*{hp}" class="field-error">Error</span>
 							</div>
 							<div class="form-group">
 								<label for="attack">Attack:</label>
 								<input type="number" id="attack" th:field="*{attack}" required />
-								<span th:if="${#fields.hasErrors('attack')}" th:errors="*{attack}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+								<span th:if="${#fields.hasErrors('attack')}" th:errors="*{attack}" class="field-error">Error</span>
 							</div>
 							<div class="form-group">
 								<label for="defense">Defense:</label>
 								<input type="number" id="defense" th:field="*{defense}" required />
-								<span th:if="${#fields.hasErrors('defense')}" th:errors="*{defense}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+								<span th:if="${#fields.hasErrors('defense')}" th:errors="*{defense}" class="field-error">Error</span>
 							</div>
 							<div class="form-group">
 								<label for="speed">Speed:</label>
 								<input type="number" id="speed" th:field="*{speed}" required />
-								<span th:if="${#fields.hasErrors('speed')}" th:errors="*{speed}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+								<span th:if="${#fields.hasErrors('speed')}" th:errors="*{speed}" class="field-error">Error</span>
 							</div>
 
 							<div class="form-group">
 								<label for="cr">Crit Rate:</label>
 								<input type="number" id="cr" th:field="*{criticalRate}" required />
-								<span th:if="${#fields.hasErrors('criticalRate')}" th:errors="*{criticalRate}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+								<span th:if="${#fields.hasErrors('criticalRate')}" th:errors="*{criticalRate}" class="field-error">Error</span>
 							</div>
 							<div class="form-group">
 								<label for="cd">Crit Damage:</label>
 								<input type="number" id="cd" th:field="*{criticalDamage}" required />
-								<span th:if="${#fields.hasErrors('criticalDamage')}" th:errors="*{criticalDamage}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+								<span th:if="${#fields.hasErrors('criticalDamage')}" th:errors="*{criticalDamage}" class="field-error">Error</span>
 							</div>
 							<div class="form-group">
 								<label for="res">Resistance:</label>
 								<input type="number" id="res" th:field="*{resistance}" required />
-								<span th:if="${#fields.hasErrors('resistance')}" th:errors="*{resistance}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+								<span th:if="${#fields.hasErrors('resistance')}" th:errors="*{resistance}" class="field-error">Error</span>
 							</div>
 							<div class="form-group">
 								<label for="acc">Accuracy:</label>
 								<input type="number" id="acc" th:field="*{accuracy}" required />
-								<span th:if="${#fields.hasErrors('accuracy')}" th:errors="*{accuracy}" style="color: #cc0000; font-weight: bold; display: block;">Error</span>
+								<span th:if="${#fields.hasErrors('accuracy')}" th:errors="*{accuracy}" class="field-error">Error</span>
 							</div>
 						</div>
 
@@ -173,7 +162,7 @@
 								<label for="isFlat">Flat Value</label>
 							</div>
 
-							<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+							<div class="aura-grid-2" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
 								<div>
 									<label for="amount">Amount (Value/Percent):</label>
 									<input type="number" id="amount" th:field="*{amount}" min="1" max="100" />
@@ -183,9 +172,7 @@
 									<label for="stat">Aura Stat:</label>
 									<select id="stat" th:field="*{stat}">
 										<option value="">-- Select Stat --</option>
-										<option th:each="s : ${auraStats}"
-												th:value="${s.name()}"
-												th:text="${s.getName()}"></option>
+										<option th:each="s : ${auraStats}" th:value="${s.name()}" th:text="${s.getName()}"></option>
 									</select>
 								</div>
 							</div>
@@ -194,17 +181,15 @@
 								<label for="location">Location:</label>
 								<select id="location" th:field="*{location}">
 									<option value="">-- Select Location --</option>
-									<option th:each="l : ${auraLocations}"
-											th:value="${l.name()}"
-											th:text="${l.getName()}"></option>
+									<option th:each="l : ${auraLocations}" th:value="${l.name()}" th:text="${l.getName()}"></option>
 								</select>
 							</div>
 
 						</div>
 
-						<button type="submit" formnovalidate class="button primary" style="margin-top: 20px; padding: 10px 20px;"
-								th:text="${isEditMode == true} ? 'Update Champion' : 'Save Champion'">
-							Save Champion
+						<button type="submit" formnovalidate class="button primary" style="margin-top: 20px;">
+							<i class="fas fa-save"></i>
+							<span th:text="${isEditMode == true} ? 'Update Champion' : 'Save Champion'">Save Champion</span>
 						</button>
 					</form>
 				</div>
@@ -217,11 +202,11 @@
 
 	<script th:if="${isEditMode == true}">
 		document.addEventListener('DOMContentLoaded', function() {
-            const finalScore = parseFloat(document.getElementById('finalArenaScore').value);
-            if (!isNaN(finalScore)) {
-                updateVisuals(finalScore);
-            }
-        });
+             const finalScore = parseFloat(document.getElementById('finalArenaScore').value);
+             if (!isNaN(finalScore)) {
+                 updateVisuals(finalScore);
+             }
+         });
 	</script>
 </div>
 </body>

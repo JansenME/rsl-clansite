@@ -18,22 +18,24 @@
 	<section id="content">
 		<div class="container">
 			<section>
-				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
 					<h2>Clanmembers</h2>
 
-					<div th:if="${successMessage}" class="alert alert-success" style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-right: 20px;">
+					<div th:if="${successMessage}" class="alert alert-success" style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 5px;">
 						<span th:text="${successMessage}"></span>
 					</div>
 
 					<div sec:authorize="hasRole('ADMIN')">
-						<a th:href="@{/clanmembers/add}" class="button primary small">Add new Clanmember</a>
+						<a th:href="@{/clanmembers/add}" class="button primary small">
+							<i class="fas fa-user-plus"></i> Add new Clanmember
+						</a>
 					</div>
 				</div>
 
 				<div sec:authorize="hasRole('ADMIN')" th:if="${pendingMembers != null and !pendingMembers.isEmpty()}"
-					 style="border: 2px solid #ffc107; background-color: #fff3cd; padding: 20px; border-radius: 8px; margin-bottom: 40px;">
-					<h3 style="color: #856404; margin-top: 0;"><i class="fas fa-user-plus"></i> Pending Setup (Auto-Onboarded)</h3>
-					<p style="color: #856404;">The following members have logged in with Discord Clan Roles but do not have a full profile yet. Please <strong>Edit</strong> them to set their Rank and correct In-Game Name.</p>
+					 class="pending-setup-box">
+					<h3 style="margin-top: 0;"><i class="fas fa-exclamation-circle"></i> Pending Setup (Auto-Onboarded)</h3>
+					<p>The following members have logged in with Discord Clan Roles but do not have a full profile yet. Please <strong>Edit</strong> them to set their Rank and correct In-Game Name.</p>
 
 					<table style="width: 100%; background: white;">
 						<thead>
@@ -59,8 +61,9 @@
 							</td>
 							<td data-label="Actions">
 								<a th:href="@{/clanmembers/edit/{id}(id=${member.id})}"
-								   class="button primary small"
-								   style="padding: 5px 15px; font-size: 0.8em;">Finalize Setup</a>
+								   class="button primary small">
+									<i class="fas fa-check"></i> Finalize Setup
+								</a>
 							</td>
 						</tr>
 						</tbody>
@@ -68,7 +71,7 @@
 				</div>
 
 				<h2>T1 Clan</h2>
-				<table th:style="${#authorization.expression('isAuthenticated()')} ? 'width: 100%;' : 'width: 50%; margin: 0 auto;'">
+				<table th:classappend="${#authorization.expression('isAuthenticated()')} ? '' : 'table-compact-view'">
 					<thead>
 					<tr>
 						<th sec:authorize="isAuthenticated()"></th>
@@ -97,16 +100,20 @@
 						<td data-label="Rank" th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
 						<td sec:authorize="isAuthenticated()" data-label="Champions" th:text="${member.rosterChampionIds != null ? member.rosterChampionIds.size() : 0}">0</td>
 
-						<td sec:authorize="hasRole('ADMIN')" data-label="Actions" onclick="event.stopPropagation()" style="white-space: nowrap;">
-							<a th:href="@{/clanmembers/edit/{id}(id=${member.id})}"
-							   class="button-edit-mobile"
-							   style="background: #007bff; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 5px; text-decoration: none; font-size: 13.33px; border: none;">Edit</a>
-							<form th:action="@{/clanmembers/{id}/delete(id=${member.id})}" method="POST"
-								  th:data-name="${member.ingameName}"
-								  style="display: inline-block; margin: 0;"
-								  onsubmit="return confirm('Are you sure you want to remove ' + this.getAttribute('data-name') + ' from the active roster? (They will be moved to Archive)');">
-								<button type="submit" class="button-delete-mobile" style="background: #cc0000; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Delete</button>
-							</form>
+						<td sec:authorize="hasRole('ADMIN')" data-label="Actions" onclick="event.stopPropagation()">
+							<div style="display: flex; gap: 5px; flex-wrap: wrap;">
+								<a th:href="@{/clanmembers/edit/{id}(id=${member.id})}" class="button small primary">
+									<i class="fas fa-edit"></i> Edit
+								</a>
+								<form th:action="@{/clanmembers/{id}/delete(id=${member.id})}" method="POST"
+									  th:data-name="${member.ingameName}"
+									  style="margin: 0;"
+									  onsubmit="return confirm('Are you sure you want to remove ' + this.getAttribute('data-name') + ' from the active roster? (They will be moved to Archive)');">
+									<button type="submit" class="button small danger">
+										<i class="fas fa-trash"></i> Delete
+									</button>
+								</form>
+							</div>
 						</td>
 					</tr>
 					</tbody>
@@ -114,7 +121,7 @@
 				<br />
 
 				<h2>T2 Clan</h2>
-				<table th:style="${#authorization.expression('isAuthenticated()')} ? 'width: 100%;' : 'width: 50%; margin: 0 auto;'">
+				<table th:classappend="${#authorization.expression('isAuthenticated()')} ? '' : 'table-compact-view'">
 					<thead>
 					<tr>
 						<th sec:authorize="isAuthenticated()"></th>
@@ -143,16 +150,20 @@
 						<td data-label="Rank" th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
 						<td sec:authorize="isAuthenticated()" data-label="Champions" th:text="${member.rosterChampionIds != null ? member.rosterChampionIds.size() : 0}">0</td>
 
-						<td sec:authorize="hasRole('ADMIN')" data-label="Actions" onclick="event.stopPropagation()" style="white-space: nowrap;">
-							<a th:href="@{/clanmembers/edit/{id}(id=${member.id})}"
-							   class="button-edit-mobile"
-							   style="background: #007bff; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 5px; text-decoration: none; font-size: 13.33px; border: none;">Edit</a>
-							<form th:action="@{/clanmembers/{id}/delete(id=${member.id})}" method="POST"
-								  th:data-name="${member.ingameName}"
-								  style="display: inline-block; margin: 0;"
-								  onsubmit="return confirm('Are you sure you want to remove ' + this.getAttribute('data-name') + ' from the active roster? (They will be moved to Archive)');">
-								<button type="submit" class="button-delete-mobile" style="background: #cc0000; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Delete</button>
-							</form>
+						<td sec:authorize="hasRole('ADMIN')" data-label="Actions" onclick="event.stopPropagation()">
+							<div style="display: flex; gap: 5px; flex-wrap: wrap;">
+								<a th:href="@{/clanmembers/edit/{id}(id=${member.id})}" class="button small primary">
+									<i class="fas fa-edit"></i> Edit
+								</a>
+								<form th:action="@{/clanmembers/{id}/delete(id=${member.id})}" method="POST"
+									  th:data-name="${member.ingameName}"
+									  style="margin: 0;"
+									  onsubmit="return confirm('Are you sure you want to remove ' + this.getAttribute('data-name') + ' from the active roster? (They will be moved to Archive)');">
+									<button type="submit" class="button small danger">
+										<i class="fas fa-trash"></i> Delete
+									</button>
+								</form>
+							</div>
 						</td>
 					</tr>
 					</tbody>
@@ -162,7 +173,7 @@
 					<p>The roster is currently empty. Please log in with a Administrator account to manually populate the initial list.</p>
 				</div>
 
-				<div sec:authorize="hasRole('ADMIN')" style="margin-top: 50px; border-top: 2px dashed #ccc; padding-top: 20px;">
+				<div sec:authorize="hasRole('ADMIN')" class="archive-section">
 					<h2 style="color: #666;">Former Members (Archive)</h2>
 
 					<div th:if="${inactiveMembers.isEmpty()}">
@@ -198,9 +209,10 @@
 							<td data-label="Actions">
 								<form th:action="@{/clanmembers/{id}/restore(id=${member.id})}" method="POST"
 									  th:data-name="${member.ingameName}"
+									  style="margin: 0;"
 									  onsubmit="return confirm('Restore ' + this.getAttribute('data-name') + ' to the active roster?');">
-									<button type="submit" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
-										Restore
+									<button type="submit" class="button small success">
+										<i class="fas fa-trash-restore"></i> Restore
 									</button>
 								</form>
 							</td>

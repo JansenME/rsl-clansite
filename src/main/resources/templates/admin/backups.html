@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
     <script th:src="@{/styles/js/main.js}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 </head>
 <body>
 <div id="page-wrapper">
@@ -26,8 +27,9 @@
                 </p>
 
                 <form method="post" th:action="@{/admin/backups/trigger}" style="margin-bottom: 2em;">
-                    <button type="submit" class="button primary icon solid fa-database">
-                        Create New Backup Now
+                    <button type="submit" class="button primary">
+                        <i class="fas fa-database"></i>
+                        <span>Create New Backup Now</span>
                     </button>
                 </form>
 
@@ -46,12 +48,12 @@
                             <td colspan="4" style="text-align: center;">No backups found.</td>
                         </tr>
                         <tr th:each="file : ${backups}">
-                            <td th:text="${#temporals.format(file.lastModified, 'dd-MM-yyyy HH:mm:ss')}">Date</td>
-                            <td th:text="${file.filename}">filename.json.gz</td>
-                            <td th:text="${file.sizeBytes / 1024} + ' KB'">Size</td>
-                            <td>
-                                <a th:href="@{'/admin/backups/download/' + ${file.filename}}" class="button small icon solid fa-download">
-                                    Download
+                            <td data-label="Date Created" th:text="${#temporals.format(file.lastModified, 'dd-MM-yyyy HH:mm:ss')}">Date</td>
+                            <td data-label="Filename" th:text="${file.filename}">filename.json.gz</td>
+                            <td data-label="Size" th:text="${file.sizeBytes / 1024} + ' KB'">Size</td>
+                            <td data-label="Action">
+                                <a th:href="@{'/admin/backups/download/' + ${file.filename}}" class="button small alt">
+                                    <i class="fas fa-download"></i> Download
                                 </a>
                             </td>
                         </tr>

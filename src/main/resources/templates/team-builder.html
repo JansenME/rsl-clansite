@@ -7,257 +7,6 @@
     <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
     <script th:src="@{/styles/js/main.js}"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-
-    <style>
-        /* --- STICKY HEADER --- */
-        #team-sticky-header {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            background: #2c3e50;
-            border-bottom: 4px solid #f39c12;
-            padding: 25px 0;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-            color: white;
-            transition: all 0.3s ease;
-        }
-
-        .builder-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            flex-wrap: wrap;
-            gap: 30px;
-        }
-
-        /* --- THE 4 SLOTS --- */
-        .team-slots-wrapper {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
-
-        .team-slot {
-            width: 150px;
-            height: 150px;
-            background-color: rgba(0,0,0,0.3);
-            border: 3px solid #555;
-            border-radius: 8px;
-            position: relative;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-
-        /* INVALID STATE (Red Border) */
-        .team-slot.invalid-slot {
-            border-color: #e74c3c !important;
-            box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
-        }
-
-        .team-slot.invalid-slot::before {
-            content: 'INVALID';
-            position: absolute;
-            top: 0;
-            width: 100%;
-            background: rgba(231, 76, 60, 0.9);
-            color: white;
-            font-size: 10px;
-            font-weight: bold;
-            text-align: center;
-            z-index: 5;
-        }
-
-        .team-slot img {
-            width: auto;
-            height: 90%;
-            object-fit: contain;
-            pointer-events: none;
-        }
-
-        .team-slot:hover {
-            border-color: #fff;
-            transform: scale(1.05);
-        }
-
-        .team-slot.selected {
-            border-color: #2ecc71;
-            box-shadow: 0 0 15px rgba(46, 204, 113, 0.6);
-            transform: scale(1.05);
-            z-index: 10;
-        }
-
-        .team-slot.leader-slot {
-            border-color: #f1c40f;
-        }
-        .team-slot.leader-slot::after {
-            content: 'LEADER';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: rgba(241, 196, 15, 0.9);
-            color: #000;
-            font-size: 12px;
-            font-weight: bold;
-            text-align: center;
-            padding: 4px 0;
-        }
-
-        .slot-clear-btn {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: rgba(231, 76, 60, 0.9);
-            color: white;
-            border-radius: 50%;
-            width: 25px;
-            height: 25px;
-            font-size: 14px;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 20;
-        }
-
-        .team-slot.has-champion:hover .slot-clear-btn {
-            display: flex;
-        }
-
-        /* --- FORM INPUTS --- */
-        .team-meta-inputs {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            min-width: 300px;
-        }
-
-        .team-meta-inputs input, .team-meta-inputs select {
-            padding: 12px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-            width: 100%;
-            color: #333;
-            font-size: 1.1em;
-        }
-
-        /* Aura Display Box */
-        #leader-aura-display {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 0.9em;
-            display: none;
-            align-items: center;
-            gap: 8px;
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-
-        #aura-warning {
-            color: #ffcccc;
-            font-weight: bold;
-            font-size: 0.9em;
-            display: none;
-            margin-top: 5px;
-            background: rgba(231, 76, 60, 0.3);
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #e74c3c;
-        }
-
-        #condition-warning {
-            color: #ffcccc;
-            font-weight: bold;
-            font-size: 0.9em;
-            display: none;
-            margin-top: 5px;
-            background: rgba(231, 76, 60, 0.3);
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #e74c3c;
-        }
-
-        .save-btn {
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.2em;
-            font-weight: bold;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .save-btn:hover {
-            background-color: #2ecc71;
-        }
-
-        .save-btn:disabled {
-            background-color: #7f8c8d;
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-
-        /* --- ROSTER SELECTION --- */
-        .roster-selection-area {
-            padding-top: 20px;
-        }
-
-        .champion-card {
-            cursor: pointer;
-            position: relative;
-            box-sizing: border-box;
-        }
-
-        .champion-card.picked {
-            opacity: 0.3;
-            filter: grayscale(100%);
-            pointer-events: none;
-        }
-
-        .champion-card.filtered-out {
-            display: none;
-        }
-
-        .champion-card:hover .champion-image-wrapper {
-            transform: scale(1.05);
-            z-index: 10;
-        }
-        .champion-image-wrapper {
-            transition: transform 0.2s ease;
-        }
-
-        .affinity-overlay {
-            position: absolute;
-            bottom: 4px;
-            left: 4px;
-            width: 35px;
-            height: 35px;
-            background-color: rgba(0, 0, 0, 0.75);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 5;
-            transition: transform 0.2s ease;
-            pointer-events: none;
-        }
-        .champion-card:hover .affinity-overlay {
-            transform: translate3d(-4px, 4px, 0);
-        }
-        .affinity-overlay img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            padding: 2px;
-        }
-
-    </style>
 </head>
 <body>
 <div id="page-wrapper">
@@ -267,7 +16,7 @@
     </section>
 
     <div class="container" th:if="${errorMessage}" style="margin: 10px auto; max-width: 1200px;">
-        <div class="alert alert-error" style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; border: 1px solid #f5c6cb; text-align: center; font-weight: bold;">
+        <div class="alert alert-danger">
             <i class="fas fa-exclamation-circle"></i> <span th:text="${errorMessage}"></span>
         </div>
     </div>
@@ -342,7 +91,7 @@
 
             <div id="champion-grid-container" th:unless="${#lists.isEmpty(champions)}">
 
-                <div class="champion-card"
+                <div class="champion-card builder-champion-card"
                      th:each="champion : ${champions}"
                      th:id="'roster-card-' + ${champion.id}"
                      th:data-id="${champion.id}"
@@ -425,7 +174,7 @@
         const category = selectedOption.getAttribute('data-category');
         const conditionValue = selectedOption.getAttribute('data-value');
 
-        const allCards = document.querySelectorAll('.champion-card');
+        const allCards = document.querySelectorAll('.builder-champion-card');
         let hasInvalidSlot = false;
 
         // A. Filter Roster
@@ -494,7 +243,7 @@
 
     // 3. GLOBAL CLICK LISTENER
     document.addEventListener("click", function(e) {
-        const cardDiv = e.target.closest('.champion-card');
+        const cardDiv = e.target.closest('.builder-champion-card');
         const grid = document.getElementById('champion-grid-container');
 
         if (cardDiv && grid && grid.contains(cardDiv)) {

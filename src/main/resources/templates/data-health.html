@@ -7,22 +7,6 @@
     <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
     <script th:src="@{/styles/js/main.js}"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-    <style>
-        .issue-tag {
-            display: inline-block;
-            background: #e44c65; /* Red background */
-            color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.8em;
-            margin-right: 5px;
-            margin-bottom: 2px;
-        }
-        .issue-tag.warning {
-            background: #eebb00; /* Orange/Yellow for non-critical */
-            color: #333;
-        }
-    </style>
 </head>
 <body>
 <div id="page-wrapper">
@@ -49,13 +33,13 @@
                         </thead>
                         <tbody>
                         <tr th:each="row : ${problems}">
-                            <td>
+                            <td data-label="Champion">
                                 <strong th:text="${row.champion.name}">Name</strong>
                                 <br/>
                                 <a th:href="@{/champions/{id}(id=${row.champion.id})}" style="font-size: 0.8em;">View</a>
                             </td>
 
-                            <td>
+                            <td data-label="Issues Found">
                                 <span th:each="issue : ${row.issues}"
                                       class="issue-tag"
                                       th:text="${issue}">
@@ -63,20 +47,21 @@
                                 </span>
                             </td>
 
-                            <td>
+                            <td data-label="Actions">
                                 <div th:if="${row.champion.faction != null}">
                                     <form method="post"
                                           th:action="@{/admin/scraper/faction/{name}/execute(name=${#strings.replace(row.champion.faction.name, ' ', '-')})}"
                                           th:data-faction="${row.champion.faction.name}"
+                                          style="margin-bottom: 0;"
                                           onsubmit="showLoading('Re-scraping ' + this.getAttribute('data-faction') + '...')">
-                                        <button type="submit" class="button small">
+                                        <button type="submit" class="button small primary">
                                             <i class="fas fa-sync"></i> Re-Scrape
                                         </button>
                                     </form>
                                 </div>
 
                                 <div th:if="${row.champion.faction == null}">
-                                    <a th:href="@{/champions/{id}(id=${row.champion.id})}" class="button small">
+                                    <a th:href="@{/champions/{id}(id=${row.champion.id})}" class="button small alt">
                                         <i class="fas fa-edit"></i> Manual Fix
                                     </a>
                                 </div>
@@ -84,7 +69,7 @@
                         </tr>
 
                         <tr th:if="${problems.empty}">
-                            <td colspan="3" style="text-align: center; color: green; font-weight: bold;">
+                            <td colspan="3" style="text-align: center;" class="status-ok">
                                 <i class="fas fa-check-circle"></i> No Data Issues Found! Great job!
                             </td>
                         </tr>
@@ -93,7 +78,9 @@
                 </div>
 
                 <div style="text-align: center; margin-top: 20px;">
-                    <a th:href="@{/admin/scraper}" class="button">Back to Scraper Dashboard</a>
+                    <a th:href="@{/admin/scraper}" class="button alt">
+                        <i class="fas fa-arrow-left"></i> Back to Scraper Dashboard
+                    </a>
                 </div>
             </section>
         </div>

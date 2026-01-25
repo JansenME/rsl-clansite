@@ -1,45 +1,47 @@
 <!DOCTYPE HTML>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-	<head>
-		<title>Fury of the Fallen</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
-	</head>
-	<body>
-		<div id="page-wrapper">
-				<section id="header">
-					<div th:insert="~{inserts/nav :: nav}" class="container">
-					</div>
-
-					<div id="banner">
-						<div class="container">
-							<p>This is a website, in case you did not know yet! And if you did know, it is still a website.</p>
-						</div>
-					</div>
-				</section>
-
-				<section id="content">
-					<div class="container">
-						<div th:replace="~{inserts/alerts :: warning-box(${roleWarning})}"></div>
-
-						<div sec:authorize="isAuthenticated() and !hasRole('ROLE_COORDINATOR')"
-							 style="background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 20px; border-radius: 8px; margin-bottom: 30px; text-align: center;">
-							<i class="fas fa-lock" style="font-size: 2em; margin-bottom: 10px;"></i>
-							<h3>Closed Beta Access</h3>
-							<p>Welcome, <strong th:text="${navUserViewData.discordUserName}">User</strong>! The website is currently in a <strong>Closed Beta</strong> phase for leadership. Access for all clan members will be opened soon.</p>
-						</div>
-
-						<div sec:authorize="hasRole('ROLE_COORDINATOR')"
-							 style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 8px; margin-bottom: 30px; text-align: center;">
-							<i class="fas fa-check-circle"></i>
-							<strong>Alpha Access Active:</strong> You have full access to the Siege and Member management tools. I guess Kloep decided you are important enough! Now give him a cookie.
-						</div>
-					</div>
-				</section>
-
-				<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
-				</div>
+<head>
+	<title>Fury of the Fallen</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
+	<script th:src="@{/styles/js/main.js}"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+</head>
+<body>
+<div id="page-wrapper">
+	<section id="header">
+		<div th:insert="~{inserts/nav :: nav}" class="container">
 		</div>
-	</body>
+
+		<div id="banner">
+			<div class="container">
+				<p>This is a website, in case you did not know yet! And if you did know, it is still a website.</p>
+			</div>
+		</div>
+	</section>
+
+	<section id="content">
+		<div class="container">
+			<div th:replace="~{inserts/alerts :: warning-box(${roleWarning})}"></div>
+
+			<div sec:authorize="isAuthenticated() and !hasRole('ROLE_COORDINATOR')"
+				 class="welcome-box warning">
+				<i class="fas fa-lock welcome-icon"></i>
+				<h3>Closed Beta Access</h3>
+				<p>Welcome, <strong th:text="${navUserViewData.discordUserName}">User</strong>! The website is currently in a <strong>Closed Beta</strong> phase for leadership. Access for all clan members will be opened soon.</p>
+			</div>
+
+			<div sec:authorize="hasRole('ROLE_COORDINATOR')"
+				 class="welcome-box success">
+				<i class="fas fa-check-circle welcome-icon"></i>
+				<strong>Alpha Access Active:</strong> You have full access to the Siege and Member management tools. I guess Kloep decided you are important enough! Now give him a cookie.
+			</div>
+		</div>
+	</section>
+
+	<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+	</div>
+</div>
+</body>
 </html>

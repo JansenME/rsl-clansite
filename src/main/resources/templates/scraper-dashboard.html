@@ -7,45 +7,6 @@
     <link rel="stylesheet" th:href="@{/styles/css/main.css}" />
     <script th:src="@{/styles/js/main.js}"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-    <style>
-        /* Custom styles for the data dashboard */
-        .diff-error { color: #e44c65; font-weight: bold; } /* Red: Missing champions */
-        .diff-ok { color: #4caf50; opacity: 0.7; }         /* Green: Complete */
-
-        table.dashboard-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.8em;
-        }
-        table.dashboard-table th, table.dashboard-table td {
-            border: 1px solid #e1e1e1;
-            padding: 0.5em;
-            text-align: center;
-            vertical-align: middle;
-        }
-        table.dashboard-table th {
-            background-color: #f4f4f4;
-            color: #333;
-            font-weight: bold;
-        }
-        .border-left-thick { border-left: 2px solid #ccc !important; }
-        .text-left { text-align: left !important; }
-
-        /* Inline Input Styles */
-        input.target-input {
-            width: 50px;
-            padding: 2px;
-            text-align: center;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            font-size: 1em;
-        }
-        input.target-input:focus {
-            border-color: #0c2ccc;
-            outline: none;
-            background-color: #f0f8ff;
-        }
-    </style>
 </head>
 <body>
 <div id="page-wrapper">
@@ -66,7 +27,7 @@
                 <form method="POST" th:action="@{/admin/scraper/targets/update}">
 
                     <div style="text-align: right; margin-bottom: 10px;">
-                        <button type="submit" class="button small button-blue">
+                        <button type="submit" class="button small primary">
                             <i class="fas fa-save"></i> Save All Targets
                         </button>
                     </div>
@@ -92,8 +53,8 @@
 
                             <th:block th:each="group : ${allianceGroups}">
                                 <tbody>
-                                <tr style="background-color: #e0e0e0; border-top: 2px solid #999;">
-                                    <td colspan="100%" style="text-align: center; padding-left: 15px; font-weight: bold; color: #333;">
+                                <tr class="alliance-header-row">
+                                    <td colspan="100%" class="alliance-header-cell">
                                         <span th:text="${group.alliance.name}">Alliance Name</span>
                                         <span style="font-weight: normal; margin-left: 10px; font-size: 0.9em;">
                                                 (<span th:text="${group.totalChampions}">0</span> / <span th:text="${group.totalTargets}">0</span> champions)
@@ -129,7 +90,7 @@
 
                                         <button th:if="${!row.isComplete() and row.isUpdateAvailable()}"
                                                 type="submit"
-                                                class="button primary small fit"
+                                                class="button primary small"
                                                 th:formaction="@{/admin/scraper/faction/{name}/execute(name=${#strings.replace(row.faction.name, ' ', '-')})}"
                                                 onclick="showLoading('Importing...')">
                                             Check
@@ -144,18 +105,20 @@
                     </div>
 
                     <div style="text-align: right; margin-top: 10px;">
-                        <button type="submit" class="button small button-blue">
+                        <button type="submit" class="button small primary">
                             <i class="fas fa-save"></i> Save All Targets
                         </button>
                     </div>
                 </form>
 
-                <div style="text-align: center; margin-top: 20px;">
-                    <a th:href="@{/admin/data-health}" class="button primary" style="margin-right: 10px;">
+                <div style="text-align: center; margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
+                    <a th:href="@{/admin/data-health}" class="button primary">
                         <i class="fas fa-heartbeat"></i> Data Health
                     </a>
 
-                    <a th:href="@{/champions}" class="button">Back to Champions</a>
+                    <a th:href="@{/champions}" class="button alt">
+                        <i class="fas fa-arrow-left"></i> Back to Champions
+                    </a>
                 </div>
             </section>
         </div>
