@@ -111,12 +111,6 @@
             gap: 20px;
             margin-top: 20px;
         }
-        @media screen and (max-width: 980px) {
-            .map-grid { grid-template-columns: 1fr; }
-            .siege-stats-ribbon { flex-direction: column; gap: 15px; }
-            .score-side { width: 100%; justify-content: space-around; }
-        }
-
         .map-box h3 {
             text-align: center;
             background-color: #f9f9f9;
@@ -201,6 +195,48 @@
         .btn-destroy { color: #e74c3c; }
         .btn-restore { color: #27ae60; }
         .btn-capture { color: #2980b9; }
+
+        /* --- MOBILE OPTIMIZATION --- */
+        @media screen and (max-width: 980px) {
+            /* 1. Force Side-by-Side Grid */
+            .map-grid {
+                grid-template-columns: 1fr 1fr !important; /* Force 2 columns */
+                gap: 4px !important; /* Tiny gap between the two tables */
+            }
+
+            /* 2. Shrink Tables to Fit Side-by-Side */
+            .map-box h3 {
+                font-size: 0.8em;
+                padding: 5px 2px;
+
+                /* ALIGNMENT FIX START */
+                height: 50px;            /* Force enough height for 2 lines of text */
+                display: flex;           /* Use Flexbox */
+                align-items: center;     /* Vertically center the text */
+                justify-content: center; /* Horizontally center the text */
+                line-height: 1.2;        /* Tighten line spacing */
+                /* ALIGNMENT FIX END */
+            }
+
+            table.siege-table {
+                font-size: 0.7em; /* Much smaller font for the data */
+            }
+
+            table.siege-table th,
+            table.siege-table td {
+                padding: 4px 2px !important; /* Minimal padding to remove whitespace */
+            }
+
+            /* 3. Make Buttons Compact */
+            .btn-action {
+                padding: 2px 4px;
+                font-size: 0.9em; /* Keep icons readable */
+            }
+
+            /* 4. Keep Ribbon Stacked (So it doesn't break the layout above) */
+            .siege-stats-ribbon { flex-direction: column; gap: 15px; }
+            .score-side { width: 100%; justify-content: space-around; }
+        }
     </style>
 </head>
 <body>
