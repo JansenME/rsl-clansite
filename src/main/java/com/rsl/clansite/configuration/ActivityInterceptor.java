@@ -1,6 +1,7 @@
 package com.rsl.clansite.configuration;
 
 import com.rsl.clansite.service.ClanmemberService;
+import jakarta.annotation.Nonnull;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +21,7 @@ public class ActivityInterceptor implements HandlerInterceptor {
     }
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(@Nonnull HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull Object handler) throws Exception {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication != null

@@ -1,7 +1,9 @@
 package com.rsl.clansite.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rsl.clansite.exceptions.DiscordClientException;
 import com.rsl.clansite.model.dto.DiscordRoleDTO;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import lombok.extern.slf4j.Slf4j;
@@ -74,9 +76,9 @@ public class DiscordApiClient {
             if (e.getStatusCode().value() == 404) {
                 return Optional.empty();
             }
-            throw new RuntimeException("Discord API Error: " + e.getStatusCode() + " - " + e.getResponseBodyAsString());
+            throw new DiscordClientException("Discord API Error: " + e.getStatusCode() + " - " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch Discord Member: " + e.getMessage());
+            throw new DiscordClientException("Failed to fetch Discord Member: " + e.getMessage(), e);
         }
     }
 
@@ -91,7 +93,7 @@ public class DiscordApiClient {
             return parseRolesResponse(jsonResponse);
 
         } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch Discord Roles: " + e.getMessage());
+            throw new DiscordClientException("Failed to fetch Discord Roles: " + e.getMessage(), e);
         }
     }
 
@@ -109,7 +111,7 @@ public class DiscordApiClient {
             return iconNode.isMissingNode() || iconNode.isNull() ? null : iconNode.asText();
 
         } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch Guild Icon Hash: " + e.getMessage());
+            throw new DiscordClientException("Failed to fetch Guild Icon Hash: " + e.getMessage(), e);
         }
     }
 
@@ -122,11 +124,11 @@ public class DiscordApiClient {
                     .bodyToMono(byte[].class)
                     .block();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to download image from " + fullUrl + ": " + e.getMessage());
+            throw new DiscordClientException("Failed to download image from " + fullUrl + ": " + e.getMessage(), e);
         }
     }
 
-    private NewClanmemberDTO parseDiscordResponse(String discordId, String json) throws Exception {
+    private NewClanmemberDTO parseDiscordResponse(String discordId, String json) throws JsonProcessingException {
         JsonNode root = objectMapper.readTree(json);
         JsonNode userNode = root.path("user");
         JsonNode nickNode = root.path("nick");
@@ -159,7 +161,7 @@ public class DiscordApiClient {
         return dto;
     }
 
-    private List<DiscordRoleDTO> parseRolesResponse(String json) throws Exception {
+    private List<DiscordRoleDTO> parseRolesResponse(String json) throws JsonProcessingException {
         JsonNode root = objectMapper.readTree(json);
         List<DiscordRoleDTO> roles = new ArrayList<>();
 

@@ -130,13 +130,6 @@ class AuditLogServiceTest {
     }
 
     @Test
-    @DisplayName("getAllLogs should delegate to repository")
-    void getAllLogs_ShouldCallRepository() {
-        auditLogService.getAllLogs();
-        verify(auditLogRepository).findAllByOrderByTimestampDesc();
-    }
-
-    @Test
     @DisplayName("deleteLogEntry - Should call repository delete for valid ID")
     void deleteLogEntry_ValidId_ShouldDelete() {
         String validId = new ObjectId().toHexString();

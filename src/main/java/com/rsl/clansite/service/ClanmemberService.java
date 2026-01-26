@@ -18,7 +18,6 @@ import com.rsl.clansite.model.enums.MemberStatus;
 import com.rsl.clansite.repository.ChampionRepository;
 import com.rsl.clansite.repository.ClanmemberRepository;
 import com.rsl.clansite.repository.VisitorLogRepository;
-import com.rsl.clansite.security.SecurityConfig;
 import com.rsl.clansite.security.SecurityService;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +35,7 @@ import org.springframework.util.StringUtils;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -150,7 +150,7 @@ public class ClanmemberService {
 
             ClanmemberEntity latestActivityMember = allAccounts.stream()
                     .filter(m -> m.getLastLogin() != null)
-                    .max((m1, m2) -> m1.getLastLogin().compareTo(m2.getLastLogin()))
+                    .max(Comparator.comparing(ClanmemberEntity::getLastLogin))
                     .orElse(allAccounts.get(0));
 
             LocalDateTime latestLogin = latestActivityMember.getLastLogin();

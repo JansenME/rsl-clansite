@@ -3,16 +3,13 @@ package com.rsl.clansite.backup;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.rsl.clansite.repository.ChampionRepository;
-import com.rsl.clansite.repository.ClanmemberRepository;
+import com.rsl.clansite.exceptions.BackupException;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -25,12 +22,14 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
 @Service
@@ -132,13 +131,13 @@ public class BackupService {
 
         } catch (IOException e) {
             log.error("Backup failed", e);
-            throw new RuntimeException("Backup failed: " + e.getMessage());
+            throw new BackupException("Backup operation failed: " + e.getMessage(), e);
         }
     }
 
     public List<File> listBackups() {
-        try {
-            return Files.list(Paths.get(backupLocation))
+        try (Stream<Path> stream = Files.list(Paths.get(backupLocation))) {
+            return stream
                     .filter(Files::isRegularFile)
                     .map(Path::toFile)
                     .filter(f -> f.getName().endsWith(".json.gz"))
@@ -146,13 +145,12 @@ public class BackupService {
                     .collect(Collectors.toList());
         } catch (IOException e) {
             log.error("Failed to list backups", e);
-            return List.of();
+            return Collections.emptyList();
         }
     }
 
     public File getBackupFile(String filename) {
         Path path = Paths.get(backupLocation, filename).normalize();
-        // Security check to prevent path traversal (e.g. ../../etc/passwd)
         if (!path.startsWith(Paths.get(backupLocation))) {
             throw new IllegalArgumentException("Invalid filename");
         }
@@ -172,7 +170,6 @@ public class BackupService {
         List<File> allBackups = listBackups();
         if (allBackups.isEmpty()) return;
 
-        // Group files by YearMonth
         Map<String, List<File>> backupsByMonth = new HashMap<>();
 
         for (File file : allBackups) {
@@ -193,26 +190,21 @@ public class BackupService {
             String monthKey = entry.getKey();
             List<File> filesInMonth = entry.getValue();
 
-            // If it's the current month, keep everything
             if (monthKey.equals(currentMonthKey)) {
                 continue;
             }
 
-            // If it's a past month, keep only the one with the latest timestamp
             if (filesInMonth.size() > 1) {
-                // Sort descending (newest first)
                 filesInMonth.sort((f1, f2) -> f2.getName().compareTo(f1.getName()));
 
-                // Keep index 0 (latest), delete the rest
                 for (int i = 1; i < filesInMonth.size(); i++) {
                     File toDelete = filesInMonth.get(i);
                     try {
-                        if (toDelete.delete()) {
-                            deletedCount++;
-                            log.info("Retention: Deleted old backup {}", toDelete.getName());
-                        }
-                    } catch (Exception e) {
-                        log.warn("Retention: Failed to delete {}", toDelete.getName());
+                        Files.delete(toDelete.toPath());
+                        deletedCount++;
+                        log.info("Retention: Deleted old backup {}", toDelete.getName());
+                    } catch (IOException e) {
+                        log.warn("Retention: Failed to delete {} - {}", toDelete.getName(), e.getMessage());
                     }
                 }
             }
@@ -225,7 +217,6 @@ public class BackupService {
 
     private Optional<LocalDateTime> parseDateFromFilename(String filename) {
         try {
-            // filename: backup-2026-01-20-153000.json.gz
             String datePart = filename.replace("backup-", "").replace(".json.gz", "");
             return Optional.of(LocalDateTime.parse(datePart, FILE_DATE_FORMATTER));
         } catch (Exception e) {

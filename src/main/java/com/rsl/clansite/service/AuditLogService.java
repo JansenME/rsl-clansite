@@ -49,14 +49,6 @@ public class AuditLogService {
         saveLog("SYSTEM", "System", action, target, details);
     }
 
-    /**
-     * Overloaded method for when we know the specific user ID (e.g. Scraper initiated by specific Admin ID)
-     * but don't have the full Authentication object passed down.
-     */
-    public void logManualAction(String actorId, String actorName, AuditAction action, String target, String details) {
-        saveLog(actorId, actorName, action, target, details);
-    }
-
     private void saveLog(String actorId, String actorName, AuditAction action, String target, String details) {
         AuditLogEntity logEntry = new AuditLogEntity(
                 ObjectId.get(),
@@ -69,10 +61,6 @@ public class AuditLogService {
         );
         auditLogRepository.save(logEntry);
         log.debug("Audit Log recorded: [{}] {} - {} performed by {}", action, target, details, actorName);
-    }
-
-    public List<AuditLogEntity> getAllLogs() {
-        return auditLogRepository.findAllByOrderByTimestampDesc();
     }
 
     public List<AuditLogEntity> searchLogs(LocalDate fromDate, LocalDate toDate, String actor, AuditAction action, String target) {

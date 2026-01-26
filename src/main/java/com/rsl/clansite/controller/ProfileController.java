@@ -92,7 +92,8 @@ public class ProfileController {
 
         ClanmemberEntity targetMember = clanmemberService.getMemberById(id);
 
-        String currentDiscordId = ((OAuth2User) authentication.getPrincipal()).getAttribute("id");
+        String currentDiscordId = getDiscordIdFromAuthentication(authentication);
+
         List<ClanmemberEntity> myAccounts = clanmemberService.getLinkedClanmembers(currentDiscordId);
 
         boolean isOwnProfile = myAccounts.stream()
@@ -188,5 +189,17 @@ public class ProfileController {
         model.addAttribute("affinities", Affinity.values());
         model.addAttribute("factions", Faction.values());
         model.addAttribute("alliances", Alliance.values());
+    }
+
+    private String getDiscordIdFromAuthentication(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof OAuth2User oauthUser)) {
+            throw new AccessDeniedException("Invalid authentication state");
+        }
+
+        String discordId = oauthUser.getAttribute("id");
+        if (discordId == null) {
+            throw new AccessDeniedException("Could not retrieve Discord ID from session");
+        }
+        return discordId;
     }
 }

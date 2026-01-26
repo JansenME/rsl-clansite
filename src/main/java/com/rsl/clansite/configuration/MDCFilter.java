@@ -1,5 +1,6 @@
 package com.rsl.clansite.configuration;
 
+import jakarta.annotation.Nonnull;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,7 +20,9 @@ public class MDCFilter extends OncePerRequestFilter {
     private static final String MDC_SESSION_KEY = "sessionId";
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(@Nonnull HttpServletRequest request,
+                                    @Nonnull HttpServletResponse response,
+                                    @Nonnull FilterChain filterChain) throws ServletException, IOException {
         try {
             HttpSession session = request.getSession(false);
 
