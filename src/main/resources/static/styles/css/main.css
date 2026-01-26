@@ -293,7 +293,9 @@ tbody tr:hover {
 .stat-group .form-group label,
 .stat-group .form-group input[type="number"],
 .identity-grid-4 .form-group label,
-.identity-grid-4 .form-group select {
+.identity-grid-4 .form-group select,
+.stat-grid .form-group label,
+.stat-grid .form-group input {
     display: block;
     width: 100%;
     box-sizing: border-box;
