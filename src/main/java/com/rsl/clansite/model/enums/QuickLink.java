@@ -11,6 +11,7 @@ public enum QuickLink {
 
     ADD_CLANMEMBER("Add Clanmember", "/clanmembers/add", "ROLE_ADMIN"),
     LOGIN_HISTORY("Login History", "/clanmembers/admin/login-history", "ROLE_ADMIN"),
+    NOTICES("Website Notices", "/admin/notices", "ROLE_ADMIN"),
     DATA_HEALTH("Discord Data Health", "/clanmembers/admin/data-health", "ROLE_ADMIN"),
     AUDIT_LOG("Audit Log", "/audit-log", "ROLE_ADMIN"),
 

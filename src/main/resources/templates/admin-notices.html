@@ -1,0 +1,93 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{inserts/head :: head(pageTitle='Manage Site Notices')}">
+</head>
+<body>
+<div id="page-wrapper">
+
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container"></div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <section>
+                <header class="major">
+                    <h2>Manage Site Notices</h2>
+                    <p>Create global announcements and update logs for all clan members.</p>
+                </header>
+
+                <h3>Create New Notice</h3>
+
+                <form method="post" action="/admin/notices/create">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                    <div style="margin-bottom: 2em;">
+                        <label for="title" style="display: block; font-weight: bold; margin-bottom: 0.5em;">Title</label>
+                        <input type="text" name="title" id="title" placeholder="e.g. Welcome to Version 1.0!" required style="width: 50%; min-width: 300px;" />
+                    </div>
+
+                    <div style="margin-bottom: 2em;">
+                        <label for="noticeContent" style="display: block; font-weight: bold; margin-bottom: 0.5em;">Content (HTML Supported)</label>
+                        <textarea name="content" id="noticeContent" placeholder="<p>We have added a new feature...</p>" rows="6" required style="width: 100%;"></textarea>
+                        <p style="font-size: 0.8em; color: #666; margin-top: 0.5em;">You can use HTML tags like &lt;b&gt;, &lt;ul&gt;, &lt;li&gt;, and &lt;a&gt;.</p>
+                    </div>
+
+                    <div>
+                        <input type="submit" value="Publish Notice" class="button primary" />
+                    </div>
+                </form>
+
+                <hr />
+
+                <h3>Notice History</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="notice : ${notices}">
+                            <td th:text="${#temporals.format(notice.createdAt, 'dd-MM-yyyy HH:mm')}">Date</td>
+                            <td th:text="${notice.title}">Title</td>
+                            <td th:text="${notice.createdBy}">Admin</td>
+                            <td>
+                                <span th:if="${notice.active}" style="color: #27ae60; font-weight: bold;">
+                                    <i class="fas fa-circle"></i> Active
+                                </span>
+                                <span th:unless="${notice.active}" style="color: #7f8c8d;">
+                                    <i class="fas fa-circle-notch"></i> Inactive
+                                </span>
+                            </td>
+                            <td>
+                                <form method="post" th:action="@{/admin/notices/{id}/toggle(id=${notice.id})}" style="margin:0;">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                    <button type="submit" class="button small"
+                                            th:classappend="${notice.active} ? 'alt' : 'primary'">
+                                        <span th:text="${notice.active} ? 'Deactivate' : 'Activate'">Toggle</span>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(notices)}">
+                            <td colspan="5" style="text-align: center;">No notices found. Create one above!</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </section>
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright"></div>
+
+</div>
+</body>
+</html>

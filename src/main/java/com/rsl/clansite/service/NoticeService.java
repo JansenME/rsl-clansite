@@ -2,11 +2,16 @@ package com.rsl.clansite.service;
 
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.entity.NoticeEntity;
+import com.rsl.clansite.model.enums.AuditAction;
 import com.rsl.clansite.repository.ClanmemberRepository;
 import com.rsl.clansite.repository.NoticeRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,10 +21,12 @@ public class NoticeService {
 
     private final NoticeRepository noticeRepository;
     private final ClanmemberRepository clanmemberRepository;
+    private final AuditLogService auditLogService;
 
-    public NoticeService(NoticeRepository noticeRepository, ClanmemberRepository clanmemberRepository) {
+    public NoticeService(NoticeRepository noticeRepository, ClanmemberRepository clanmemberRepository, AuditLogService auditLogService) {
         this.noticeRepository = noticeRepository;
         this.clanmemberRepository = clanmemberRepository;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -50,11 +57,9 @@ public class NoticeService {
     }
 
     /**
-     * Updates ALL linked accounts for this Discord ID so the user doesn't see the notice again
-     * regardless of which sub-account they switch to.
+     * Updates ALL linked accounts for this Discord ID.
      */
     public void markNoticeAsSeen(String discordId, String noticeId) {
-        // Find all accounts belonging to this Discord User
         List<ClanmemberEntity> linkedAccounts = clanmemberRepository.findAllByDiscordId(discordId);
 
         if (linkedAccounts.isEmpty()) {
@@ -62,13 +67,37 @@ public class NoticeService {
             return;
         }
 
-        // Update all of them
         for (ClanmemberEntity member : linkedAccounts) {
             member.setLastSeenNoticeId(noticeId);
         }
 
-        // Save all changes
         clanmemberRepository.saveAll(linkedAccounts);
         log.debug("Updated {} accounts for Discord ID {} to acknowledge notice {}", linkedAccounts.size(), discordId, noticeId);
+    }
+
+    // --- ADMIN METHODS ---
+
+    public List<NoticeEntity> getAllNotices() {
+        return noticeRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+    }
+
+    public void createNotice(String title, String content, String author, Authentication authentication) {
+        NoticeEntity notice = new NoticeEntity();
+        notice.setTitle(title);
+        notice.setContent(content);
+        notice.setCreatedBy(author);
+        notice.setCreatedAt(LocalDateTime.now());
+        notice.setActive(true); // Default to active
+
+        auditLogService.logAction(authentication, AuditAction.CREATE_NOTICE, "Notice Board", "Created a website notice");
+
+        noticeRepository.save(notice);
+    }
+
+    public void toggleActive(String id) {
+        noticeRepository.findById(new ObjectId(id)).ifPresent(notice -> {
+            notice.setActive(!notice.isActive());
+            noticeRepository.save(notice);
+        });
     }
 }

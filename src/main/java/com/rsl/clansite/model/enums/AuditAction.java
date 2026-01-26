@@ -21,6 +21,9 @@ public enum AuditAction {
     SIEGE_CONDITION_TOGGLE("Siege Condition Changed"),
     SIEGE_SYSTEM_EVENT("Siege System Event"),
 
+    // Notice Actions
+    CREATE_NOTICE("Create Notice"),
+
     // System Actions
     SYSTEM_BACKUP("System Backup");
 
