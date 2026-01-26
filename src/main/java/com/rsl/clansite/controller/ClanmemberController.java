@@ -8,11 +8,14 @@ import com.rsl.clansite.model.enums.ClanRank;
 import com.rsl.clansite.repository.VisitorLogRepository;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
+import com.rsl.clansite.service.NoticeService;
 import com.rsl.clansite.validation.OnCreate;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.groups.Default;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
@@ -24,6 +27,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
@@ -34,13 +38,16 @@ public class ClanmemberController {
     private final CommonsService commonsService;
     private final ClanmemberService clanmemberService;
     private final VisitorLogRepository visitorLogRepository;
+    private final NoticeService noticeService;
 
     public ClanmemberController(final CommonsService commonsService,
                                 final ClanmemberService clanmemberService,
-                                final VisitorLogRepository visitorLogRepository) {
+                                final VisitorLogRepository visitorLogRepository,
+                                final NoticeService noticeService) {
         this.commonsService = commonsService;
         this.clanmemberService = clanmemberService;
         this.visitorLogRepository = visitorLogRepository;
+        this.noticeService = noticeService;
     }
 
     @GetMapping(value={"", "/"})
@@ -57,6 +64,22 @@ public class ClanmemberController {
         model.addAttribute("inactiveMembers", clanmemberService.findInactiveClanmemberEntities());
 
         return "clanmembers";
+    }
+
+    @PostMapping("/acknowledge-notice")
+    @ResponseBody
+    public ResponseEntity<Void> acknowledgeNotice(@RequestParam("noticeId") String noticeId, Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        // Get the Discord ID directly from the OAuth Principal
+        String discordId = ((OAuth2User) authentication.getPrincipal()).getAttribute("id");
+
+        // Update all linked accounts at once
+        noticeService.markNoticeAsSeen(discordId, noticeId);
+
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/admin/login-history")

@@ -1,6 +1,9 @@
 package com.rsl.clansite.configuration;
 
+import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.entity.NoticeEntity;
 import com.rsl.clansite.service.ClanmemberService;
+import com.rsl.clansite.service.NoticeService;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,13 +14,18 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.util.List;
+import java.util.Optional;
+
 @Slf4j
 @Component
 public class ActivityInterceptor implements HandlerInterceptor {
     private final ClanmemberService clanmemberService;
+    private final NoticeService noticeService;
 
-    public ActivityInterceptor(ClanmemberService clanmemberService) {
+    public ActivityInterceptor(ClanmemberService clanmemberService, NoticeService noticeService) {
         this.clanmemberService = clanmemberService;
+        this.noticeService = noticeService;
     }
 
     @Override
@@ -32,7 +40,20 @@ public class ActivityInterceptor implements HandlerInterceptor {
             String path = request.getRequestURI();
             String location = resolveLocation(path);
 
+            // 1. Update Last Seen (Existing logic)
             clanmemberService.updateLastSeen(discordId, location);
+
+            // 2. Check for Global Notices (New logic)
+            // We use the first linked account to track the 'seen' status for the Discord User
+            List<ClanmemberEntity> members = clanmemberService.getLinkedClanmembers(discordId);
+            if (!members.isEmpty()) {
+                ClanmemberEntity activeMember = members.get(0);
+                Optional<NoticeEntity> unseenNotice = noticeService.getUnseenNotice(activeMember);
+
+                if (unseenNotice.isPresent()) {
+                    request.setAttribute("globalNotice", unseenNotice.get());
+                }
+            }
         }
 
         return true;
@@ -81,7 +102,7 @@ public class ActivityInterceptor implements HandlerInterceptor {
         // Teams Controller
         if (path.startsWith("/teams/builder")) return "Build a team";
 
-        // Resources (Ignore static resources to prevent log spam if they bypass filters)
+        // Resources
         if (path.startsWith("/styles") || path.startsWith("/images") || path.startsWith("/favicon")) {
             return "Resources";
         }

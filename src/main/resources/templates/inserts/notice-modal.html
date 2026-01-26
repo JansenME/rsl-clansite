@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="notice-modal">
+
+    <div id="globalUpdateModal" class="modal"
+         th:if="${globalNotice != null}"
+         style="display: block;"> <div class="modal-content">
+        <span class="close-modal" onclick="dismissNotice()">&times;</span>
+
+        <h2 style="margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 10px; color: #2c3e50;">
+            <i class="fas fa-bullhorn" style="color: #e67e22; margin-right: 10px;"></i>
+            <span th:text="${globalNotice.title}">Update Title</span>
+        </h2>
+
+        <div style="margin: 20px 0; font-size: 1.1em; line-height: 1.6;"
+             th:utext="${globalNotice.content}">
+            Update content goes here...
+        </div>
+
+        <div style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
+            <button class="button primary" onclick="dismissNotice()">
+                <i class="fas fa-check"></i> Got it!
+            </button>
+        </div>
+
+        <input type="hidden" id="noticeId" th:value="${globalNotice.id}" />
+    </div>
+    </div>
+
+    <script th:if="${globalNotice != null}">
+        function dismissNotice() {
+            // 1. Hide the modal immediately for better UX
+            const modal = document.getElementById("globalUpdateModal");
+            modal.style.display = "none";
+
+            // 2. Get the Notice ID
+            const noticeId = document.getElementById("noticeId").value;
+            const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+            // 3. Send AJAX request to acknowledge
+            fetch('/clanmembers/acknowledge-notice?noticeId=' + noticeId, {
+                method: 'POST',
+                headers: {
+                    [csrfHeader]: csrfToken
+                }
+            }).then(response => {
+                if (!response.ok) {
+                    console.warn("Failed to acknowledge notice on server.");
+                } else {
+                    console.log("Notice acknowledged successfully.");
+                }
+            }).catch(error => {
+                console.error("Error acknowledging notice:", error);
+            });
+        }
+    </script>
+</div>
+
+</body>
+</html>

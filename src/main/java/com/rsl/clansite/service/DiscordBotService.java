@@ -59,9 +59,9 @@ public class DiscordBotService extends ListenerAdapter {
                     .queue();
         }
         else if (commandName.equals("coming-soon")) {
-            event.reply("Something is waking up... \n" +
-                            "Prepare yourself. It will arrive soon! \n\n" +
-                            "And if it's not, then keep doing what you're doing!")
+            event.reply("Something is coming soon... \n" +
+                            "I don't know what it is either. \n\n" +
+                            "Bye now!")
                     .setEphemeral(false)
                     .queue();
         }
