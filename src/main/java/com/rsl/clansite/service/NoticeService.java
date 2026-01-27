@@ -12,8 +12,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Slf4j
@@ -30,30 +30,33 @@ public class NoticeService {
     }
 
     /**
-     * Checks if there is an active global notice that the member hasn't seen yet.
+     * Returns a list of all active notices the user hasn't seen yet.
+     * Logic: Fetch all active notices, and collect them until we hit the ID the user last saw.
      */
-    public Optional<NoticeEntity> getUnseenNotice(ClanmemberEntity member) {
+    public List<NoticeEntity> getUnseenNotices(ClanmemberEntity member) {
         if (member == null) {
-            return Optional.empty();
+            return List.of();
         }
 
-        // 1. Get the latest global active notice
-        Optional<NoticeEntity> latestNoticeOpt = noticeRepository.findFirstByActiveTrueOrderByCreatedAtDesc();
+        List<NoticeEntity> allActive = noticeRepository.findAllByActiveTrueOrderByCreatedAtDesc();
+        String lastSeenId = member.getLastSeenNoticeId();
 
-        if (latestNoticeOpt.isEmpty()) {
-            return Optional.empty();
+        // If they've seen nothing (null or blank), show everything active
+        if (lastSeenId == null || lastSeenId.isBlank()) {
+            return allActive;
         }
 
-        NoticeEntity latestNotice = latestNoticeOpt.get();
-        String latestId = latestNotice.getId().toHexString();
-
-        // 2. Compare with member's last seen ID
-        if (latestId.equals(member.getLastSeenNoticeId())) {
-            return Optional.empty();
+        List<NoticeEntity> unseen = new ArrayList<>();
+        for (NoticeEntity notice : allActive) {
+            // We iterate from newest to oldest.
+            // If we hit the notice the user has already seen, we stop.
+            if (notice.getId().toHexString().equals(lastSeenId)) {
+                break;
+            }
+            unseen.add(notice);
         }
 
-        // 3. Return the notice
-        return Optional.of(latestNotice);
+        return unseen;
     }
 
     /**

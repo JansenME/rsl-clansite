@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Component
@@ -43,15 +42,20 @@ public class ActivityInterceptor implements HandlerInterceptor {
             // 1. Update Last Seen (Existing logic)
             clanmemberService.updateLastSeen(discordId, location);
 
-            // 2. Check for Global Notices (New logic)
+            // 2. Check for Global Notices (New logic: List-based)
             // We use the first linked account to track the 'seen' status for the Discord User
             List<ClanmemberEntity> members = clanmemberService.getLinkedClanmembers(discordId);
             if (!members.isEmpty()) {
                 ClanmemberEntity activeMember = members.get(0);
-                Optional<NoticeEntity> unseenNotice = noticeService.getUnseenNotice(activeMember);
+                List<NoticeEntity> unseenNotices = noticeService.getUnseenNotices(activeMember);
 
-                if (unseenNotice.isPresent()) {
-                    request.setAttribute("globalNotice", unseenNotice.get());
+                if (!unseenNotices.isEmpty()) {
+                    // Pass the full list to show all missed updates
+                    request.setAttribute("globalNotices", unseenNotices);
+
+                    // Pass the ID of the NEWEST notice (index 0) for the "Dismiss" button
+                    // This allows us to "fast-forward" the user's seen status to the top
+                    request.setAttribute("latestNoticeId", unseenNotices.get(0).getId().toHexString());
                 }
             }
         }
@@ -89,6 +93,9 @@ public class ActivityInterceptor implements HandlerInterceptor {
         // Scraper Controller
         if (path.startsWith("/admin/scraper")) return "Viewing Champion Scraper";
         if (path.startsWith("/admin/data-health")) return "Viewing Champion Data Health";
+
+        // Notices Controller
+        if (path.startsWith("/admin/notices")) return "Managing Notices";
 
         // SiegeCondition Controller
         if (path.startsWith("/admin/siege-conditions")) return "Viewing Siege Conditions";

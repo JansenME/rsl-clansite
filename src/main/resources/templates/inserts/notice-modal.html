@@ -5,42 +5,58 @@
 <div th:fragment="notice-modal">
 
     <div id="globalUpdateModal" class="modal"
-         th:if="${globalNotice != null}"
-         style="display: block;"> <div class="modal-content">
-        <span class="close-modal" onclick="dismissNotice()">&times;</span>
+         th:if="${globalNotices != null && !globalNotices.isEmpty()}"
+         style="display: block;">
 
-        <h2 style="margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 10px; color: #2c3e50;">
-            <i class="fas fa-bullhorn" style="color: #e67e22; margin-right: 10px;"></i>
-            <span th:text="${globalNotice.title}">Update Title</span>
-        </h2>
+        <div class="modal-content" style="max-width: 700px; max-height: 85vh; overflow-y: auto;">
+            <span class="close-modal" onclick="dismissNotice()">&times;</span>
 
-        <div style="margin: 20px 0; font-size: 1.1em; line-height: 1.6;"
-             th:utext="${globalNotice.content}">
-            Update content goes here...
+            <h2 style="margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 10px; color: #2c3e50;">
+                <i class="fas fa-bullhorn" style="color: #e67e22; margin-right: 10px;"></i>
+                Recent Updates
+            </h2>
+
+            <div th:each="notice, iterStat : ${globalNotices}"
+                 style="margin-bottom: 25px; padding-bottom: 15px;"
+                 th:styleappend="${!iterStat.last} ? 'border-bottom: 1px dashed #ddd;' : ''">
+
+                <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
+                    <h3 th:text="${notice.title}" style="margin: 0; color: #2c3e50; margin-right: 10px;">Title</h3>
+
+                    <span style="font-size: 0.85em; color: #7f8c8d; font-weight: bold; white-space: nowrap;">
+                        <i class="far fa-calendar-alt"></i>
+                        <span th:text="${#temporals.format(notice.createdAt, 'dd-MM-yyyy')}">01-01-2026</span>
+                    </span>
+                </div>
+
+                <div style="margin: 15px 0; line-height: 1.6; font-size: 1.1em;" th:utext="${notice.content}">
+                    Content...
+                </div>
+            </div>
+
+            <div style="text-align: right; border-top: 1px solid #eee; padding-top: 15px; position: sticky; bottom: 0; background: white; margin-top: 10px;">
+                <button class="button primary" onclick="dismissNotice()">
+                    <i class="fas fa-check"></i> Got it!
+                </button>
+            </div>
+
+            <input type="hidden" id="noticeId" th:value="${latestNoticeId}" />
         </div>
-
-        <div style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
-            <button class="button primary" onclick="dismissNotice()">
-                <i class="fas fa-check"></i> Got it!
-            </button>
-        </div>
-
-        <input type="hidden" id="noticeId" th:value="${globalNotice.id}" />
-    </div>
     </div>
 
-    <script th:if="${globalNotice != null}">
+    <script th:if="${globalNotices != null}">
         function dismissNotice() {
             // 1. Hide the modal immediately for better UX
             const modal = document.getElementById("globalUpdateModal");
             modal.style.display = "none";
 
-            // 2. Get the Notice ID
+            // 2. Get the Notice ID (This is the NEWEST ID)
             const noticeId = document.getElementById("noticeId").value;
             const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
             const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
 
             // 3. Send AJAX request to acknowledge
+            // This marks the newest notice as seen, implicitly marking all older ones as seen too.
             fetch('/clanmembers/acknowledge-notice?noticeId=' + noticeId, {
                 method: 'POST',
                 headers: {
