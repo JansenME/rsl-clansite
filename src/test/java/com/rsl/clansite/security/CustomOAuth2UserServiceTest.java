@@ -70,8 +70,6 @@ class CustomOAuth2UserServiceTest {
         lenient().when(discordRoleService.getClanLeaderRoleId()).thenReturn("test-leader-id");
         lenient().when(discordRoleService.getDeputyRoleId()).thenReturn("test-deputy-id");
         lenient().when(discordRoleService.getSiegeCoordinatorRoleId()).thenReturn("test-coordinator-id");
-
-        ReflectionTestUtils.setField(customOAuth2UserService, "kloepDiscordId", "270588526267990017");
     }
 
     @Test

@@ -91,7 +91,9 @@ class IndexControllerIntegrationTest extends BaseControllerTest {
         ClanmemberViewData mockNavData = new ClanmemberViewData(
                 discordName,
                 List.of("ROLE_MEMBER"),
-                "https://cdn.discordapp.com/avatars/123/abc.png"
+                "https://cdn.discordapp.com/avatars/123/abc.png",
+                null,
+                false
         );
 
         doAnswer(invocation -> {

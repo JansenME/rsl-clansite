@@ -35,10 +35,7 @@
 										 alt="Discord Avatar"
 										 style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
 								</div>
-								<div style="margin-left: 0; padding-left: 0;">
-									<p style="margin: 0 0 10px 0; padding-left: 0;">
-										<span th:text="${isOwnProfile ? 'Logged in as:' : 'Member:'}">User:</span><br />
-										<strong th:text="${clanmemberViewData != null ? clanmemberViewData.discordUserName : 'User'}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong>
+								<div style="margin-left: 0; padding-left: 0;"><p style="margin: 0 0 10px 0; padding-left: 0;"><span th:text="${isOwnProfile ? 'Logged in as:' : 'Member:'}">User:</span><br /><strong th:text="${clanmemberViewData != null ? clanmemberViewData.discordUserName : 'User'}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong>
 									</p>
 
 									<p style="font-weight: bold; margin-bottom: 5px; margin-left: 0; padding-left: 0;">Roles:</p>

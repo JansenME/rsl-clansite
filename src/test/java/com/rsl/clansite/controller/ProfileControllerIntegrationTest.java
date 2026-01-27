@@ -88,7 +88,7 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
         target.setId(new ObjectId(targetId));
 
         when(clanmemberService.getMemberById(targetId)).thenReturn(target);
-        when(clanmemberService.getViewDataForMember(target)).thenReturn(new ClanmemberViewData("Other", List.of(), null));
+        when(clanmemberService.getViewDataForMember(target)).thenReturn(new ClanmemberViewData("Other", List.of(), null, null, false));
 
         String viewerId = "999999";
 
@@ -238,7 +238,7 @@ class ProfileControllerIntegrationTest extends BaseControllerTest {
         me.setId(new ObjectId(id));
         when(clanmemberService.getMemberById(id)).thenReturn(me);
         when(clanmemberService.getLinkedClanmembers(any())).thenReturn(List.of(me));
-        when(clanmemberService.getViewDataForMember(me)).thenReturn(new ClanmemberViewData("Me", List.of(), null));
+        when(clanmemberService.getViewDataForMember(me)).thenReturn(new ClanmemberViewData("Me", List.of(), null, null, false));
 
         Set<SimpleGrantedAuthority> authorities = Arrays.stream(roles)
                 .map(SimpleGrantedAuthority::new)

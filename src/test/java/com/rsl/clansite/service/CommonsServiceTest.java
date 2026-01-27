@@ -86,7 +86,7 @@ class CommonsServiceTest {
     @DisplayName("fillModel should add user view data when Authenticated")
     void fillModel_ShouldAddUserData_WhenAuthenticated() {
         when(authentication.isAuthenticated()).thenReturn(true);
-        ClanmemberViewData mockData = new ClanmemberViewData("User", java.util.List.of(), null);
+        ClanmemberViewData mockData = new ClanmemberViewData("User", java.util.List.of(), null, null, false);
         when(clanmemberService.getUserViewData(authentication)).thenReturn(mockData);
 
         commonsService.fillModel(model, authentication);
