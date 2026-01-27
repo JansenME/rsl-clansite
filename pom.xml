@@ -11,7 +11,7 @@
 	<packaging>war</packaging>
 	<groupId>com.rsl</groupId>
 	<artifactId>clansite</artifactId>
-	<version>0.7</version>
+	<version>0.9</version>
 	<name>Clansite Fury of the Fallen</name>
 	<description>Clansite Fury of the Fallen</description>
 

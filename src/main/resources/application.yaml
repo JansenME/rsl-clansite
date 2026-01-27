@@ -20,7 +20,7 @@ discord:
 spring:
   data:
     mongodb:
-      uri: mongodb://localhost:27017
+      uri: ${MONGO_URI:mongodb://localhost:27017/raidshadowlegends}
       database: raidshadowlegends
       auto-index-creation: true
   session:
