@@ -65,8 +65,9 @@ public class SecurityConfig {
                                 "/champions", "/champions/",
                                 "/clanmembers", "/clanmembers/"
                         ).permitAll()
-                        .requestMatchers("/profile", "/champions/**", "/clanmembers/**").authenticated()
-                        .anyRequest().authenticated()
+                        .requestMatchers("/admin/masquerade").authenticated()
+                        .requestMatchers("/profile", "/champions/**", "/clanmembers/**").hasRole("USER")
+                        .anyRequest().hasRole("USER")
                 )
                 .addFilterBefore(sessionSecurityFilter, AuthorizationFilter.class)
                 .exceptionHandling(exception -> exception

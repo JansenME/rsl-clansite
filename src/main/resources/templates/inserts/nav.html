@@ -29,6 +29,50 @@
         </a>
 
     </nav>
+
+    <div th:if="${navUserViewData != null && navUserViewData.isSystemOwner}"
+         style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: rgba(0,0,0,0.85); padding: 8px; border-radius: 8px; border: 1px solid #3498db; font-family: sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+
+        <label style="color: #3498db; font-size: 10px; font-weight: bold; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px;">
+            View As Role
+        </label>
+
+        <select onchange="updateMasquerade(this.value)"
+                style="background: #111; color: #fff; border: 1px solid #444; border-radius: 4px; font-size: 12px; cursor: pointer; padding: 4px 8px; width: 140px; height: auto;">
+
+            <option value="NONE" th:selected="${navUserViewData.impersonatedRole == null}">-- OWNER (Full) --</option>
+            <option value="ROLE_ADMIN" th:selected="${navUserViewData.impersonatedRole == 'ROLE_ADMIN'}">Admin</option>
+            <option value="ROLE_COORDINATOR" th:selected="${navUserViewData.impersonatedRole == 'ROLE_COORDINATOR'}">Coordinator</option>
+            <option value="ROLE_MEMBER" th:selected="${navUserViewData.impersonatedRole == 'ROLE_MEMBER'}">Member</option>
+            <option value="ROLE_USER" th:selected="${navUserViewData.impersonatedRole == 'ROLE_USER'}">User</option>
+            <option value="ROLE_GUEST" th:selected="${navUserViewData.impersonatedRole == 'ROLE_GUEST'}">Guest</option>
+        </select>
+
+        <script th:inline="javascript">
+            function updateMasquerade(role) {
+                const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
+                const formData = new URLSearchParams();
+                formData.append('role', role);
+
+                fetch('/admin/masquerade', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        [csrfHeader]: csrfToken
+                    },
+                    body: formData.toString()
+                }).then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert("Masquerade update failed. Check console.");
+                    }
+                });
+            }
+        </script>
+    </div>
 </div>
 </body>
 </html>

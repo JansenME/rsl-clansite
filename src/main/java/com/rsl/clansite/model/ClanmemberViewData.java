@@ -10,4 +10,6 @@ public class ClanmemberViewData implements Serializable {
     private final String discordUserName;
     private final List<String> discordUserRoles;
     private final String discordAvatarUrl;
+    private final String impersonatedRole;
+    private final boolean isSystemOwner;
 }

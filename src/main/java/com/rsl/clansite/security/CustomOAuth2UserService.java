@@ -24,9 +24,6 @@ import java.util.Set;
 @Slf4j
 @Service
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
-    @Value("${discord.kloep-id}")
-    private String kloepDiscordId;
-
     private final ClanmemberService clanmemberService;
     private final DiscordApiClient discordApiClient;
     private final DiscordRoleService discordRoleService;

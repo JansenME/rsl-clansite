@@ -53,6 +53,9 @@ public class ClanmemberEntity {
 
     private String lastSeenNoticeId;
 
+    // Added for Masquerade / Dev Mode
+    private String impersonatedRole;
+
     private LocalDateTime rosterLastUpdated;
     private String rosterUpdatedBy;
 }

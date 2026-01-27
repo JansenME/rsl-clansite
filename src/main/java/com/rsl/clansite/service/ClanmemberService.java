@@ -23,6 +23,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -57,6 +58,9 @@ public class ClanmemberService {
     private final ChampionRepository championRepository;
     private final SiegeConditionService siegeConditionService;
     private final SecurityService securityService;
+
+    @Value("${discord.kloep-id}")
+    private String kloepDiscordId;
 
     @Autowired
     public ClanmemberService(final ClanmemberRepository clanmemberRepository,
@@ -461,7 +465,8 @@ public class ClanmemberService {
 
     public ClanmemberViewData getUserViewData(Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof OAuth2User oauth2User)) {
-            return new ClanmemberViewData(null, List.of(), null);
+            // Updated constructor usage: No impersonation, Not owner
+            return new ClanmemberViewData(null, List.of(), null, null, false);
         }
 
         String discordId = oauth2User.getAttribute("id");
@@ -469,10 +474,24 @@ public class ClanmemberService {
         String discordUserName = (globalName != null) ? globalName : "Unknown User";
         String avatarHash = oauth2User.getAttribute("avatar");
 
+        boolean isSystemOwner = false;
+        String impersonatedRole = null;
+
+        if (discordId != null && discordId.equals(kloepDiscordId)) {
+            isSystemOwner = true;
+            List<ClanmemberEntity> members = clanmemberRepository.findAllByDiscordId(discordId);
+            if (!members.isEmpty()) {
+                impersonatedRole = members.get(0).getImpersonatedRole();
+            }
+        }
+
+        // Updated constructor usage
         return new ClanmemberViewData(
                 discordUserName,
                 resolveRoleNamesForUser(discordId),
-                buildAvatarUrl(discordId, avatarHash)
+                buildAvatarUrl(discordId, avatarHash),
+                impersonatedRole,
+                isSystemOwner
         );
     }
 
@@ -604,7 +623,8 @@ public class ClanmemberService {
 
         String avatarUrl = buildAvatarUrl(member.getDiscordId(), member.getAvatarHash());
 
-        return new ClanmemberViewData(discordUserName, roleNames, avatarUrl);
+        // Updated constructor usage: No impersonation or system owner status for public member view
+        return new ClanmemberViewData(discordUserName, roleNames, avatarUrl, null, false);
     }
 
     public NewClanmemberDTO mapEntityToDto(ClanmemberEntity entity) {
@@ -805,9 +825,45 @@ public class ClanmemberService {
         return clanmemberRepository.findAllByDiscordId(discordId).stream()
                 .findFirst()
                 .map(member -> {
+                    // SECURE CHECK: Only allow impersonation if the ID matches the Owner ID from YAML
+                    if (discordId.equals(kloepDiscordId) && member.getImpersonatedRole() != null) {
+                        Set<SimpleGrantedAuthority> shadowAuths = new HashSet<>();
+
+                        String role = member.getImpersonatedRole();
+
+                        // Add the specific role selected
+                        shadowAuths.add(new SimpleGrantedAuthority(role));
+
+                        if (!"ROLE_GUEST".equals(role)) {
+                            shadowAuths.add(new SimpleGrantedAuthority("ROLE_USER"));
+                        }
+
+                        log.info("Masquerade active for Owner. Current shadow role: {}", role);
+                        return shadowAuths;
+                    }
+
+                    // Normal flow for everyone else (and Owner when not impersonating)
                     Set<String> dbRoles = new HashSet<>(member.getDiscordRoles());
                     return discordRoleService.getAuthoritiesForRoles(dbRoles, discordId);
                 });
+    }
+
+    @Transactional
+    public void updateImpersonation(String discordId, String role) {
+        if (!discordId.equals(kloepDiscordId)) {
+            log.warn("Unauthorized impersonation attempt by discordId: {}", discordId);
+            throw new AccessDeniedException("Only the system owner can use masquerade mode.");
+        }
+
+        List<ClanmemberEntity> members = clanmemberRepository.findAllByDiscordId(discordId);
+        if (members.isEmpty()) return;
+
+        for (ClanmemberEntity member : members) {
+            member.setImpersonatedRole(role);
+            clanmemberRepository.save(member);
+        }
+
+        log.info("Owner impersonation updated to: {}", role != null ? role : "NONE");
     }
 
     @Transactional

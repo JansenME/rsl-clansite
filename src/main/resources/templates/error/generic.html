@@ -1,12 +1,7 @@
 <!DOCTYPE HTML>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-	<head>
-		<title>Error Encountered</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" th:href="@{/styles/css/main.css}" />
-		<script th:src="@{/styles/js/main.js}"></script>
-	</head>
+<head th:replace="~{inserts/head :: head(pageTitle='Error Encountered')}">
+</head>
 	<body>
 		<div id="page-wrapper">
 			<section id="header">
