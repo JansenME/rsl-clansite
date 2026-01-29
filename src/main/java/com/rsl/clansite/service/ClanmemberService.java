@@ -700,7 +700,16 @@ public class ClanmemberService {
                     });
 
             member.setRosterLastUpdated(LocalDateTime.now());
-            member.setRosterUpdatedBy(authentication.getName());
+
+            // FIX: Resolve friendly name from OAuth2User instead of raw ID
+            String actorName = "Unknown";
+            if (authentication.getPrincipal() instanceof OAuth2User oauthUser) {
+                String globalName = oauthUser.getAttribute("global_name");
+                String username = oauthUser.getAttribute("username");
+                actorName = globalName != null ? globalName : (username != null ? username : authentication.getName());
+            }
+            member.setRosterUpdatedBy(actorName);
+
             clanmemberRepository.save(member);
         }
     }
