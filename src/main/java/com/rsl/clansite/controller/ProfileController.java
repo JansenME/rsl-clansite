@@ -3,6 +3,7 @@ package com.rsl.clansite.controller;
 import com.rsl.clansite.model.Champion;
 import com.rsl.clansite.model.ClanmemberViewData;
 import com.rsl.clansite.model.CompleteChampionsFilter;
+import com.rsl.clansite.model.OwnedChampion;
 import com.rsl.clansite.model.Team;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.entity.SiegeConditionEntity;
@@ -64,6 +65,12 @@ public class ProfileController {
             Champion member4
     ) {}
 
+    // DTO to combine Master Data (Image/Name) with Instance Data (Level/Rank)
+    public record RosterEntryDTO(
+            Champion masterData,
+            OwnedChampion instanceData
+    ) {}
+
     @GetMapping(value={"", "/"})
     @PreAuthorize("isAuthenticated()")
     public String profileRedirect(Authentication authentication, HttpSession session, Model model) {
@@ -76,7 +83,7 @@ public class ProfileController {
         commonsService.fillModel(model, authentication, session);
         model.addAttribute("isOwnProfile", true);
 
-        model.addAttribute("champions", List.of());
+        model.addAttribute("rosterEntries", List.of());
         addFilterDataToModel(model);
 
         return "profile";
@@ -109,8 +116,37 @@ public class ProfileController {
             model.addAttribute("linkedMembers", myAccounts);
         }
 
-        List<Champion> roster = championsService.getChampionsByIds(targetMember.getRosterChampionIds());
-        model.addAttribute("champions", roster);
+        // --- New Roster Logic ---
+        List<OwnedChampion> ownedRoster = targetMember.getRoster() != null ? targetMember.getRoster() : List.of();
+
+        // 1. Collect all unique Master IDs
+        Set<String> masterIds = ownedRoster.stream()
+                .map(OwnedChampion::getChampionId)
+                .collect(Collectors.toSet());
+
+        // 2. Fetch Master Data
+        Map<String, Champion> masterMap = championsService.getChampionsByIds(new ArrayList<>(masterIds)).stream()
+                .collect(Collectors.toMap(Champion::getId, c -> c));
+
+        // 3. Build Composite DTOs
+        List<RosterEntryDTO> rosterEntries = ownedRoster.stream()
+                .filter(oc -> masterMap.containsKey(oc.getChampionId()))
+                .map(oc -> new RosterEntryDTO(masterMap.get(oc.getChampionId()), oc))
+                .sorted((a, b) -> {
+                    // Sort by Rank DESC, then Level DESC, then Name ASC
+                    int rankCompare = Integer.compare(b.instanceData().getRank(), a.instanceData().getRank());
+                    if (rankCompare != 0) return rankCompare;
+
+                    int levelCompare = Integer.compare(b.instanceData().getLevel(), a.instanceData().getLevel());
+                    if (levelCompare != 0) return levelCompare;
+
+                    return a.masterData().getName().compareTo(b.masterData().getName());
+                })
+                .collect(Collectors.toList());
+
+        model.addAttribute("rosterEntries", rosterEntries);
+        // ------------------------
+
         addFilterDataToModel(model);
 
         ClanmemberViewData targetViewData = clanmemberService.getViewDataForMember(targetMember);
@@ -118,7 +154,7 @@ public class ProfileController {
         model.addAttribute("member", targetMember);
         model.addAttribute("isOwnProfile", isOwnProfile);
 
-        List<TeamViewDTO> knownTeamsView = buildKnownTeamsView(targetMember.getKnownTeams());
+        List<TeamViewDTO> knownTeamsView = buildKnownTeamsView(targetMember.getKnownTeams(), targetMember);
         model.addAttribute("knownTeams", knownTeamsView);
 
         return "profile";
@@ -136,20 +172,27 @@ public class ProfileController {
         return "redirect:/profile";
     }
 
-    private List<TeamViewDTO> buildKnownTeamsView(List<Team> rawTeams) {
+    private List<TeamViewDTO> buildKnownTeamsView(List<Team> rawTeams, ClanmemberEntity member) {
         if (rawTeams == null || rawTeams.isEmpty()) {
             return List.of();
         }
 
-        Set<String> allChampionIds = new HashSet<>();
+        // Map Instance UUIDs to OwnedChampions for O(1) lookup
+        Map<String, OwnedChampion> rosterMap = (member.getRoster() != null) ?
+                member.getRoster().stream().collect(Collectors.toMap(OwnedChampion::getId, c -> c)) :
+                new HashMap<>();
+
+        Set<String> masterChampionIdsToCheck = new HashSet<>();
+
+        // Resolve Team UUIDs to Master IDs
         for (Team t : rawTeams) {
-            if (t.getLeaderChampionId() != null) allChampionIds.add(t.getLeaderChampionId());
-            if (t.getChampion2Id() != null) allChampionIds.add(t.getChampion2Id());
-            if (t.getChampion3Id() != null) allChampionIds.add(t.getChampion3Id());
-            if (t.getChampion4Id() != null) allChampionIds.add(t.getChampion4Id());
+            resolveAndAddMasterId(t.getLeaderChampionId(), rosterMap, masterChampionIdsToCheck);
+            resolveAndAddMasterId(t.getChampion2Id(), rosterMap, masterChampionIdsToCheck);
+            resolveAndAddMasterId(t.getChampion3Id(), rosterMap, masterChampionIdsToCheck);
+            resolveAndAddMasterId(t.getChampion4Id(), rosterMap, masterChampionIdsToCheck);
         }
 
-        Map<String, Champion> championMap = championsService.getChampionsByIds(new ArrayList<>(allChampionIds))
+        Map<String, Champion> championMap = championsService.getChampionsByIds(new ArrayList<>(masterChampionIdsToCheck))
                 .stream()
                 .collect(Collectors.toMap(Champion::getId, c -> c));
 
@@ -172,14 +215,28 @@ public class ProfileController {
                     t.getId(),
                     t.getTeamName(),
                     conditionLabel,
-                    championMap.get(t.getLeaderChampionId()),
-                    championMap.get(t.getChampion2Id()),
-                    championMap.get(t.getChampion3Id()),
-                    championMap.get(t.getChampion4Id())
+                    resolveMasterChampion(t.getLeaderChampionId(), rosterMap, championMap),
+                    resolveMasterChampion(t.getChampion2Id(), rosterMap, championMap),
+                    resolveMasterChampion(t.getChampion3Id(), rosterMap, championMap),
+                    resolveMasterChampion(t.getChampion4Id(), rosterMap, championMap)
             ));
         }
 
         return viewList;
+    }
+
+    private void resolveAndAddMasterId(String instanceId, Map<String, OwnedChampion> rosterMap, Set<String> masterIds) {
+        if (instanceId != null && rosterMap.containsKey(instanceId)) {
+            masterIds.add(rosterMap.get(instanceId).getChampionId());
+        }
+    }
+
+    private Champion resolveMasterChampion(String instanceId, Map<String, OwnedChampion> rosterMap, Map<String, Champion> masterMap) {
+        if (instanceId != null && rosterMap.containsKey(instanceId)) {
+            String masterId = rosterMap.get(instanceId).getChampionId();
+            return masterMap.get(masterId);
+        }
+        return null; // Handle case where champion was deleted from roster but remains in team
     }
 
     private void addFilterDataToModel(Model model) {

@@ -13,6 +13,11 @@
 		<div class="container">
 			<section>
 
+				<div th:if="${successMessage != null}"
+					 style="background-color: #2ecc71; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: center;">
+					<i class="fas fa-check-circle"></i> <span th:text="${successMessage}">Success</span>
+				</div>
+
 				<div th:if="${errorMessage != null}"
 					 style="background-color: #e74c3c; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: center;">
 					<i class="fas fa-exclamation-triangle"></i> <span th:text="${errorMessage}">Error</span>
@@ -137,7 +142,7 @@
 								id="roster-toggle-btn"
 								class="button small primary"
 								onclick="toggleRosterMode()">
-							<i class="fas fa-edit"></i> <span th:text="${isManagementMode ? 'Edit Member Roster' : 'Edit Personal Roster'}">Edit Roster</span>
+							<i class="fas fa-edit"></i> <span th:text="${isManagementMode ? 'Edit Member Roster' : 'Edit My Roster'}">Edit Roster</span>
 						</button>
 					</div>
 
@@ -169,7 +174,8 @@
 		<div style="margin-right: 20px;">
 			<span th:text="${isManagementMode ? 'Managing Roster for:' : 'Editing Roster for:'}">Editing:</span>
 			<strong th:text="${targetMember != null ? targetMember.ingameName : 'Unknown'}" style="color: #2ecc71;">User</strong>
-			(<span id="selected-count" th:text="${ownedChampionIds != null ? ownedChampionIds.size() : 0}">0</span> selected)
+			<span style="margin-left: 10px; font-size: 0.9em; color: #ccc;">(Left-Click: +1 | Right-Click: -1)</span>
+			(<span id="selected-count">0</span> selected)
 		</div>
 
 		<form id="roster-form" method="POST" th:action="@{/champions/roster-save}" onsubmit="prepareRosterSubmission()">
@@ -192,13 +198,52 @@
 	↑
 </button>
 
+<style>
+	/* Styles for Duplicate Badge */
+    .card-count-badge {
+       display: none;
+       position: absolute;
+       top: 5px;
+       right: 5px;
+       background: #e74c3c;
+       color: white;
+       font-weight: bold;
+       border-radius: 50%;
+       width: 25px;
+       height: 25px;
+       align-items: center;
+       justify-content: center;
+       font-size: 0.8em;
+       border: 2px solid white;
+       z-index: 20;
+       box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* Only show the red badge if we have multiples AND are editing */
+    body.roster-editing .champion-card .card-count-badge.is-multi {
+       display: flex;
+    }
+
+    body.roster-editing .champion-card {
+        cursor: pointer;
+    }
+</style>
+
 <script th:inline="javascript">
 	/*[+
-       const initialOwned = [[${ownedChampionIds}]];
+       const initialOwned = [[${ownedChampionIds}]]; // List<String>
        const autoOpenEditMode = [[${autoOpenEditMode}]];
     +]*/
 
-    const selectedChampionIds = new Set(initialOwned || []);
+    // NEW LOGIC: Use Map instead of Set to track counts
+    const championCounts = new Map();
+    if (initialOwned) {
+        initialOwned.forEach(id => {
+            const current = championCounts.get(id) || 0;
+            championCounts.set(id, current + 1);
+        });
+    }
+
     let isEditingRoster = false;
 
     function toggleRosterMode() {
@@ -211,59 +256,123 @@
             body.classList.add('roster-editing');
             saveBar.classList.add('visible');
             toggleBtn.style.display = 'none';
+            // Disable links while editing
+            document.querySelectorAll('.champion-card a').forEach(a => a.style.pointerEvents = 'none');
         } else {
             body.classList.remove('roster-editing');
             saveBar.classList.remove('visible');
             toggleBtn.style.display = 'inline-block';
+            document.querySelectorAll('.champion-card a').forEach(a => a.style.pointerEvents = 'auto');
         }
     }
 
-    function handleCardClick(champId) {
+    // Function to draw the badges
+    function updateCardVisuals() {
+        let totalCount = 0;
+
+        document.querySelectorAll('.champion-card').forEach(card => {
+            const champId = card.id.replace('card-', '');
+            const count = championCounts.get(champId) || 0;
+            if (count > 0) totalCount += count;
+
+            // Create badge if missing
+            let badge = card.querySelector('.card-count-badge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'card-count-badge';
+                card.appendChild(badge);
+            }
+
+            badge.style.display = ''; // Clear inline to let CSS rule
+
+            if (count > 0) {
+                card.classList.add('selected');
+
+                if (count > 1) {
+                    badge.innerText = 'x' + count;
+                    badge.classList.add('is-multi');
+                } else {
+                    badge.innerText = '';
+                    badge.classList.remove('is-multi');
+                }
+            } else {
+                card.classList.remove('selected');
+                badge.classList.remove('is-multi');
+            }
+        });
+
+        const countSpan = document.getElementById('selected-count');
+        if (countSpan) countSpan.innerText = totalCount;
+    }
+
+    function handleCardClick(champId, event) {
         if (!isEditingRoster) return;
 
-        console.log("Toggling Selection for:", champId);
-        const card = document.getElementById('card-' + champId);
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
 
-        if (selectedChampionIds.has(champId)) {
-            selectedChampionIds.delete(champId);
-            card.classList.remove('selected');
+        const isRightClick = event && (event.button === 2 || event.which === 3);
+        let count = championCounts.get(champId) || 0;
+
+        if (isRightClick) {
+            if (count > 0) count--;
         } else {
-            selectedChampionIds.add(champId);
-            card.classList.add('selected');
+            count++;
         }
 
-        updateCountDisplay();
-    }
-
-    function updateCountDisplay() {
-        const countSpan = document.getElementById('selected-count');
-        if (countSpan) {
-            countSpan.innerText = selectedChampionIds.size;
+        if (count > 0) {
+            championCounts.set(champId, count);
+        } else {
+            championCounts.delete(champId);
         }
+
+        updateCardVisuals();
     }
 
     function prepareRosterSubmission() {
         showLoading('Saving Roster...');
         const input = document.getElementById('final-champion-ids');
-        input.value = Array.from(selectedChampionIds).join(',');
+
+        // Flatten the Map into a list of IDs (e.g. ID, ID, ID) for the backend
+        const flatList = [];
+        championCounts.forEach((count, id) => {
+            for(let i=0; i<count; i++) {
+                flatList.push(id);
+            }
+        });
+
+        input.value = flatList.join(',');
     }
 
     document.addEventListener("DOMContentLoaded", function() {
         const images = document.querySelectorAll("img.champion-portrait");
-        const placeholder = "/images/champion-cards/placeholder.png";
-
         images.forEach(function(img) {
-            img.onerror = function() {
-                this.onerror = null;
-                this.src = placeholder;
-            };
-
-            if (img.complete && img.naturalWidth === 0) {
-                img.src = placeholder;
-            }
+            img.onerror = function() { this.src = "/images/champion-cards/placeholder.png"; };
         });
 
-        // Story #7: Auto-open editing if requested by Controller (Self or Other)
+        // Initialize badges
+        updateCardVisuals();
+
+        // Attach listeners for Left/Right click
+        document.querySelectorAll('.champion-card').forEach(card => {
+            card.addEventListener('mousedown', function(e) {
+                if (!isEditingRoster) return;
+                e.preventDefault();
+                const champId = this.id.replace('card-', '');
+                handleCardClick(champId, e);
+            });
+
+            card.addEventListener('contextmenu', e => {
+               if(isEditingRoster) { e.preventDefault(); e.stopPropagation(); }
+            });
+
+            card.addEventListener('click', e => {
+                if(isEditingRoster) { e.preventDefault(); e.stopPropagation(); }
+            }, true);
+        });
+
         if (autoOpenEditMode) {
             toggleRosterMode();
         }

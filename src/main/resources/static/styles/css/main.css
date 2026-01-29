@@ -400,7 +400,7 @@ tbody tr:hover {
 }
 
 /* Mobile override for compact table */
-@media screen and (max-width: 980px) {
+@media screen and (max-width: 1200px) {
     .table-compact-view {
         width: 100%;
     }
@@ -873,7 +873,7 @@ tr.structure-captured .name-cell { text-decoration: line-through; }
 /* ========================================= */
 
 /* --- Mobile Responsive Header --- */
-@media screen and (max-width: 980px) {
+@media screen and (max-width: 1200px) {
 
     #header > .container {
         min-height: auto; padding: 20px 0;
@@ -1090,13 +1090,13 @@ body.roster-editing .champion-card.selected::after {
 }
 
 /* Extra small screens (Phones) */
-@media screen and (max-width: 480px) {
+@media screen and (max-width: 1200px) {
     #header h1 { font-size: 1.8em; }
     #header nav a { margin: 5px 10px; font-size: 1.1em; }
 }
 
 /* --- Responsive Table to Cards (For Clanmembers/Audit) --- */
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 1200px) {
     table, thead, tbody, th, td, tr { display: block; width: 100% !important; box-sizing: border-box; }
     tbody tr { height: auto !important; }
     table { overflow: visible !important; background: transparent !important; box-shadow: none !important; }
@@ -1139,7 +1139,7 @@ body.roster-editing .champion-card.selected::after {
 }
 
 /* --- Filter Section Mobile Overrides --- */
-@media screen and (max-width: 980px) {
+@media screen and (max-width: 1200px) {
     #filter-wrapper form { max-height: 60vh; overflow-y: auto; overflow-x: hidden; }
     #filter-wrapper table, #filter-wrapper tbody, #filter-wrapper tr, #filter-wrapper td {
         display: block; width: 100% !important; border: none;
@@ -1433,7 +1433,7 @@ body.roster-editing .champion-card.selected::after {
 }
 
 /* Mobile Adjustments */
-@media screen and (max-width: 980px) {
+@media screen and (max-width: 1200px) {
     .builder-container {
         flex-direction: column;
         gap: 20px;
@@ -1684,7 +1684,7 @@ tr.structure-captured .name-cell { text-decoration: line-through; }
 .card-history .card-icon { color: #95a5a6; }
 
 /* Mobile Card Adjustments */
-@media screen and (max-width: 600px) {
+@media screen and (max-width: 1200px) {
     .hub-card {
         flex-direction: column;
         text-align: center;

@@ -1,5 +1,6 @@
 package com.rsl.clansite.controller;
 
+import com.rsl.clansite.model.OwnedChampion;
 import com.rsl.clansite.model.SiegeStructure;
 import com.rsl.clansite.model.dto.SiegeSlotAssignmentDTO;
 import com.rsl.clansite.model.entity.ChampionEntity;
@@ -86,8 +87,6 @@ public class SiegeController {
         ClanmemberEntity activeMember = clanmemberService.getActiveClanmember(session, authentication);
         String discordId = activeMember.getDiscordId();
 
-        // isPrivileged is now set in setupSiegeModel, can reuse logic or rely on model
-
         boolean isPrivileged = (boolean) model.getAttribute("isPrivileged");
 
         // --- Data Loading Strategy ---
@@ -138,38 +137,59 @@ public class SiegeController {
         }
         model.addAttribute("usedSlotsMap", usedSlotsMap);
 
-        Set<String> allChampIds = new HashSet<>();
-        profilesForData.forEach(p -> {
-            if (p.getRosterChampionIds() != null) {
-                allChampIds.addAll(p.getRosterChampionIds());
-            }
-        });
-
+        // --- UPDATED: Map Instance UUIDs to Champion Names ---
         Map<String, String> championNames = new HashMap<>();
-        if (!allChampIds.isEmpty()) {
-            List<ObjectId> objectIds = allChampIds.stream()
-                    .map(id -> {
-                        try { return new ObjectId(id); } catch (IllegalArgumentException e) { return null; }
-                    })
-                    .filter(Objects::nonNull)
+        Set<String> masterIdsToCheck = new HashSet<>();
+        Map<String, String> instanceToMasterIdMap = new HashMap<>();
+
+        for (ClanmemberEntity p : profilesForData) {
+            if (p.getRoster() != null) {
+                for (OwnedChampion oc : p.getRoster()) {
+                    masterIdsToCheck.add(oc.getChampionId());
+                    instanceToMasterIdMap.put(oc.getId(), oc.getChampionId());
+                }
+            }
+        }
+
+        if (!masterIdsToCheck.isEmpty()) {
+            List<ObjectId> objectIds = masterIdsToCheck.stream()
+                    .filter(ObjectId::isValid)
+                    .map(ObjectId::new)
                     .collect(Collectors.toList());
 
             if (!objectIds.isEmpty()) {
-                List<ChampionEntity> champs = championRepository.findAllById(objectIds);
-                champs.forEach(c -> championNames.put(c.getId().toHexString(), c.getName()));
+                Map<String, String> masterIdToName = championRepository.findAllById(objectIds).stream()
+                        .collect(Collectors.toMap(c -> c.getId().toHexString(), ChampionEntity::getName));
+
+                for (Map.Entry<String, String> entry : instanceToMasterIdMap.entrySet()) {
+                    String instanceId = entry.getKey();
+                    String masterId = entry.getValue();
+                    if (masterIdToName.containsKey(masterId)) {
+                        String name = masterIdToName.get(masterId);
+                        championNames.put(instanceId, name);
+                    }
+                }
             }
         }
         model.addAttribute("championNames", championNames);
+        // ---------------------------------------------------
 
         return "siege-defense";
     }
 
+    // --- UPDATED: Extract OwnedChampion UUIDs for JS ---
     private List<Map<String, Object>> toJsList(List<ClanmemberEntity> members) {
         return members.stream().map(m -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", m.getId().toHexString());
             map.put("ingameName", m.getIngameName());
-            map.put("rosterChampionIds", m.getRosterChampionIds());
+
+            // Extract IDs from OwnedChampion list
+            List<String> instanceIds = (m.getRoster() != null) ?
+                    m.getRoster().stream().map(OwnedChampion::getId).collect(Collectors.toList()) :
+                    Collections.emptyList();
+
+            map.put("rosterChampionIds", instanceIds);
             map.put("knownTeams", m.getKnownTeams());
             return map;
         }).collect(Collectors.toList());

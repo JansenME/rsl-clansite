@@ -3,6 +3,7 @@ package com.rsl.clansite.service;
 import com.rsl.clansite.client.DiscordApiClient;
 import com.rsl.clansite.exceptions.UnlinkedAccountException;
 import com.rsl.clansite.model.ClanmemberViewData;
+import com.rsl.clansite.model.OwnedChampion;
 import com.rsl.clansite.model.Team;
 import com.rsl.clansite.model.dto.MemberLookupResult;
 import com.rsl.clansite.model.dto.NewClanmemberDTO;
@@ -93,6 +94,79 @@ public class ClanmemberService {
             String lastLocation,
             List<AccountDetailDTO> accounts
     ) {}
+
+    // --- Team Display Helpers ---
+
+    public record SimpleChampionDisplay(String name, String imagename) {}
+
+    public record TeamDisplayDTO(
+            String id,
+            String teamName,
+            String conditionLabel,
+            SimpleChampionDisplay leader,
+            SimpleChampionDisplay member2,
+            SimpleChampionDisplay member3,
+            SimpleChampionDisplay member4
+    ) {}
+
+    public List<TeamDisplayDTO> getEnrichedTeams(String memberId) {
+        ClanmemberEntity member = getMemberById(memberId);
+        if (member.getKnownTeams() == null) return new ArrayList<>();
+
+        // 1. Build a Map of InstanceID -> Master Champion Data
+        // This lets us resolve "UUID-123" to "Kael" + "kael.png"
+        Map<String, ChampionEntity> instanceToMasterMap = new java.util.HashMap<>();
+
+        if (member.getRoster() != null) {
+            // Get all Master IDs from roster
+            List<String> masterIds = member.getRoster().stream()
+                    .map(OwnedChampion::getChampionId)
+                    .collect(Collectors.toList());
+
+            // Fetch Master Entities
+            List<ChampionEntity> masters = championRepository.findAllById(
+                    masterIds.stream().map(ObjectId::new).collect(Collectors.toList())
+            );
+            Map<String, ChampionEntity> masterLookup = masters.stream()
+                    .collect(Collectors.toMap(c -> c.getId().toHexString(), c -> c));
+
+            // Map Instance UUID -> Master Entity
+            for (OwnedChampion oc : member.getRoster()) {
+                if (masterLookup.containsKey(oc.getChampionId())) {
+                    instanceToMasterMap.put(oc.getId(), masterLookup.get(oc.getChampionId()));
+                }
+            }
+        }
+
+        // 2. Convert Teams to DTOs
+        List<TeamDisplayDTO> dtos = new ArrayList<>();
+        for (Team team : member.getKnownTeams()) {
+            String conditionLabel = null;
+            if (team.getSiegeConditionId() != null) {
+                // You might need a lightweight lookup here or just skip the label for now if speed is key
+                // For now, let's leave it null or fetch if you have the service handy
+            }
+
+            dtos.add(new TeamDisplayDTO(
+                    team.getId(),
+                    team.getTeamName(),
+                    conditionLabel, // Or resolve using siegeConditionService if needed
+                    resolveDisplay(team.getLeaderChampionId(), instanceToMasterMap),
+                    resolveDisplay(team.getChampion2Id(), instanceToMasterMap),
+                    resolveDisplay(team.getChampion3Id(), instanceToMasterMap),
+                    resolveDisplay(team.getChampion4Id(), instanceToMasterMap)
+            ));
+        }
+        return dtos;
+    }
+
+    private SimpleChampionDisplay resolveDisplay(String instanceId, Map<String, ChampionEntity> map) {
+        if (!StringUtils.hasText(instanceId) || !map.containsKey(instanceId)) {
+            return null;
+        }
+        ChampionEntity master = map.get(instanceId);
+        return new SimpleChampionDisplay(master.getName(), master.getImagename());
+    }
 
     @Transactional
     public void deleteKnownTeam(HttpSession session, Authentication authentication, String teamId, String targetMemberId) {
@@ -508,7 +582,7 @@ public class ClanmemberService {
         newMember.setClanGroup(dto.getClanGroup());
         newMember.setAvatarHash(dto.getAvatarHash());
         newMember.setDiscordRoles(dto.getDiscordRoles() != null ? dto.getDiscordRoles() : List.of());
-        newMember.setRosterChampionIds(new ArrayList<>());
+        newMember.setRoster(new ArrayList<>());
 
         if (dto.getDiscordId() != null) {
             Optional<VisitorLogEntity> visitorOpt = visitorLogRepository.findByDiscordId(dto.getDiscordId());
@@ -528,6 +602,110 @@ public class ClanmemberService {
                 "Manually added to Roster: " + dto.getIngameName()
         );
     }
+
+    // --- NEW: Roster Management for OwnedChampions ---
+    @Transactional
+    public void bulkUpdateRoster(String memberId, List<String> submittedChampionIds, Authentication authentication) {
+        ClanmemberEntity member = getMemberById(memberId);
+
+        if (!isOwnProfile(member, authentication) && !securityService.isCoordinator(authentication)) {
+            throw new AccessDeniedException("You do not have permission to modify this roster.");
+        }
+
+        // 1. Calculate Submitted Frequencies (e.g., Kael=3, Elhain=1)
+        List<String> safeSubmittedIds = submittedChampionIds != null ? submittedChampionIds : new ArrayList<>();
+        Map<String, Long> submittedCounts = safeSubmittedIds.stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
+        if (member.getRoster() == null) {
+            member.setRoster(new ArrayList<>());
+        }
+
+        List<OwnedChampion> currentRoster = member.getRoster();
+        boolean changed = false;
+
+        // 2. Identify all Master IDs involved (Union of Existing and Submitted)
+        Set<String> allMasterIds = new HashSet<>(submittedCounts.keySet());
+        currentRoster.forEach(oc -> allMasterIds.add(oc.getChampionId()));
+
+        for (String masterId : allMasterIds) {
+            long targetCount = submittedCounts.getOrDefault(masterId, 0L);
+            long currentCount = currentRoster.stream().filter(oc -> oc.getChampionId().equals(masterId)).count();
+            long diff = targetCount - currentCount;
+
+            if (diff > 0) {
+                // We need to ADD copies
+                for (int i = 0; i < diff; i++) {
+                    currentRoster.add(new OwnedChampion(masterId, 1, 1)); // Default Level 1
+                }
+                changed = true;
+            } else if (diff < 0) {
+                // We need to REMOVE copies (Remove `abs(diff)` instances)
+                // Logic: Prefer removing low level/rank instances first
+                long toRemove = Math.abs(diff);
+
+                // Get all instances of this champion
+                List<OwnedChampion> instances = currentRoster.stream()
+                        .filter(oc -> oc.getChampionId().equals(masterId))
+                        .sorted(Comparator.comparingInt(OwnedChampion::getRank)
+                                .thenComparingInt(OwnedChampion::getLevel)) // Sort Ascending (weakest first)
+                        .collect(Collectors.toList());
+
+                for (int i = 0; i < toRemove; i++) {
+                    if (i < instances.size()) {
+                        currentRoster.remove(instances.get(i));
+                    }
+                }
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            member.setRosterLastUpdated(LocalDateTime.now());
+
+            String actorName = "Unknown";
+            if (authentication.getPrincipal() instanceof OAuth2User oauthUser) {
+                String globalName = oauthUser.getAttribute("global_name");
+                String username = oauthUser.getAttribute("username");
+                actorName = globalName != null ? globalName : (username != null ? username : authentication.getName());
+            }
+            member.setRosterUpdatedBy(actorName);
+
+            clanmemberRepository.save(member);
+
+            auditLogService.logAction(
+                    authentication,
+                    AuditAction.ROSTER_UPDATE,
+                    member.getIngameName(),
+                    "Bulk Roster Update (Synced Counts)"
+            );
+        }
+    }
+
+    @Transactional
+    public void updateOwnedChampion(String memberId, String ownedChampionId, int level, int rank, Authentication authentication) {
+        ClanmemberEntity member = getMemberById(memberId);
+
+        if (!isOwnProfile(member, authentication) && !securityService.isCoordinator(authentication)) {
+            throw new AccessDeniedException("You do not have permission to modify this roster.");
+        }
+
+        if (member.getRoster() != null) {
+            member.getRoster().stream()
+                    .filter(oc -> oc.getId().equals(ownedChampionId))
+                    .findFirst()
+                    .ifPresent(oc -> {
+                        oc.setLevel(level);
+                        oc.setRank(rank);
+                    });
+
+            member.setRosterLastUpdated(LocalDateTime.now());
+            member.setRosterUpdatedBy(authentication.getName());
+            clanmemberRepository.save(member);
+        }
+    }
+
+    // ------------------------------------------------
 
     public NewClanmemberDTO lookupDiscordUser(String userId) throws RuntimeException {
         Optional<NewClanmemberDTO> result = discordApiClient.getDiscordMember(userId);
@@ -895,7 +1073,7 @@ public class ClanmemberService {
         }
 
         if (team.getSiegeConditionId() != null) {
-            validateTeamAgainstCondition(team);
+            validateTeamAgainstCondition(team, targetMember);
         }
 
         if (targetMember.getKnownTeams() == null) {
@@ -933,18 +1111,31 @@ public class ClanmemberService {
         return StringUtils.hasText(s) && !"null".equalsIgnoreCase(s);
     }
 
-    private void validateTeamAgainstCondition(Team team) {
+    private void validateTeamAgainstCondition(Team team, ClanmemberEntity member) {
         SiegeConditionEntity condition = siegeConditionService.getConditionById(team.getSiegeConditionId());
 
-        List<String> championIds = new ArrayList<>();
-        if (team.getLeaderChampionId() != null) championIds.add(team.getLeaderChampionId());
-        if (team.getChampion2Id() != null) championIds.add(team.getChampion2Id());
-        if (team.getChampion3Id() != null) championIds.add(team.getChampion3Id());
-        if (team.getChampion4Id() != null) championIds.add(team.getChampion4Id());
+        List<String> championInstanceIds = new ArrayList<>();
+        if (team.getLeaderChampionId() != null) championInstanceIds.add(team.getLeaderChampionId());
+        if (team.getChampion2Id() != null) championInstanceIds.add(team.getChampion2Id());
+        if (team.getChampion3Id() != null) championInstanceIds.add(team.getChampion3Id());
+        if (team.getChampion4Id() != null) championInstanceIds.add(team.getChampion4Id());
 
-        if (championIds.isEmpty()) return;
+        if (championInstanceIds.isEmpty()) return;
 
-        List<ObjectId> objectIds = championIds.stream()
+        // Resolve OwnedChampion UUIDs to Master Champion IDs
+        List<String> masterChampionIds = new ArrayList<>();
+        if (member.getRoster() != null) {
+            for (String instanceId : championInstanceIds) {
+                member.getRoster().stream()
+                        .filter(oc -> oc.getId().equals(instanceId))
+                        .findFirst()
+                        .ifPresent(oc -> masterChampionIds.add(oc.getChampionId()));
+            }
+        }
+
+        if (masterChampionIds.isEmpty()) return;
+
+        List<ObjectId> objectIds = masterChampionIds.stream()
                 .filter(ObjectId::isValid)
                 .map(ObjectId::new)
                 .collect(Collectors.toList());

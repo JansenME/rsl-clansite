@@ -1,5 +1,6 @@
 package com.rsl.clansite.service;
 
+import com.rsl.clansite.model.OwnedChampion;
 import com.rsl.clansite.model.SiegeStructure;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.entity.SiegeEntity;
@@ -24,6 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -165,17 +167,20 @@ public class SiegeService {
         ClanmemberEntity member = clanmemberRepository.findById(new ObjectId(memberId))
                 .orElseThrow(() -> new IllegalArgumentException("Member not found"));
 
-        List<String> rosterList = member.getRosterChampionIds();
-        Set<String> roster = new HashSet<>(rosterList != null ? rosterList : Collections.emptyList());
+        // Refactored to check OwnedChampion UUIDs
+        List<OwnedChampion> rosterList = member.getRoster();
+        Set<String> ownedInstanceIds = (rosterList != null) ?
+                rosterList.stream().map(OwnedChampion::getId).collect(Collectors.toSet()) :
+                Collections.emptySet();
 
-        if (StringUtils.hasText(leaderId) && !roster.contains(leaderId)) {
-            throw new IllegalArgumentException("Member does not own the Leader champion.");
+        if (StringUtils.hasText(leaderId) && !ownedInstanceIds.contains(leaderId)) {
+            throw new IllegalArgumentException("Member does not own this specific Leader champion instance.");
         }
 
         if (supportIds != null) {
             for (String supId : supportIds) {
-                if (StringUtils.hasText(supId) && !roster.contains(supId)) {
-                    throw new IllegalArgumentException("Member does not own one or more support champions.");
+                if (StringUtils.hasText(supId) && !ownedInstanceIds.contains(supId)) {
+                    throw new IllegalArgumentException("Member does not own one or more support champion instances.");
                 }
             }
         }
@@ -218,12 +223,12 @@ public class SiegeService {
                     if (struct.getId().equals(currentStructId) && slot.getSlotNumber() == currentSlotNum) continue;
 
                     if (StringUtils.hasText(slot.getLeaderChampionId()) && proposedChamps.contains(slot.getLeaderChampionId())) {
-                        throw new IllegalArgumentException("Champion (ID: " + slot.getLeaderChampionId() + ") is already used in another slot.");
+                        throw new IllegalArgumentException("Champion Instance (ID: " + slot.getLeaderChampionId() + ") is already used in another slot.");
                     }
                     if (slot.getSupportChampionIds() != null) {
                         for (String sup : slot.getSupportChampionIds()) {
                             if (StringUtils.hasText(sup) && proposedChamps.contains(sup)) {
-                                throw new IllegalArgumentException("Champion (ID: " + sup + ") is already used in another slot.");
+                                throw new IllegalArgumentException("Champion Instance (ID: " + sup + ") is already used in another slot.");
                             }
                         }
                     }

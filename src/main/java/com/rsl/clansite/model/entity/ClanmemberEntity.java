@@ -1,5 +1,6 @@
 package com.rsl.clansite.model.entity;
 
+import com.rsl.clansite.model.OwnedChampion;
 import com.rsl.clansite.model.Team;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.ClanRank;
@@ -41,7 +42,7 @@ public class ClanmemberEntity {
 
     private int maxDefenseScrolls = 2;
 
-    private List<String> rosterChampionIds = new ArrayList<>();
+    private List<OwnedChampion> roster = new ArrayList<>();
 
     private List<Team> knownTeams = new ArrayList<>();
 
@@ -53,7 +54,6 @@ public class ClanmemberEntity {
 
     private String lastSeenNoticeId;
 
-    // Added for Masquerade / Dev Mode
     private String impersonatedRole;
 
     private LocalDateTime rosterLastUpdated;

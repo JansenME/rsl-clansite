@@ -1,11 +1,13 @@
 package com.rsl.clansite.controller;
 
+import com.rsl.clansite.model.Champion;
+import com.rsl.clansite.model.OwnedChampion;
 import com.rsl.clansite.model.Team;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.entity.SiegeConditionEntity;
 import com.rsl.clansite.repository.ChampionRepository;
-import com.rsl.clansite.security.SecurityConfig;
 import com.rsl.clansite.security.SecurityService;
+import com.rsl.clansite.service.ChampionsService;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
 import com.rsl.clansite.service.SiegeConditionService;
@@ -17,19 +19,14 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.InitBinder;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.beans.PropertyEditorSupport;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Controller
@@ -39,29 +36,47 @@ public class TeamController {
     private final CommonsService commonsService;
     private final ClanmemberService clanmemberService;
     private final ChampionRepository championRepository;
+    private final ChampionsService championsService;
     private final SiegeConditionService siegeConditionService;
     private final SecurityService securityService;
 
     public TeamController(CommonsService commonsService,
                           ClanmemberService clanmemberService,
                           ChampionRepository championRepository,
+                          ChampionsService championsService,
                           SiegeConditionService siegeConditionService,
                           SecurityService securityService) {
         this.commonsService = commonsService;
         this.clanmemberService = clanmemberService;
         this.championRepository = championRepository;
+        this.championsService = championsService;
         this.siegeConditionService = siegeConditionService;
         this.securityService = securityService;
     }
 
     public record ConditionDropdownItem(String id, String label, String category, String value) {}
 
+    // UPDATED DTO: Added level and rank
+    public record TeamBuilderOptionDTO(
+            String id,
+            String label,
+            String imageName,
+            String rarity,
+            String type,
+            String faction,
+            String affinity,
+            String auraLoc,
+            String auraDesc,
+            int level,
+            int rank
+    ) {}
+
     @GetMapping("/builder")
     @PreAuthorize("hasRole('MEMBER')")
     public String builder(@RequestParam(required = false) String editTeamId,
                           @RequestParam(required = false) String targetMemberId,
                           Model model, Authentication authentication, HttpSession session) {
-        commonsService.fillModel(model, authentication);
+        commonsService.fillModel(model, authentication, session);
 
         ClanmemberEntity activeMember;
 
@@ -84,16 +99,56 @@ public class TeamController {
 
         model.addAttribute("targetMemberId", activeMember.getId().toHexString());
 
-        List<String> rosterIds = activeMember.getRosterChampionIds();
-        if (rosterIds != null && !rosterIds.isEmpty()) {
-            List<ObjectId> objectIds = rosterIds.stream()
-                    .filter(ObjectId::isValid)
-                    .map(ObjectId::new)
-                    .collect(Collectors.toList());
-            model.addAttribute("champions", championRepository.findAllById(objectIds));
-        } else {
-            model.addAttribute("champions", List.of());
+        List<OwnedChampion> roster = activeMember.getRoster() != null ? activeMember.getRoster() : List.of();
+
+        List<String> masterIds = roster.stream()
+                .map(OwnedChampion::getChampionId)
+                .collect(Collectors.toList());
+
+        Map<String, Champion> masterMap = championsService.getChampionsByIds(masterIds).stream()
+                .collect(Collectors.toMap(Champion::getId, c -> c));
+
+        List<TeamBuilderOptionDTO> championOptions = new ArrayList<>();
+
+        for (OwnedChampion instance : roster) {
+            Champion master = masterMap.get(instance.getChampionId());
+            if (master != null) {
+                // Label can be simpler now that we have visual badges, but keeping it for searching/debug
+                String label = master.getName();
+
+                String auraLoc = "NONE";
+                String auraDesc = "No Aura";
+                if (master.getAura() != null) {
+                    auraLoc = master.getAura().getLocation().name();
+                    auraDesc = master.getAura().getStat().getName() + " " +
+                            master.getAura().getAmount() +
+                            (master.getAura().isPercentage() ? "%" : "") +
+                            " in " + master.getAura().getLocation().getName();
+                }
+
+                championOptions.add(new TeamBuilderOptionDTO(
+                        instance.getId(),
+                        label,
+                        master.getImagename(),
+                        master.getRarity() != null ? master.getRarity().name() : "",
+                        master.getType() != null ? master.getType().name() : "",
+                        master.getFaction() != null ? master.getFaction().name() : "",
+                        master.getAffinity() != null ? master.getAffinity().name() : "",
+                        auraLoc,
+                        auraDesc,
+                        instance.getLevel(),
+                        instance.getRank()
+                ));
+            }
         }
+
+        championOptions.sort((a, b) -> {
+            int nameCompare = a.label().compareToIgnoreCase(b.label());
+            if (nameCompare != 0) return nameCompare;
+            return Integer.compare(b.level(), a.level()); // Same name? High level first
+        });
+
+        model.addAttribute("championOptions", championOptions);
 
         List<SiegeConditionEntity> activeEntities = siegeConditionService.findAllConditions().stream()
                 .filter(SiegeConditionEntity::isActive)
@@ -128,6 +183,7 @@ public class TeamController {
         return "team-builder";
     }
 
+    // ... (Rest of Controller Unchanged) ...
     @PostMapping("/save")
     @PreAuthorize("hasRole('MEMBER')")
     public String saveTeam(@ModelAttribute Team team,

@@ -18,6 +18,8 @@
     <div id="team-sticky-header">
         <form id="team-form" th:action="@{/teams/save}" th:object="${newTeam}" method="POST" class="builder-container">
 
+            <input type="hidden" th:field="*{id}" />
+
             <input type="hidden" name="targetMemberId" th:value="${targetMemberId}" />
 
             <div class="team-meta-inputs">
@@ -79,50 +81,117 @@
         <div class="container roster-selection-area">
             <h2 style="text-align: center; margin-bottom: 20px;">Select Champions for Siege Defense</h2>
 
-            <div th:if="${#lists.isEmpty(champions)}" style="text-align: center;">
+            <div th:if="${#lists.isEmpty(championOptions)}" style="text-align: center;">
                 <p>You have no champions in your roster yet. Go to <a th:href="@{/champions}">My Roster</a> to add some!</p>
             </div>
 
-            <div id="champion-grid-container" th:unless="${#lists.isEmpty(champions)}">
+            <div id="champion-grid-container" th:unless="${#lists.isEmpty(championOptions)}" style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center;">
 
-                <div class="champion-card builder-champion-card"
-                     th:each="champion : ${champions}"
-                     th:id="'roster-card-' + ${champion.id}"
-                     th:data-id="${champion.id}"
-                     th:data-img="${champion.imagename}"
-                     th:data-aura="${champion.aura != null ? champion.aura.location : 'NONE'}"
-                     th:data-aura-desc="${champion.aura != null} ? |${champion.aura.stat.getName()} ${champion.aura.amount}${champion.aura.isPercentage ? '%' : ''} in ${champion.aura.location.getName()}| : 'No Aura'"
+                <th:block th:each="option : ${championOptions}">
+                    <div class="roster-card custom-card builder-champion-card"
+                         style="width: 120px; position: relative; margin-bottom: 10px; cursor: pointer;"
+                         th:id="'roster-card-' + ${option.id}"
+                         th:data-id="${option.id}"
+                         th:data-img="${option.imageName}"
+                         th:data-aura="${option.auraLoc}"
+                         th:data-aura-desc="${option.auraDesc}"
+                         th:data-faction="${option.faction}"
+                         th:data-rarity="${option.rarity}"
+                         th:data-type="${option.type}"
+                         th:data-affinity="${option.affinity}">
 
-                     th:data-faction="${champion.faction}"
-                     th:data-rarity="${champion.rarity}"
-                     th:data-type="${champion.type}"
-                     th:data-affinity="${champion.affinity}">
+                        <div class="image-container" style="position: relative; width: 100%; height: 120px; border-radius: 8px; overflow: hidden; border: 2px solid #444;">
+                            <img th:src="${option.imageName != null and !#strings.isEmpty(option.imageName)} ? @{/images/champion-cards/{name}(name=${option.imageName})} : @{/images/champion-cards/placeholder.png}"
+                                 style="width: 100%; height: 100%; object-fit: cover;" />
 
-                    <div class="champion-image-wrapper">
-                        <img th:src="${champion.imagename != null and !#strings.isEmpty(champion.imagename)} ? @{/images/champion-cards/{name}(name=${champion.imagename})} : @{/images/champion-cards/placeholder.png}"
-                             alt="Champion Image"
-                             style="width:140px;"
-                             class="champion-portrait"
-                             th:classappend="${champion.rarity != null} ? 'rarity-border-' + ${#strings.toLowerCase(champion.rarity)} : ''"
-                             loading="lazy" />
+                            <div th:if="${option.affinity != ''}" style="position: absolute; bottom: 3px; left: 3px; width: 20px; height: 20px; z-index: 5;">
+                                <img th:src="@{/images/affinity/{name}.png(name=${#strings.toLowerCase(option.affinity)})}"
+                                     onerror="this.style.display='none'"
+                                     style="width: 100%;" />
+                            </div>
 
-                        <div class="affinity-overlay" th:if="${champion.affinity != null}">
-                            <img th:src="@{/images/affinity/{name}.png(name=${#strings.toLowerCase(champion.affinity)})}"
-                                 onerror="this.style.display='none'"
-                                 alt="Affinity" />
+                            <div class="rank-badge">
+                                <i class="fas fa-star" style="color: #f1c40f; margin-right: 2px;"></i>
+                                <span th:text="${option.rank}">6</span>
+                            </div>
+
+                            <div class="level-badge" th:text="${option.level}">60</div>
+
+                            <div class="pick-overlay">
+                                <i class="fas fa-check"></i>
+                            </div>
                         </div>
+
+                        <div style="text-align: center; font-size: 0.8em; margin-top: 5px; line-height: 1.2; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                             th:text="${option.label}">Name</div>
                     </div>
-                    <div class="champion-rating-placeholder"></div>
-                    <p class="champion-name" th:text="${champion.name}"></p>
-                </div>
+                </th:block>
 
             </div>
         </div>
     </section>
 
-    <div th:insert="~{inserts/copyright :: copyright}" id="copyright">
-    </div>
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright"></div>
 </div>
+
+<style>
+    .rank-badge {
+       position: absolute;
+       top: 3px; left: 3px;
+       background: rgba(0,0,0,0.8);
+       color: white;
+       font-size: 0.8em;
+       padding: 1px 4px;
+       border-radius: 4px;
+       z-index: 10;
+       font-weight: bold;
+    }
+
+    .level-badge {
+       position: absolute;
+       bottom: 3px; right: 3px;
+       background: rgba(0,0,0,0.8);
+       color: white;
+       font-size: 0.9em;
+       padding: 1px 4px;
+       border-radius: 4px;
+       z-index: 10;
+       font-weight: bold;
+       border: 1px solid #666;
+    }
+
+    .builder-champion-card.filtered-out {
+        opacity: 0.2;
+        pointer-events: none;
+    }
+
+    .builder-champion-card.picked .image-container {
+        border-color: #2ecc71 !important;
+        box-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+    }
+
+    .pick-overlay {
+       position: absolute;
+       top: 0; left: 0; width: 100%; height: 100%;
+       background: rgba(46, 204, 113, 0.3);
+       display: flex;
+       align-items: center; justify-content: center;
+       color: white;
+       font-size: 2em;
+       opacity: 0;
+       transition: opacity 0.2s;
+       z-index: 20;
+    }
+
+    .builder-champion-card:hover .pick-overlay {
+        opacity: 1;
+    }
+
+    .builder-champion-card.picked .pick-overlay {
+        opacity: 1;
+        background: rgba(46, 204, 113, 0.6);
+    }
+</style>
 
 <script>
     console.log("TEAM BUILDER SCRIPT STARTING...");
@@ -131,7 +200,6 @@
     const LEADER_PLACEHOLDER = '/images/leader-image.png';
     const MEMBER_PLACEHOLDER = '/images/teammember-image.png';
 
-    // 1. STARTUP LOGIC
     document.addEventListener("DOMContentLoaded", function() {
         console.log("Checking for existing team data...");
 
@@ -147,7 +215,7 @@
                     const auraDesc = cardDiv.getAttribute('data-aura-desc');
 
                     let fullImgUrl = '/images/champion-cards/placeholder.png';
-                    if (imgName && imgName !== 'null') {
+                    if (imgName && imgName !== 'null' && imgName !== '') {
                         fullImgUrl = `/images/champion-cards/${imgName}`;
                     }
 
@@ -160,7 +228,6 @@
         applyConditionFilter();
     });
 
-    // 2. CONDITION FILTER LOGIC
     function applyConditionFilter() {
         const selector = document.getElementById('siege-condition-selector');
         const selectedOption = selector.options[selector.selectedIndex];
@@ -171,7 +238,6 @@
         const allCards = document.querySelectorAll('.builder-champion-card');
         let hasInvalidSlot = false;
 
-        // A. Filter Roster
         allCards.forEach(card => {
             if (!category || category === 'NONE') {
                 card.classList.remove('filtered-out');
@@ -190,7 +256,6 @@
             }
         });
 
-        // B. Validate Current Slots
         for (let i = 0; i < 4; i++) {
             const input = document.getElementById(`input-${i}`);
             const slotDiv = document.getElementById(`slot-${i}`);
@@ -222,7 +287,6 @@
             }
         }
 
-        // C. Update UI State
         const saveBtn = document.getElementById('save-btn');
         const warnDiv = document.getElementById('condition-warning');
 
@@ -235,7 +299,6 @@
         }
     }
 
-    // 3. GLOBAL CLICK LISTENER
     document.addEventListener("click", function(e) {
         const cardDiv = e.target.closest('.builder-champion-card');
         const grid = document.getElementById('champion-grid-container');
@@ -264,13 +327,13 @@
 
     function pickChampion(cardDiv) {
         const champId = cardDiv.getAttribute('data-id');
-        const champImgName = cardDiv.getAttribute('data-img');
+        const imgName = cardDiv.getAttribute('data-img');
         const auraLoc = cardDiv.getAttribute('data-aura');
         const auraDesc = cardDiv.getAttribute('data-aura-desc');
 
         let fullImgUrl = '/images/champion-cards/placeholder.png';
-        if (champImgName && champImgName !== 'null') {
-            fullImgUrl = `/images/champion-cards/${champImgName}`;
+        if (imgName && imgName !== 'null' && imgName !== '') {
+            fullImgUrl = `/images/champion-cards/${imgName}`;
         }
 
         let targetIndex = -1;
@@ -291,7 +354,6 @@
             return;
         }
 
-        // PREVENT INVALID PICK
         const selector = document.getElementById('siege-condition-selector');
         const selectedOption = selector.options[selector.selectedIndex];
         const category = selectedOption.getAttribute('data-category');

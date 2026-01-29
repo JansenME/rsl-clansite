@@ -136,7 +136,7 @@
 				</div>
 			</section>
 
-			<section th:if="${champions != null}">
+			<section th:if="${rosterEntries != null}">
 				<div style="border-top: 2px solid #eee; margin-top: 40px; padding-top: 30px;">
 
 					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -158,7 +158,7 @@
 
 					<div style="text-align: center; margin-bottom: 20px;">
 						<div style="font-size: 1.1em; margin-bottom: 15px;">
-							Showing <strong id="visible-champion-count" th:text="${champions.size()}">0</strong> / <strong th:text="${champions.size()}">0</strong> Owned Champions
+							Showing <strong id="visible-champion-count" th:text="${rosterEntries.size()}">0</strong> / <strong th:text="${rosterEntries.size()}">0</strong> Owned Champions
 						</div>
 
 						<button type="button" onclick="toggleFilter()" class="button primary">
@@ -240,16 +240,54 @@
 						</form>
 					</div>
 
-					<div th:if="${#lists.isEmpty(champions)}" style="text-align: center; padding: 40px; background: #f9f9f9; border-radius: 8px;">
+					<div th:if="${#lists.isEmpty(rosterEntries)}" style="text-align: center; padding: 40px; background: #f9f9f9; border-radius: 8px;">
 						<p style="font-size: 1.2em; color: #666;">No champions found in your roster yet.</p>
 						<a th:href="@{/champions(editingMemberId=${member.id})}" class="button special small">
 							<span th:text="${isOwnProfile ? 'Go to Champions Page to Add' : 'Manage Member Roster'}">Manage Roster</span>
 						</a>
 					</div>
 
-					<div id="champion-grid-container" th:if="${!#lists.isEmpty(champions)}">
-						<th:block th:each="champion : ${champions}">
-							<div th:replace="~{inserts/champion-card :: card(champion=${champion}, ownedChampionIds=${null})}"></div>
+					<div id="champion-grid-container" th:if="${!#lists.isEmpty(rosterEntries)}" style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center;">
+
+						<th:block th:each="entry : ${rosterEntries}">
+							<div class="roster-card custom-card"
+								 th:data-name="${entry.masterData.name.toLowerCase()}"
+								 th:data-rarity="${entry.masterData.rarity != null ? entry.masterData.rarity.getName() : ''}"
+								 th:data-type="${entry.masterData.type != null ? entry.masterData.type.getName() : ''}"
+								 th:data-affinity="${entry.masterData.affinity != null ? entry.masterData.affinity.getName() : ''}"
+								 th:data-faction="${entry.masterData.faction != null ? entry.masterData.faction.getName() : ''}"
+								 th:data-alliance="${entry.masterData.faction != null ? entry.masterData.faction.alliance.getName() : ''}"
+								 style="width: 120px; position: relative; margin-bottom: 10px;">
+
+								<div class="image-container" style="position: relative; width: 100%; height: 120px; border-radius: 8px; overflow: hidden; border: 2px solid #444;">
+									<img th:src="${entry.masterData.imagename != null} ? @{/images/champion-cards/{name}(name=${entry.masterData.imagename})} : @{/images/champion-cards/placeholder.png}"
+										 style="width: 100%; height: 100%; object-fit: cover;" />
+
+									<div th:if="${entry.masterData.affinity != null}" style="position: absolute; bottom: 3px; left: 3px; width: 20px; height: 20px; z-index: 5;">
+										<img th:src="@{/images/affinity/{name}.png(name=${#strings.toLowerCase(entry.masterData.affinity.getName())})}" style="width: 100%;" />
+									</div>
+
+									<div class="rank-badge">
+										<i class="fas fa-star" style="color: #f1c40f; margin-right: 2px;"></i>
+										<span th:text="${entry.instanceData.rank}">6</span>
+									</div>
+
+									<div class="level-badge" th:text="${entry.instanceData.level}">60</div>
+
+									<div class="edit-overlay"
+										 th:if="${isOwnProfile or #authorization.expression('hasRole(''ROLE_COORDINATOR'')')}"
+										 th:data-id="${entry.instanceData.id}"
+										 th:data-name="${entry.masterData.name}"
+										 th:data-level="${entry.instanceData.level}"
+										 th:data-rank="${entry.instanceData.rank}"
+										 onclick="openEditModal(this)">
+										<i class="fas fa-pencil-alt"></i>
+									</div>
+								</div>
+
+								<div style="text-align: center; font-size: 0.8em; margin-top: 5px; line-height: 1.2; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+									 th:text="${entry.masterData.name}">Name</div>
+							</div>
 						</th:block>
 					</div>
 				</div>
@@ -310,17 +348,14 @@
 									<i class="fas fa-crown" style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); color: #f1c40f; text-shadow: 0 1px 2px black; font-size: 12px;"></i>
 								</div>
 
-								<img th:if="${team.member2 != null}"
-									 th:src="${team.member2.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member2.imagename})} : @{/images/champion-cards/placeholder.png}"
-									 class="team-mini-portrait" />
+								<th:block th:if="${team.member2 != null}"><img th:src="${team.member2.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member2.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" /></th:block>
+								<th:block th:if="${team.member2 == null}"><img src="/images/teammember-image.png" class="team-mini-portrait" style="opacity: 0.3;" /></th:block>
 
-								<img th:if="${team.member3 != null}"
-									 th:src="${team.member3.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member3.imagename})} : @{/images/champion-cards/placeholder.png}"
-									 class="team-mini-portrait" />
+								<th:block th:if="${team.member3 != null}"><img th:src="${team.member3.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member3.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" /></th:block>
+								<th:block th:if="${team.member3 == null}"><img src="/images/teammember-image.png" class="team-mini-portrait" style="opacity: 0.3;" /></th:block>
 
-								<img th:if="${team.member4 != null}"
-									 th:src="${team.member4.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member4.imagename})} : @{/images/champion-cards/placeholder.png}"
-									 class="team-mini-portrait" />
+								<th:block th:if="${team.member4 != null}"><img th:src="${team.member4.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member4.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" /></th:block>
+								<th:block th:if="${team.member4 == null}"><img src="/images/teammember-image.png" class="team-mini-portrait" style="opacity: 0.3;" /></th:block>
 							</div>
 						</div>
 					</div>
@@ -329,44 +364,179 @@
 		</div>
 	</section>
 
+	<div id="edit-instance-modal" class="custom-modal" style="display: none;">
+		<div class="modal-content">
+			<h3>Edit Champion</h3>
+			<h4 id="modal-champ-name" style="color: #2ecc71; margin-bottom: 20px; font-size: 1.1em; font-weight: normal;">Name</h4>
+			<form th:action="@{/champions/instance/update}" method="POST">
+				<input type="hidden" name="memberId" th:value="${member.id}" />
+				<input type="hidden" name="instanceId" id="modal-instance-id" />
+				<div class="row gtr-uniform">
+					<div class="col-6 col-12-xsmall">
+						<label for="modal-level">Level (1-60)</label>
+						<input type="number" name="level" id="modal-level" min="1" max="60" required />
+					</div>
+					<div class="col-6 col-12-xsmall">
+						<label for="modal-rank">Rank (Stars)</label>
+						<select name="rank" id="modal-rank">
+							<option value="6">6 Stars</option>
+							<option value="5">5 Stars</option>
+							<option value="4">4 Stars</option>
+							<option value="3">3 Stars</option>
+							<option value="2">2 Stars</option>
+							<option value="1">1 Star</option>
+						</select>
+					</div>
+					<div class="col-12" style="margin-top: 20px; text-align: right;">
+						<button type="button" class="button small cancel-btn" onclick="closeEditModal()" style="margin-right: 10px;">Cancel</button>
+						<button type="submit" class="button small primary">Save Changes</button>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+
 	<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
 	</div>
 </div>
-<button id="backToTopBtn" title="Go to top">
-	↑
-</button>
+<button id="backToTopBtn" title="Go to top">↑</button>
+
+<style>
+	/* Custom Roster Styles */
+    .rank-badge { position: absolute; top: 3px; left: 3px; background: rgba(0,0,0,0.8); color: white; font-size: 0.8em; padding: 1px 4px; border-radius: 4px; z-index: 10; font-weight: bold; }
+    .level-badge { position: absolute; bottom: 3px; right: 3px; background: rgba(0,0,0,0.8); color: white; font-size: 0.9em; padding: 1px 4px; border-radius: 4px; z-index: 10; font-weight: bold; border: 1px solid #666; }
+    .edit-overlay { position: absolute; top: 5px; right: 5px; width: 30px; height: 30px; background: rgba(46, 204, 113, 0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1em; opacity: 0; transition: all 0.2s ease; cursor: pointer; z-index: 20; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+    .image-container:hover .edit-overlay { opacity: 1; }
+    .edit-overlay:hover { transform: scale(1.1); background: #27ae60; }
+
+    /* Modal */
+    .custom-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+    .modal-content { background: #1f2226; padding: 30px; border-radius: 8px; width: 90%; max-width: 350px; box-shadow: 0 0 20px rgba(0,0,0,0.5); border: 1px solid #444; color: #ddd; }
+</style>
 
 <script>
-	document.addEventListener("DOMContentLoaded", function() {
-        const images = document.querySelectorAll("img.champion-portrait");
-        const placeholder = "/images/champion-cards/placeholder.png";
+	// --- MODAL LOGIC ---
+    function openEditModal(element) {
+        document.getElementById('modal-instance-id').value = element.dataset.id;
+        document.getElementById('modal-champ-name').innerText = element.dataset.name;
+        document.getElementById('modal-level').value = element.dataset.level;
+        document.getElementById('modal-rank').value = element.dataset.rank;
+        document.getElementById('edit-instance-modal').style.display = 'flex';
+    }
 
-        images.forEach(function(img) {
-            img.onerror = function() {
-                this.onerror = null;
-                this.src = placeholder;
-            };
+    function closeEditModal() {
+        document.getElementById('edit-instance-modal').style.display = 'none';
+    }
 
-            if (img.complete && img.naturalWidth === 0) {
-                img.src = placeholder;
+    window.onclick = function(event) {
+        const modal = document.getElementById('edit-instance-modal');
+        if (event.target == modal) closeEditModal();
+    }
+
+    // --- ANIMATION HELPER ---
+    function animateCount(obj, start, end, duration) {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            obj.innerText = Math.floor(progress * (end - start) + start);
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            } else {
+                obj.innerText = end; // Ensure it ends exactly on the target
+            }
+        };
+        window.requestAnimationFrame(step);
+    }
+
+    // --- FILTER LOGIC ---
+    function applyChampionFilters() {
+        const searchInput = document.getElementById('champion-search');
+        if (!searchInput) return;
+
+        const searchText = searchInput.value.toLowerCase().trim();
+        const cards = document.querySelectorAll('.roster-card');
+        const countSpan = document.getElementById('visible-champion-count');
+
+        // 1. Get Checked Filters
+        const getChecked = (cls) => Array.from(document.querySelectorAll('.' + cls + ':checked')).map(cb => cb.getAttribute('data-filter-name'));
+
+        const checkedRarities = getChecked('filter-rarity');
+        const checkedTypes = getChecked('filter-type');
+        const checkedAffinities = getChecked('filter-affinity');
+        const checkedFactions = getChecked('filter-faction');
+        const checkedAlliances = getChecked('filter-alliance');
+
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            let matches = true;
+
+            // Name Search
+            if (searchText && !card.dataset.name.includes(searchText)) matches = false;
+
+            // Checkbox Filters
+            if (matches && checkedRarities.length > 0 && !checkedRarities.includes(card.dataset.rarity)) matches = false;
+            if (matches && checkedTypes.length > 0 && !checkedTypes.includes(card.dataset.type)) matches = false;
+            if (matches && checkedAffinities.length > 0 && !checkedAffinities.includes(card.dataset.affinity)) matches = false;
+            if (matches && checkedFactions.length > 0 && !checkedFactions.includes(card.dataset.faction)) matches = false;
+            if (matches && checkedAlliances.length > 0 && !checkedAlliances.includes(card.dataset.alliance)) matches = false;
+
+            if (matches) {
+                card.style.display = 'block';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
             }
         });
 
-        if (typeof checkAll === "function") {
-            checkAll(true);
+        // ANIMATE THE COUNT CHANGE
+        if (countSpan) {
+            const currentCount = parseInt(countSpan.innerText) || 0;
+            if (currentCount !== visibleCount) {
+                animateCount(countSpan, currentCount, visibleCount, 500); // 500ms duration
+            }
         }
+    }
+
+    function toggleFilter() {
+        const wrapper = document.getElementById('filter-wrapper');
+        if (!wrapper) return;
+
+        const isHidden = (wrapper.style.maxHeight === '0px' || wrapper.style.maxHeight === '' || wrapper.style.maxHeight === '0');
+        wrapper.style.maxHeight = isHidden ? '1000px' : '0';
+        wrapper.style.opacity = isHidden ? '1' : '0';
+        wrapper.style.marginBottom = isHidden ? '20px' : '0';
+    }
+
+    // Helper for buttons
+    function checkAll(checked) {
+        document.querySelectorAll('.filter-checkbox').forEach(cb => cb.checked = checked);
+        applyChampionFilters();
+    }
+
+    // --- INITIALIZATION ---
+    document.addEventListener("DOMContentLoaded", function() {
+        const images = document.querySelectorAll("img");
+        images.forEach(img => {
+            img.onerror = function() {
+                if (this.src.includes('champion-cards')) this.src = "/images/champion-cards/placeholder.png";
+            };
+        });
+
+        // Force Clear Search
+        const searchInput = document.getElementById('champion-search');
+        if(searchInput) searchInput.value = '';
+
+        // Note: Filters not run on load (Safe Start)
 
         document.querySelectorAll('.utc-time').forEach(el => {
             const raw = el.innerText;
             if (raw) {
                 const dateStr = raw.endsWith('Z') ? raw : raw + 'Z';
-                const date = new Date(dateStr);
-                el.innerText = date.toLocaleString(undefined, {
-                    year: 'numeric',
-                    month: 'numeric',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                el.innerText = new Date(dateStr).toLocaleString(undefined, {
+                    year: 'numeric', month: 'numeric', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
                 });
             }
         });

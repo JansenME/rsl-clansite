@@ -2,6 +2,7 @@ package com.rsl.clansite.controller;
 
 import com.rsl.clansite.exceptions.ChampionSaveException;
 import com.rsl.clansite.model.CompleteChampionsFilter;
+import com.rsl.clansite.model.OwnedChampion;
 import com.rsl.clansite.model.dto.ChampionEntryDTO;
 import com.rsl.clansite.model.dto.DataHealthDTO;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
@@ -17,7 +18,6 @@ import com.rsl.clansite.security.SecurityService;
 import com.rsl.clansite.service.ChampionsService;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
-import com.rsl.clansite.service.RosterService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,7 +28,9 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/champions")
@@ -36,20 +38,17 @@ public class ChampionsController {
     private final CommonsService commonsService;
     private final ChampionsService championsService;
     private final ClanmemberService clanmemberService;
-    private final RosterService rosterService;
     private final SecurityService securityService;
     private final ChampionRepository championRepository;
 
     public ChampionsController(final CommonsService commonsService,
                                final ChampionsService championsService,
                                final ClanmemberService clanmemberService,
-                               final RosterService rosterService,
                                final SecurityService securityService,
                                final ChampionRepository championRepository) {
         this.commonsService = commonsService;
         this.championsService = championsService;
         this.clanmemberService = clanmemberService;
-        this.rosterService = rosterService;
         this.securityService = securityService;
         this.championRepository = championRepository;
     }
@@ -89,7 +88,14 @@ public class ChampionsController {
         }
 
         if (targetMember != null) {
-            model.addAttribute("ownedChampionIds", targetMember.getRosterChampionIds());
+            // Extract Master IDs for the frontend selection (Checked/Unchecked logic)
+            List<String> masterIds = targetMember.getRoster() != null ?
+                    targetMember.getRoster().stream()
+                            .map(OwnedChampion::getChampionId)
+                            .collect(Collectors.toList())
+                    : Collections.emptyList();
+
+            model.addAttribute("ownedChampionIds", masterIds);
             model.addAttribute("targetMember", targetMember);
         }
 
@@ -103,6 +109,7 @@ public class ChampionsController {
         return "champions";
     }
 
+    // RESTORED: Bulk Save functionality
     @PostMapping("/roster-save")
     @PreAuthorize("isAuthenticated()")
     public String saveRoster(@RequestParam("targetMemberId") String targetMemberId,
@@ -110,13 +117,14 @@ public class ChampionsController {
                              Authentication authentication,
                              RedirectAttributes redirectAttributes) {
         try {
-            rosterService.updateRoster(targetMemberId, championIds, authentication);
+            // Delegate to service to handle the merge of IDs into OwnedChampion objects
+            clanmemberService.bulkUpdateRoster(targetMemberId, championIds, authentication);
             redirectAttributes.addFlashAttribute("successMessage", "Roster updated successfully!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Failed to save roster: " + e.getMessage());
         }
 
-        return "redirect:/champions";
+        return "redirect:/champions?editingMemberId=" + targetMemberId;
     }
 
     @GetMapping("/new")
@@ -212,6 +220,17 @@ public class ChampionsController {
         championsService.deleteChampion(id, authentication);
         redirectAttributes.addFlashAttribute("successMessage", "Champion deleted successfully.");
         return "redirect:/champions";
+    }
+
+    @PostMapping("/instance/update")
+    @PreAuthorize("isAuthenticated()")
+    public String updateInstance(@RequestParam String memberId,
+                                 @RequestParam String instanceId,
+                                 @RequestParam int level,
+                                 @RequestParam int rank,
+                                 Authentication authentication) {
+        clanmemberService.updateOwnedChampion(memberId, instanceId, level, rank, authentication);
+        return "redirect:/profile/" + memberId;
     }
 
     private void fillModel(Model model, Authentication authentication, HttpSession session) {
