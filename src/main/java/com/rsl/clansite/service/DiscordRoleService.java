@@ -125,10 +125,6 @@ public class DiscordRoleService {
             authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
         }*/
 
-        //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
-        //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
-        //authorities.clear(); authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
-
         return authorities;
     }
 }

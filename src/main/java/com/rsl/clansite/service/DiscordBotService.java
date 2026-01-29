@@ -41,7 +41,8 @@ public class DiscordBotService extends ListenerAdapter {
 
             jda.updateCommands().addCommands(
                     Commands.slash("hello", "I will help with anything you want!"),
-                    Commands.slash("coming-soon", "Get a hint about what lies ahead...")
+                    Commands.slash("robot", "What am I?")/*,
+                    Commands.slash("website", "We have a clan website!")*/
             ).queue();
 
         } catch (Exception e) {
@@ -58,13 +59,16 @@ public class DiscordBotService extends ListenerAdapter {
                     .setEphemeral(false)
                     .queue();
         }
-        else if (commandName.equals("coming-soon")) {
-            event.reply("Something is coming soon... \n" +
-                            "I don't know what it is either. \n\n" +
-                            "Bye now!")
+        else if (commandName.equals("robot")) {
+            event.reply("Beep Baap Boop! I... AM... A... ROBOT...")
                     .setEphemeral(false)
                     .queue();
         }
+/*        else if (commandName.equals("website")) {
+            event.reply("Clanwebsite! https://fotf-raid.com/")
+                    .setEphemeral(false)
+                    .queue();
+        }*/
     }
 
     @PreDestroy

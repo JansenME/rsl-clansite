@@ -20,8 +20,8 @@ discord:
 spring:
   data:
     mongodb:
-      uri: ${MONGO_URI:mongodb://localhost:27017/raidshadowlegends}
-      database: raidshadowlegends
+      uri: ${MONGO_URI:mongodb://localhost:27017/furyOfTheFallen}
+      database: furyOfTheFallen
       auto-index-creation: true
   session:
     store-type: mongodb
