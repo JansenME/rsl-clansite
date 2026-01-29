@@ -128,18 +128,25 @@ public class ProfileController {
         Map<String, Champion> masterMap = championsService.getChampionsByIds(new ArrayList<>(masterIds)).stream()
                 .collect(Collectors.toMap(Champion::getId, c -> c));
 
-        // 3. Build Composite DTOs
+        // 3. Build Composite DTOs with Updated Sorting
         List<RosterEntryDTO> rosterEntries = ownedRoster.stream()
                 .filter(oc -> masterMap.containsKey(oc.getChampionId()))
                 .map(oc -> new RosterEntryDTO(masterMap.get(oc.getChampionId()), oc))
                 .sorted((a, b) -> {
-                    // Sort by Rank DESC, then Level DESC, then Name ASC
+                    // 1. Rarity DESC (Mythical -> Common)
+                    // Enums compare based on ordinal definition. Descending means b.compareTo(a).
+                    int rarityCompare = b.masterData().getRarity().compareTo(a.masterData().getRarity());
+                    if (rarityCompare != 0) return rarityCompare;
+
+                    // 2. Rank DESC (6 -> 1)
                     int rankCompare = Integer.compare(b.instanceData().getRank(), a.instanceData().getRank());
                     if (rankCompare != 0) return rankCompare;
 
+                    // 3. Level DESC (60 -> 1)
                     int levelCompare = Integer.compare(b.instanceData().getLevel(), a.instanceData().getLevel());
                     if (levelCompare != 0) return levelCompare;
 
+                    // 4. Name ASC (A -> Z)
                     return a.masterData().getName().compareTo(b.masterData().getName());
                 })
                 .collect(Collectors.toList());
