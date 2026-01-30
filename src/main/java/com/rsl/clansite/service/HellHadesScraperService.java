@@ -81,7 +81,13 @@ public class HellHadesScraperService {
                 }
 
                 // Construct URLs using the Old Logic
-                String slug = name.toLowerCase().replace(" ", "-").replace("'", "").replace(".", "");
+                String slug = name.toLowerCase()
+                        .replace("’", "")  // Curly quote
+                        .replace("'", "")  // Standard quote
+                        .replaceAll("[^a-z0-9]", "-") // Everything else to dash
+                        .replaceAll("-+", "-")         // Collapse multiple dashes
+                        .replaceAll("^-|-$", "");      // Trim dashes from ends
+
                 String detailUrl = "https://hellhades.com/raid/champions/" + slug + "/";
 
                 // THE MAGIC LINE: Construct the Image URL from ID
