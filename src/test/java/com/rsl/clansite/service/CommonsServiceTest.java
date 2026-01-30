@@ -1,9 +1,11 @@
 package com.rsl.clansite.service;
 
 import com.rsl.clansite.model.ClanmemberViewData;
+import com.rsl.clansite.model.entity.ClanmemberEntity;
 import com.rsl.clansite.model.enums.QuickLink;
 import com.rsl.clansite.security.SecurityService;
 import jakarta.servlet.http.HttpSession;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +30,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -195,17 +198,23 @@ class CommonsServiceTest {
     }
 
     @Test
-    @DisplayName("MEMBER should see NO quick links (Empty List)")
+    @DisplayName("MEMBER should see three quick links (Empty List)")
     void getVisibleQuickLinks_Member_ShouldSeeNone() {
         Authentication auth = mock(Authentication.class);
         when(auth.isAuthenticated()).thenReturn(true);
 
+        ClanmemberEntity clanmemberEntity = new ClanmemberEntity();
+        clanmemberEntity.setId(new ObjectId());
+
         when(securityService.getReachableAuthorities(auth))
                 .thenReturn((List) List.of(new SimpleGrantedAuthority("ROLE_MEMBER")));
 
+        when(clanmemberService.getActiveClanmember(any(), any()))
+                .thenReturn(clanmemberEntity);
+
         List<CommonsService.VisibleQuickLink> links = commonsService.getVisibleQuickLinks(auth, session);
 
-        assertTrue(links.size() == 1, "Member should see Add Siege Team quick link");
+        assertEquals(3, links.size(), "Member should see Add Siege Team, Sync My Roster and Edit My Roster quick links");
     }
 
     @Test
