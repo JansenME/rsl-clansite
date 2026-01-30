@@ -47,6 +47,17 @@ public class SiegeService {
         return siegeRepository.findFirstByClanGroupAndStatusNot(clanGroup, SiegeStatus.FINISHED);
     }
 
+    /**
+     * Retrieves the latest Siege that is either in BATTLE or FINISHED status.
+     * Effectively ignores PREP or MATCHMAKING phases to show the "relevant" score.
+     */
+    public Optional<SiegeEntity> getLatestBattleOrFinishedSiege(ClanGroup clanGroup) {
+        return siegeRepository.findFirstByClanGroupAndStatusInOrderByStartDateDesc(
+                clanGroup,
+                List.of(SiegeStatus.BATTLE, SiegeStatus.FINISHED)
+        );
+    }
+
     @Transactional
     public void checkAndAdvanceState(ClanGroup clanGroup) {
         Optional<SiegeEntity> siegeOpt = getActiveSiege(clanGroup);

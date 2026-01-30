@@ -16,4 +16,10 @@ public interface SiegeRepository extends MongoRepository<SiegeEntity, ObjectId> 
     Optional<SiegeEntity> findFirstByClanGroupAndStatusNot(ClanGroup clanGroup, SiegeStatus status);
 
     List<SiegeEntity> findByClanGroupAndStatusOrderByStartDateDesc(ClanGroup clanGroup, SiegeStatus status);
+
+    /**
+     * Finds the latest Siege for a specific clan group that matches one of the provided statuses.
+     * Used to find the current active or last finished siege (excluding PREP/MATCHMAKING).
+     */
+    Optional<SiegeEntity> findFirstByClanGroupAndStatusInOrderByStartDateDesc(ClanGroup clanGroup, List<SiegeStatus> statuses);
 }
