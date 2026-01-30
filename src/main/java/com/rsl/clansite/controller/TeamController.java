@@ -145,7 +145,7 @@ public class TeamController {
                         instance.getId(),
                         master.getName(),
                         master.getImagename(),
-                        rarityName,   // Corrected Name
+                        rarityName,
                         typeName,
                         factionName,
                         affinityName,
@@ -153,7 +153,7 @@ public class TeamController {
                         auraDesc,
                         instance.getLevel(),
                         instance.getRank(),
-                        sortScore     // The Shadow Score
+                        sortScore
                 ));
             }
         }
