@@ -301,14 +301,10 @@ public class RosterSyncService {
     // --- DEBUG VERSION of findAffectedTeams ---
     private List<String> findAffectedTeams(ClanmemberEntity member, String instanceId) {
         if (member.getKnownTeams() == null) {
-            log.info("DEBUG: Member has NO known teams list (null).");
             return Collections.emptyList();
         }
 
         List<String> teamNames = new ArrayList<>();
-
-        // Log what we are looking for
-        log.info("DEBUG: Searching for Instance ID: [{}] in {} teams.", instanceId, member.getKnownTeams().size());
 
         for (Team t : member.getKnownTeams()) {
             // Check matches
@@ -317,14 +313,7 @@ public class RosterSyncService {
             boolean match3 = Objects.equals(t.getChampion3Id(), instanceId);
             boolean match4 = Objects.equals(t.getChampion4Id(), instanceId);
 
-            // Only log if it's the team we suspect (or just log all to be safe)
-            if (t.getTeamName().contains("Geomancer") || t.getLeaderChampionId() != null) {
-                log.info("  > Team '{}': Leader=[{}] vs Target=[{}] -> Match? {}",
-                        t.getTeamName(), t.getLeaderChampionId(), instanceId, matchLeader);
-            }
-
             if (matchLeader || match2 || match3 || match4) {
-                log.info("  !!! MATCH FOUND in Team '{}' !!!", t.getTeamName());
                 teamNames.add(t.getTeamName());
             }
         }

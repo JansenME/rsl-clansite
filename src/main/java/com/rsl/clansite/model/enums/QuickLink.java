@@ -5,6 +5,7 @@ import lombok.Getter;
 @Getter
 public enum QuickLink {
     EDIT_ROSTER("Edit My Roster", "/champions?editingMemberId=", "ROLE_MEMBER"),
+    SYNC_ROSTER("Sync My Roster", "/sync", "ROLE_MEMBER"),
     ADD_SIEGE_TEAM("Add Siege Team", "/teams/builder", "ROLE_MEMBER"),
 
     SIEGE_CONDITIONS("Siege Conditions", "/admin/siege-conditions", "ROLE_COORDINATOR"),

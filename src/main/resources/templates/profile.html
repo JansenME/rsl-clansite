@@ -136,18 +136,100 @@
 				</div>
 			</section>
 
+			<section th:if="${(knownTeams != null and !knownTeams.isEmpty()) or isOwnProfile or #authorization.expression('hasRole(''ROLE_COORDINATOR'')')}">
+				<div style="border-top: 2px solid #eee; margin-top: 40px; padding-top: 30px;">
+
+					<div class="roster-header">
+						<h3>Siege Teams</h3>
+
+						<div class="roster-header-buttons">
+							<a th:if="${isOwnProfile or #authorization.expression('hasRole(''ROLE_COORDINATOR'')')}"
+							   th:href="@{/teams/builder(targetMemberId=${member.id})}"
+							   class="button small primary">
+								<i class="fas fa-plus"></i> Add Siege Team
+							</a>
+						</div>
+					</div>
+
+
+					<div th:if="${#lists.isEmpty(knownTeams)}" style="text-align: center; padding: 20px; color: #666;">
+						<p>No Siege Teams created yet.</p>
+					</div>
+
+					<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+						<div th:each="team : ${knownTeams}" class="known-team-card">
+							<div class="known-team-header">
+								<div style="display: flex; align-items: center; gap: 10px;">
+									<strong th:text="${team.teamName}">Team Name</strong>
+									<span th:if="${team.conditionLabel != null}"
+										  class="team-condition-badge"
+										  th:text="${team.conditionLabel}">Condition</span>
+								</div>
+
+								<div th:if="${isOwnProfile or #authorization.expression('hasRole(''ROLE_COORDINATOR'')')}" class="team-actions">
+
+									<a th:href="@{/teams/builder(editTeamId=${team.id}, targetMemberId=${member.id})}" class="team-action-btn btn-edit" title="Edit Team">
+										<i class="fas fa-edit"></i>
+									</a>
+
+									<form th:action="@{/teams/delete/{id}(id=${team.id})}" method="POST" style="margin:0;"
+										  onsubmit="return confirm('Are you sure you want to delete this team?');">
+										<input type="hidden" name="targetMemberId" th:value="${member.id}" />
+										<button type="submit" class="team-action-btn btn-delete" title="Delete Team">
+											<i class="fas fa-trash-alt"></i>
+										</button>
+									</form>
+								</div>
+							</div>
+
+							<div class="team-portraits">
+								<div class="team-mini-portrait leader-wrapper"
+									 style="position: relative;"
+									 th:if="${team.leader != null}">
+
+									<img th:src="${team.leader.imagename != null} ? @{/images/champion-cards/{name}(name=${team.leader.imagename})} : @{/images/champion-cards/placeholder.png}"
+										 class="team-mini-portrait leader"
+										 title="Leader" />
+
+									<i class="fas fa-crown" style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); color: #f1c40f; text-shadow: 0 1px 2px black; font-size: 12px;"></i>
+								</div>
+
+								<th:block th:if="${team.member2 != null}"><img th:src="${team.member2.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member2.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" /></th:block>
+								<th:block th:if="${team.member2 == null}"><img src="/images/teammember-image.png" class="team-mini-portrait" style="opacity: 0.3;" /></th:block>
+
+								<th:block th:if="${team.member3 != null}"><img th:src="${team.member3.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member3.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" /></th:block>
+								<th:block th:if="${team.member3 == null}"><img src="/images/teammember-image.png" class="team-mini-portrait" style="opacity: 0.3;" /></th:block>
+
+								<th:block th:if="${team.member4 != null}"><img th:src="${team.member4.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member4.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" /></th:block>
+								<th:block th:if="${team.member4 == null}"><img src="/images/teammember-image.png" class="team-mini-portrait" style="opacity: 0.3;" /></th:block>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
 			<section th:if="${rosterEntries != null}">
 				<div style="border-top: 2px solid #eee; margin-top: 40px; padding-top: 30px;">
 
-					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-						<h3 th:text="${isOwnProfile ? 'My Champion Roster' : 'Champion Roster'}" style="margin: 0; text-align: center !important;">Champion Roster</h3>
+					<div class="roster-header">
+						<h3 th:text="${isOwnProfile ? 'My Champion Roster' : 'Champion Roster'}">
+							Champion Roster
+						</h3>
 
-						<a th:if="${isOwnProfile or #authorization.expression('hasRole(''ROLE_COORDINATOR'')')}"
-						   th:href="@{/champions(editingMemberId=${member.id})}"
-						   class="button small primary">
-							<i class="fas fa-edit"></i>
-							<span th:text="${isOwnProfile ? 'Edit Personal Roster' : 'Edit Member Roster'}">Edit Roster</span>
-						</a>
+						<div class="roster-header-buttons">
+							<a th:if="${isOwnProfile or #authorization.expression('hasRole(''ROLE_COORDINATOR'')')}"
+							   th:href="@{/champions(editingMemberId=${member.id})}"
+							   class="button small primary">
+								<i class="fas fa-edit"></i>
+								<span th:text="${isOwnProfile ? 'Edit Personal Roster' : 'Edit Member Roster'}">Edit Roster</span>
+							</a>
+
+							<a th:if="${isOwnProfile}"
+							   th:href="@{/sync}"
+							   class="button small primary">
+								<i class="fas fa-sync"></i> Sync Roster
+							</a>
+						</div>
 					</div>
 
 					<div th:if="${member.rosterLastUpdated != null}" style="text-align: center; color: #666; font-size: 0.9em; margin-bottom: 15px;">
@@ -292,75 +374,6 @@
 					</div>
 				</div>
 			</section>
-
-			<section th:if="${(knownTeams != null and !knownTeams.isEmpty()) or isOwnProfile or #authorization.expression('hasRole(''ROLE_COORDINATOR'')')}">
-				<div style="border-top: 2px solid #eee; margin-top: 40px; padding-top: 30px;">
-
-					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-						<h3 style="margin: 0; text-align: center !important;">Siege Teams</h3>
-
-						<a th:if="${isOwnProfile or #authorization.expression('hasRole(''ROLE_COORDINATOR'')')}"
-						   th:href="@{/teams/builder(targetMemberId=${member.id})}"
-						   class="button small primary">
-							<i class="fas fa-plus"></i> Add Siege Team
-						</a>
-					</div>
-
-					<div th:if="${#lists.isEmpty(knownTeams)}" style="text-align: center; padding: 20px; color: #666;">
-						<p>No Siege Teams created yet.</p>
-					</div>
-
-					<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
-						<div th:each="team : ${knownTeams}" class="known-team-card">
-							<div class="known-team-header">
-								<div style="display: flex; align-items: center; gap: 10px;">
-									<strong th:text="${team.teamName}">Team Name</strong>
-									<span th:if="${team.conditionLabel != null}"
-										  class="team-condition-badge"
-										  th:text="${team.conditionLabel}">Condition</span>
-								</div>
-
-								<div th:if="${isOwnProfile or #authorization.expression('hasRole(''ROLE_COORDINATOR'')')}" class="team-actions">
-
-									<a th:href="@{/teams/builder(editTeamId=${team.id}, targetMemberId=${member.id})}" class="team-action-btn btn-edit" title="Edit Team">
-										<i class="fas fa-edit"></i>
-									</a>
-
-									<form th:action="@{/teams/delete/{id}(id=${team.id})}" method="POST" style="margin:0;"
-										  onsubmit="return confirm('Are you sure you want to delete this team?');">
-										<input type="hidden" name="targetMemberId" th:value="${member.id}" />
-										<button type="submit" class="team-action-btn btn-delete" title="Delete Team">
-											<i class="fas fa-trash-alt"></i>
-										</button>
-									</form>
-								</div>
-							</div>
-
-							<div class="team-portraits">
-								<div class="team-mini-portrait leader-wrapper"
-									 style="position: relative;"
-									 th:if="${team.leader != null}">
-
-									<img th:src="${team.leader.imagename != null} ? @{/images/champion-cards/{name}(name=${team.leader.imagename})} : @{/images/champion-cards/placeholder.png}"
-										 class="team-mini-portrait leader"
-										 title="Leader" />
-
-									<i class="fas fa-crown" style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); color: #f1c40f; text-shadow: 0 1px 2px black; font-size: 12px;"></i>
-								</div>
-
-								<th:block th:if="${team.member2 != null}"><img th:src="${team.member2.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member2.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" /></th:block>
-								<th:block th:if="${team.member2 == null}"><img src="/images/teammember-image.png" class="team-mini-portrait" style="opacity: 0.3;" /></th:block>
-
-								<th:block th:if="${team.member3 != null}"><img th:src="${team.member3.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member3.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" /></th:block>
-								<th:block th:if="${team.member3 == null}"><img src="/images/teammember-image.png" class="team-mini-portrait" style="opacity: 0.3;" /></th:block>
-
-								<th:block th:if="${team.member4 != null}"><img th:src="${team.member4.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member4.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" /></th:block>
-								<th:block th:if="${team.member4 == null}"><img src="/images/teammember-image.png" class="team-mini-portrait" style="opacity: 0.3;" /></th:block>
-							</div>
-						</div>
-					</div>
-				</div>
-			</section>
 		</div>
 	</section>
 
@@ -412,6 +425,58 @@
     /* Modal */
     .custom-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; }
     .modal-content { background: #1f2226; padding: 30px; border-radius: 8px; width: 90%; max-width: 350px; box-shadow: 0 0 20px rgba(0,0,0,0.5); border: 1px solid #444; color: #ddd; }
+
+	.roster-header {
+        position: relative;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin-bottom: 25px;
+        min-height: 50px;
+    }
+
+    .roster-header h3 {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        margin: 0;
+        white-space: nowrap;
+        text-align: center;
+    }
+
+    .roster-header-buttons {
+        display: flex;
+        gap: 10px;
+        z-index: 1;
+    }
+
+    /* Mobile view: Stack elements vertically */
+    @media (max-width: 768px) {
+        .roster-header {
+            flex-direction: column;
+            justify-content: center;
+            min-height: auto;
+            gap: 15px;
+        }
+
+        .roster-header h3 {
+            position: static; /* Remove absolute centering */
+            transform: none;
+            width: 100%;
+        }
+
+        .roster-header-buttons {
+            width: 100%;
+            justify-content: center;
+            flex-wrap: wrap; /* Wraps buttons if they are too wide */
+        }
+
+        .roster-header-buttons .button {
+            flex: 1; /* Makes buttons equal width on mobile */
+            text-align: center;
+            min-width: 140px;
+        }
+    }
 </style>
 
 <script>
