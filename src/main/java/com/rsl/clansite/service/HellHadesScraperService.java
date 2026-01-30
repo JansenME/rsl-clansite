@@ -73,7 +73,7 @@ public class HellHadesScraperService {
 
             // 2. Build Contexts
             for (HellHadesChampionJson json : jsonChampions) {
-                String name = json.getName().trim();
+                String name = json.getName().trim().replace("''", "'");
 
                 // Skip if exists AND not forcing refresh
                 if (!forceRefresh && championRepository.findByNameIgnoreCase(name).isPresent()) {
@@ -174,7 +174,7 @@ public class HellHadesScraperService {
         ScrapedChampion dto = new ScrapedChampion();
         dto.setUrl(url);
 
-        String name = doc.select("h1").text().trim();
+        String name = doc.select("h1").text().trim().replace("''", "'");
         dto.setName(name);
 
         String postId = extractPostId(doc);
