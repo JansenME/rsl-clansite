@@ -3,6 +3,8 @@ app:
   storage:
     location:
       champion-cards: "/var/www/clansite/images/champions/"
+  upload:
+    roster-path: "/var/www/clansite/upload/roster-sync/"
   backup:
     enabled: true
     location: "/var/www/clansite/backups/"

@@ -2,6 +2,8 @@ app:
   storage:
     location:
       champion-cards: "C:/Development/images-rsl-clansite/champion-cards"
+  upload:
+    roster-path: "C:/Development/images-rsl-clansite/upload/roster-sync/"
   backup:
     enabled: true
     location: "C:/Development/images-rsl-clansite/backups/"

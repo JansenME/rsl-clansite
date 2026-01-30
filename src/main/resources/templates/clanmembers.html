@@ -92,7 +92,7 @@
 						<td sec:authorize="isAuthenticated()" data-label="Discord Nickname" th:text="${member.playerNickname}">Server Nickname</td>
 						<td data-label="In-Game Name" th:text="${(member.ingameName != null) ? member.ingameName : 'Unassigned'}">In-Game Name</td>
 						<td data-label="Rank" th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
-						<td sec:authorize="isAuthenticated()" data-label="Champions" th:text="${member.rosterChampionIds != null ? member.rosterChampionIds.size() : 0}">0</td>
+						<td sec:authorize="isAuthenticated()" data-label="Champions" th:text="${member.roster != null ? member.roster.size() : 0}">0</td>
 
 						<td sec:authorize="hasRole('ADMIN')" data-label="Actions" onclick="event.stopPropagation()">
 							<div style="display: flex; gap: 5px; flex-wrap: wrap;">
@@ -142,7 +142,7 @@
 						<td sec:authorize="isAuthenticated()" data-label="Discord Nickname" th:text="${member.playerNickname}">Server Nickname</td>
 						<td data-label="In-Game Name" th:text="${(member.ingameName != null) ? member.ingameName : 'Unassigned'}">In-Game Name</td>
 						<td data-label="Rank" th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
-						<td sec:authorize="isAuthenticated()" data-label="Champions" th:text="${member.rosterChampionIds != null ? member.rosterChampionIds.size() : 0}">0</td>
+						<td sec:authorize="isAuthenticated()" data-label="Champions" th:text="${member.roster != null ? member.roster.size() : 0}">0</td>
 
 						<td sec:authorize="hasRole('ADMIN')" data-label="Actions" onclick="event.stopPropagation()">
 							<div style="display: flex; gap: 5px; flex-wrap: wrap;">
@@ -197,7 +197,7 @@
 							<td data-label="In-Game Name" th:text="${member.ingameName}">IGN</td>
 							<td data-label="Clan" th:text="${member.clanGroup}">Clan</td>
 							<td data-label="Former Rank" th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
-							<td data-label="Champions" th:text="${member.rosterChampionIds != null ? member.rosterChampionIds.size() : 0}">0</td>
+							<td data-label="Champions" th:text="${member.roster != null ? member.roster.size() : 0}">0</td>
 							<td data-label="Left Date" th:text="${member.statusChangedDate != null ? #temporals.format(member.statusChangedDate, 'dd-MM-yyyy') : '-'}">Date</td>
 
 							<td data-label="Actions">

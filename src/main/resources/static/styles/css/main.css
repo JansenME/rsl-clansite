@@ -2001,3 +2001,105 @@ input.target-input:focus {
 .modal-content { background-color: #fff; margin: 5% auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 600px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
 .close-modal { float: right; font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa; transition: color 0.2s; }
 .close-modal:hover { color: #000; }
+
+/* --- Compact Sync Preview Table (Mobile Optimized) --- */
+.compact-sync-table th,
+.compact-sync-table td {
+    padding: 6px 4px !important; /* Tighter padding */
+    font-size: 0.9em;
+}
+
+/* Mobile Specifics for Sync Table */
+@media screen and (max-width: 600px) {
+    .compact-sync-table {
+        font-size: 0.8em;
+    }
+
+    /* Hide non-essential columns on very small screens if needed,
+       but for now we just make them small */
+    .compact-sync-table .button.small {
+        padding: 2px 6px;
+        font-size: 0.7em;
+        letter-spacing: 0;
+    }
+
+    .compact-sync-table input[type="checkbox"] {
+        transform: scale(1.0); /* Smaller checkbox on mobile */
+    }
+}
+
+/* Unknown Champion List Styling */
+.unknown-champion-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 0;
+    list-style: none;
+    margin-top: 10px;
+}
+
+.unknown-champion-item {
+    background: rgba(133, 100, 4, 0.1);
+    border: 1px solid rgba(133, 100, 4, 0.2);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+/* ================================================= */
+/* COMPACT SYNC TABLE OVERRIDES (Force Table Layout) */
+/* ================================================= */
+
+@media screen and (max-width: 1200px) {
+    /* 1. Reset the "Card View" behavior so it stays a normal table */
+    table.compact-sync-table,
+    .compact-sync-table tbody {
+        display: table !important;
+        width: 100% !important;
+    }
+
+    .compact-sync-table thead {
+        display: table-header-group !important; /* Show headers again */
+    }
+
+    .compact-sync-table tr {
+        display: table-row !important;
+        border: 1px solid #eee !important;
+        margin-bottom: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .compact-sync-table td,
+    .compact-sync-table th {
+        display: table-cell !important;
+        text-align: left !important;
+        padding: 6px 4px !important;
+        border-bottom: 1px solid #eee !important;
+        min-height: auto !important;
+    }
+
+    /* 2. Hide the "Data Label" pseudo-elements used in Card View */
+    .compact-sync-table td::before {
+        display: none !important;
+    }
+
+    /* 3. Mobile Optimization: Hide the "Type" Badge column on small screens */
+    /* (The row color or text color already indicates the type) */
+    .compact-sync-table th:nth-child(2),
+    .compact-sync-table td:nth-child(2) {
+        display: none !important;
+    }
+
+    /* 4. Tighter Font for Mobile */
+    .compact-sync-table {
+        font-size: 0.8em !important;
+    }
+
+    /* Adjust Checkbox column width */
+    .compact-sync-table td:first-child,
+    .compact-sync-table th:first-child {
+        width: 30px !important;
+        text-align: center !important;
+    }
+}

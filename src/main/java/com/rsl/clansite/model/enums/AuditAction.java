@@ -7,6 +7,7 @@ public enum AuditAction {
     MEMBER_REACTIVATE("Re-activate Clanmember"),
     MEMBER_DELETE("Deleted Clanmember"),
     ROSTER_UPDATE("Roster updated"),
+    ROSTER_SYNC("Automated Roster Sync"),
 
     // Champion Actions (Individual)
     CHAMPION_ADD("Added Champion"),

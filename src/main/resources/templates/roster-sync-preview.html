@@ -1,0 +1,133 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{inserts/head :: head(pageTitle='Sync Preview')}">
+</head>
+<body>
+<div id="page-wrapper">
+	<section id="header">
+		<div th:insert="~{inserts/nav :: nav}" class="container">
+		</div>
+	</section>
+
+	<section id="content">
+		<div class="container">
+			<section>
+				<header class="main">
+					<h2>Sync Preview</h2>
+				</header>
+
+				<div th:if="${not #lists.isEmpty(diff.unknownNames)}" class="col-12" style="margin-bottom: 2em;">
+					<div class="alert" style="background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 4px;">
+						<h4 style="color: #856404; font-size: 1.2em; margin-bottom: 0.5em;"><i class="fa fa-exclamation-triangle"></i> Unknown Champions Detected</h4>
+						<p style="margin-bottom: 5px;">The following champions were found in your CSV but do not exist in the database yet. They will be ignored.</p>
+
+						<div class="unknown-champion-list">
+							<span th:each="name : ${diff.unknownNames}" class="unknown-champion-item" th:text="${name}">Name</span>
+						</div>
+
+						<p style="margin-top: 10px; font-size: 0.85em; opacity: 0.8;">Please contact the Administrator to add these champions.</p>
+					</div>
+				</div>
+
+				<div class="row" style="margin-bottom: 2em; text-align: center;">
+					<div class="col-4">
+						<div class="box" style="padding: 10px; border-top: 4px solid #4CAF50;">
+							<h3 th:text="${diff.totalAdds}">0</h3>
+							<span>New Additions</span>
+						</div>
+					</div>
+					<div class="col-4">
+						<div class="box" style="padding: 10px; border-top: 4px solid #2196F3;">
+							<h3 th:text="${diff.totalUpdates}">0</h3>
+							<span>Updates</span>
+						</div>
+					</div>
+					<div class="col-4">
+						<div class="box" style="padding: 10px; border-top: 4px solid #F44336;">
+							<h3 th:text="${diff.totalRemoves}">0</h3>
+							<span>Removals</span>
+						</div>
+					</div>
+				</div>
+
+				<form method="post" th:action="@{/sync/commit}">
+					<div class="table-wrapper">
+						<table class="alt compact-sync-table">
+							<thead>
+							<tr>
+								<th style="width: 50px;">Apply</th>
+								<th style="width: 100px;">Type</th>
+								<th>Champion</th>
+								<th>Change Detail</th>
+								<th>Warnings</th>
+							</tr>
+							</thead>
+							<tbody>
+							<tr th:if="${#lists.isEmpty(diff.changes)}">
+								<td colspan="5" style="text-align: center; padding: 2em;">
+									<strong>No changes detected! Your roster is already up to date.</strong>
+								</td>
+							</tr>
+
+							<tr th:each="change, iter : ${diff.changes}"
+								th:classappend="${change.type == 'REMOVE' ? 'bg-light-red' : ''}"
+								th:style="${change.affectedTeams != null ? 'background-color: #fff0f0;' : ''}">
+
+								<td style="text-align: center; vertical-align: middle;">
+									<input type="checkbox"
+										   th:id="'check-' + ${iter.index}"
+										   name="selectedIndices"
+										   th:value="${iter.index}"
+										   checked>
+									<label th:for="'check-' + ${iter.index}" style="margin: 0;"></label>
+								</td>
+
+								<td style="vertical-align: middle;">
+									<span th:if="${change.type == 'ADD'}" class="button small" style="background-color: #4CAF50; color: white; pointer-events: none;">ADD</span>
+									<span th:if="${change.type == 'UPDATE'}" class="button small" style="background-color: #2196F3; color: white; pointer-events: none;">UPD</span>
+									<span th:if="${change.type == 'REMOVE'}" class="button small" style="background-color: #F44336; color: white; pointer-events: none;">DEL</span>
+								</td>
+
+								<td style="vertical-align: middle; font-weight: bold;" th:text="${change.championName}">Kael</td>
+
+								<td style="vertical-align: middle;">
+									<div th:if="${change.type == 'UPDATE'}">
+										<span style="color: #999;" th:text="${change.oldState}">5* Lvl 50</span>
+										<i class="fa fa-arrow-right" style="margin: 0 5px;"></i>
+										<strong style="color: #2196F3;" th:text="${change.newState}">6* Lvl 1</strong>
+									</div>
+									<div th:if="${change.type == 'ADD'}">
+										<strong style="color: #4CAF50;" th:text="${change.newState}">6* Lvl 60</strong>
+									</div>
+									<div th:if="${change.type == 'REMOVE'}">
+										<span style="text-decoration: line-through; color: #999;" th:text="${change.oldState}">6* Lvl 10</span>
+									</div>
+								</td>
+
+								<td style="vertical-align: middle;">
+									<div th:if="${change.affectedTeams != null}">
+										<strong style="color: #d32f2f;">
+											<i class="fa fa-exclamation-circle"></i> TEAM BREAK:
+										</strong>
+										<span th:text="${#strings.listJoin(change.affectedTeams, ', ')}">Team 1</span>
+									</div>
+								</td>
+							</tr>
+							</tbody>
+						</table>
+					</div>
+
+					<div class="col-12" style="margin-top: 2em; text-align: right;">
+						<a th:href="@{/sync/cancel}" class="button">Cancel</a>
+						<button type="submit" class="button primary" th:if="${not #lists.isEmpty(diff.changes)}">Confirm Sync</button>
+					</div>
+				</form>
+			</section>
+		</div>
+	</section>
+
+	<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+	</div>
+</div>
+</body>
+</html>

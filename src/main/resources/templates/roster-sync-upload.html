@@ -1,0 +1,76 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{inserts/head :: head(pageTitle='Roster Sync')}">
+</head>
+<body>
+<div id="page-wrapper">
+	<section id="header">
+		<div th:insert="~{inserts/nav :: nav}" class="container">
+		</div>
+	</section>
+
+	<section id="content">
+		<div class="container">
+
+			<div th:if="${errorMessage}" class="col-12">
+				<div class="alert alert-danger" style="background: #ffe6e6; border: 1px solid #ffcccc; padding: 15px; margin-bottom: 20px; border-radius: 4px; color: #a94442;">
+					<i class="fa fa-exclamation-triangle"></i> <span th:text="${errorMessage}">Error</span>
+				</div>
+			</div>
+
+			<div th:if="${resumeAvailable}" class="col-12" style="margin-bottom: 30px;">
+				<div style="background: #e3f2fd; border: 1px solid #bbdefb; padding: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: space-between;">
+					<div>
+						<h3 style="margin: 0 0 5px 0; color: #0d47a1;">Unfinished Sync Found</h3>
+						<p style="margin: 0; color: #555;">
+							You uploaded a file on <strong th:text="${#temporals.format(fileLastModified, 'dd-MM-yyyy HH:mm')}">Date</strong> but didn't finish.
+						</p>
+					</div>
+					<div>
+						<a th:href="@{/sync/preview}" class="button icon solid fa-arrow-right" style="background-color: #2196f3; color: white;">Resume Sync</a>
+					</div>
+				</div>
+			</div>
+
+			<section>
+				<header class="main">
+					<h2>Roster Sync (RSL Helper)</h2>
+				</header>
+
+				<div class="row gtr-200">
+					<div class="col-6 col-12-medium">
+						<h3>Step 1: Export Data</h3>
+						<p>To synchronize your champions, levels, and ranks automatically:</p>
+						<ol>
+							<li>Open <strong>RSL Helper</strong>.</li>
+							<li>Go to the <strong>Champion Index</strong> page on the left.</li>
+							<li>Select <strong>Save Champion Index to CSV</strong>. This is at the top next to the dropdown for sorting.</li>
+							<li>Save the file to your computer.</li>
+						</ol>
+					</div>
+
+					<div class="col-6 col-12-medium">
+						<h3>Step 2: Upload CSV</h3>
+						<form method="post" th:action="@{/sync/upload}" enctype="multipart/form-data" style="background: #f9f9f9; padding: 30px; border-radius: 8px; border: 2px dashed #ccc; text-align: center;">
+
+							<div class="col-12" style="margin-bottom: 20px;">
+								<input type="file" name="file" id="file" accept=".csv" style="display: none;" onchange="document.getElementById('file-label').innerHTML = this.files[0].name;" />
+								<label for="file" class="button icon solid fa-upload" style="cursor: pointer;">Choose CSV File</label>
+								<div id="file-label" style="margin-top: 10px; font-weight: bold; color: #666;">No file selected</div>
+							</div>
+
+							<div class="col-12">
+								<button type="submit" class="button primary">Upload & Preview</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			</section>
+		</div>
+	</section>
+
+	<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+	</div>
+</div>
+</body>
+</html>
