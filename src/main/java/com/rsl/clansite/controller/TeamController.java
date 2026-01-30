@@ -56,7 +56,6 @@ public class TeamController {
 
     public record ConditionDropdownItem(String id, String label, String category, String value) {}
 
-    // UPDATED DTO: Added level and rank
     public record TeamBuilderOptionDTO(
             String id,
             String label,
@@ -68,7 +67,8 @@ public class TeamController {
             String auraLoc,
             String auraDesc,
             int level,
-            int rank
+            int rank,
+            Double sortScore // Renamed for clarity, stores our "Shadow Score"
     ) {}
 
     @GetMapping("/builder")
@@ -126,18 +126,34 @@ public class TeamController {
                             " in " + master.getAura().getLocation().getName();
                 }
 
+                // FIX 1: Use resolveEnumName so "Legendary" matches the Checkbox value
+                String rarityName = resolveEnumName(master.getRarity());
+                String typeName = resolveEnumName(master.getType());
+                String factionName = resolveEnumName(master.getFaction());
+                String affinityName = resolveEnumName(master.getAffinity());
+
+                // FIX 2: Calculate Shadow Score for Sorting
+                // This forces main.js to sort by Rarity > Rank > Level
+                double sortScore = 0.0;
+                if (master.getRarity() != null) {
+                    sortScore += master.getRarity().ordinal() * 10000;
+                }
+                sortScore += instance.getRank() * 100;
+                sortScore += instance.getLevel();
+
                 championOptions.add(new TeamBuilderOptionDTO(
                         instance.getId(),
-                        label,
+                        master.getName(),
                         master.getImagename(),
-                        master.getRarity() != null ? master.getRarity().name() : "",
-                        master.getType() != null ? master.getType().name() : "",
-                        master.getFaction() != null ? master.getFaction().name() : "",
-                        master.getAffinity() != null ? master.getAffinity().name() : "",
+                        rarityName,   // Corrected Name
+                        typeName,
+                        factionName,
+                        affinityName,
                         auraLoc,
                         auraDesc,
                         instance.getLevel(),
-                        instance.getRank()
+                        instance.getRank(),
+                        sortScore     // The Shadow Score
                 ));
             }
         }
@@ -253,5 +269,16 @@ public class TeamController {
             return entity.getConditionKey();
         }
         return entity.getConditionKey();
+    }
+
+    private String resolveEnumName(Enum<?> enumVal) {
+        if (enumVal == null) return "";
+        try {
+            Method m = enumVal.getClass().getMethod("getName");
+            return (String) m.invoke(enumVal);
+        } catch (Exception e) {
+            String name = enumVal.name().toLowerCase().replace("_", " ");
+            return Character.toUpperCase(name.charAt(0)) + name.substring(1);
+        }
     }
 }

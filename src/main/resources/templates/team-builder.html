@@ -19,7 +19,6 @@
         <form id="team-form" th:action="@{/teams/save}" th:object="${newTeam}" method="POST" class="builder-container">
 
             <input type="hidden" th:field="*{id}" />
-
             <input type="hidden" name="targetMemberId" th:value="${targetMemberId}" />
 
             <div class="team-meta-inputs">
@@ -85,48 +84,127 @@
                 <p>You have no champions in your roster yet. Go to <a th:href="@{/champions}">My Roster</a> to add some!</p>
             </div>
 
-            <div id="champion-grid-container" th:unless="${#lists.isEmpty(championOptions)}" style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center;">
+            <div th:unless="${#lists.isEmpty(championOptions)}">
 
-                <th:block th:each="option : ${championOptions}">
-                    <div class="roster-card custom-card builder-champion-card"
-                         style="width: 120px; position: relative; margin-bottom: 10px; cursor: pointer;"
-                         th:id="'roster-card-' + ${option.id}"
-                         th:data-id="${option.id}"
-                         th:data-img="${option.imageName}"
-                         th:data-aura="${option.auraLoc}"
-                         th:data-aura-desc="${option.auraDesc}"
-                         th:data-faction="${option.faction}"
-                         th:data-rarity="${option.rarity}"
-                         th:data-type="${option.type}"
-                         th:data-affinity="${option.affinity}">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 1.1em; margin-bottom: 15px;">
+                        Showing <strong id="visible-champion-count" th:text="${championOptions.size()}">0</strong> / <strong th:text="${championOptions.size()}">0</strong> Owned Champions
+                    </div>
 
-                        <div class="image-container" style="position: relative; width: 100%; height: 120px; border-radius: 8px; overflow: hidden; border: 2px solid #444;">
-                            <img th:src="${option.imageName != null and !#strings.isEmpty(option.imageName)} ? @{/images/champion-cards/{name}(name=${option.imageName})} : @{/images/champion-cards/placeholder.png}"
-                                 style="width: 100%; height: 100%; object-fit: cover;" />
+                    <button type="button" onclick="toggleFilter()" class="button primary small">
+                        <span id="filter-text">Show Filters & Sorting</span>
+                        <span id="filter-arrow">▼</span>
+                    </button>
+                </div>
 
-                            <div th:if="${option.affinity != ''}" style="position: absolute; bottom: 3px; left: 3px; width: 20px; height: 20px; z-index: 5;">
-                                <img th:src="@{/images/affinity/{name}.png(name=${#strings.toLowerCase(option.affinity)})}"
-                                     onerror="this.style.display='none'"
-                                     style="width: 100%;" />
-                            </div>
+                <div id="filter-wrapper"
+                     style="max-height: 0; opacity: 0; overflow: hidden; transition: all 0.5s ease-in-out; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px solid transparent; margin-bottom: 0; padding: 0 20px;">
+                    <form action="#" onsubmit="event.preventDefault(); return false;">
 
-                            <div class="rank-badge">
-                                <i class="fas fa-star" style="color: #f1c40f; margin-right: 2px;"></i>
-                                <span th:text="${option.rank}">6</span>
-                            </div>
+                        <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap;">
+                            <input type="button" onclick="checkAll(true)" value="Check all" class="button small">
+                            <input type="button" onclick="checkAll(false)" value="Clear all" class="button small">
 
-                            <div class="level-badge" th:text="${option.level}">60</div>
+                            <select id="champion-sort" onchange="applyChampionFilters();" style="width: auto; display: inline-block;">
+                                <option value="score_desc" selected>Default (Rarity > Rank)</option>
+                                <option value="name_asc">Name (A-Z)</option>
+                                <option value="name_desc">Name (Z-A)</option>
+                            </select>
 
-                            <div class="pick-overlay">
-                                <i class="fas fa-check"></i>
-                            </div>
+                            <input type="text"
+                                   id="champion-search"
+                                   placeholder="Search name..."
+                                   oninput="applyChampionFilters();"
+                                   style="width: 200px; padding: 0 10px; height: 2.75em;"
+                            />
                         </div>
 
-                        <div style="text-align: center; font-size: 0.8em; margin-top: 5px; line-height: 1.2; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-                             th:text="${option.label}">Name</div>
-                    </div>
-                </th:block>
+                        <div class="table-wrapper">
+                            <table class="alt" style="margin-bottom: 0;">
+                                <thead>
+                                <tr>
+                                    <th>Rarity</th>
+                                    <th>Type</th>
+                                    <th>Affinity</th>
+                                    <th>Faction</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td style="vertical-align: text-top;">
+                                        <span th:each="item : ${T(com.rsl.clansite.model.enums.Rarity).values()}">
+                                            <input type="checkbox" class="filter-checkbox filter-rarity" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" checked />
+                                            <span th:text="${item.getName()}"></span><br />
+                                        </span>
+                                    </td>
+                                    <td style="vertical-align: text-top;">
+                                        <span th:each="item : ${T(com.rsl.clansite.model.enums.Type).values()}">
+                                            <input type="checkbox" class="filter-checkbox filter-type" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" checked />
+                                            <span th:text="${item.getName()}"></span><br />
+                                        </span>
+                                    </td>
+                                    <td style="vertical-align: text-top;">
+                                        <span th:each="item : ${T(com.rsl.clansite.model.enums.Affinity).values()}">
+                                            <input type="checkbox" class="filter-checkbox filter-affinity" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" checked />
+                                            <span th:text="${item.getName()}"></span><br />
+                                        </span>
+                                    </td>
+                                    <td style="vertical-align: text-top;">
+                                        <div style="max-height: 200px; overflow-y: auto;">
+                                            <span th:each="item : ${T(com.rsl.clansite.model.enums.Faction).values()}">
+                                                <input type="checkbox" class="filter-checkbox filter-faction" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" checked />
+                                                <span th:text="${item.getName()}"></span><br />
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </form>
+                </div>
 
+                <div id="champion-grid-container" style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-top: 20px;">
+                    <th:block th:each="option : ${championOptions}">
+                        <div class="roster-card custom-card builder-champion-card"
+                             th:id="'roster-card-' + ${option.id}"
+                             th:data-id="${option.id}"
+                             th:data-name="${option.label.toLowerCase()}"
+                             th:data-score="${option.sortScore}"
+                             th:data-rarity="${option.rarity}"
+                             th:data-type="${option.type}"
+                             th:data-affinity="${option.affinity}"
+                             th:data-faction="${option.faction}"
+                             style="width: 120px; position: relative; margin-bottom: 10px; cursor: pointer;">
+
+                            <div class="image-container" style="position: relative; width: 100%; height: 120px; border-radius: 8px; overflow: hidden; border: 2px solid #444;">
+                                <img th:src="${option.imageName != null and !#strings.isEmpty(option.imageName)} ? @{/images/champion-cards/{name}(name=${option.imageName})} : @{/images/champion-cards/placeholder.png}"
+                                     class="champion-portrait"
+                                     style="width: 100%; height: 100%; object-fit: cover;" />
+
+                                <div th:if="${option.affinity != ''}" style="position: absolute; bottom: 3px; left: 3px; width: 20px; height: 20px; z-index: 5;">
+                                    <img th:src="@{/images/affinity/{name}.png(name=${#strings.toLowerCase(option.affinity)})}"
+                                         onerror="this.style.display='none'"
+                                         style="width: 100%;" />
+                                </div>
+
+                                <div class="rank-badge">
+                                    <i class="fas fa-star" style="color: #f1c40f; margin-right: 2px;"></i>
+                                    <span th:text="${option.rank}">6</span>
+                                </div>
+
+                                <div class="level-badge" th:text="${option.level}">60</div>
+
+                                <div class="pick-overlay">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                            </div>
+
+                            <div style="text-align: center; font-size: 0.8em; margin-top: 5px; line-height: 1.2; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                                 th:text="${option.label}">Name</div>
+                        </div>
+                    </th:block>
+                </div>
             </div>
         </div>
     </section>
@@ -135,74 +213,138 @@
 </div>
 
 <style>
-    .rank-badge {
-       position: absolute;
-       top: 3px; left: 3px;
-       background: rgba(0,0,0,0.8);
-       color: white;
-       font-size: 0.8em;
-       padding: 1px 4px;
-       border-radius: 4px;
-       z-index: 10;
-       font-weight: bold;
-    }
+    /* Card Styles */
+    .rank-badge { position: absolute; top: 3px; left: 3px; background: rgba(0,0,0,0.8); color: white; font-size: 0.8em; padding: 1px 4px; border-radius: 4px; z-index: 10; font-weight: bold; }
+    .level-badge { position: absolute; bottom: 3px; right: 3px; background: rgba(0,0,0,0.8); color: white; font-size: 0.9em; padding: 1px 4px; border-radius: 4px; z-index: 10; font-weight: bold; border: 1px solid #666; }
 
-    .level-badge {
-       position: absolute;
-       bottom: 3px; right: 3px;
-       background: rgba(0,0,0,0.8);
-       color: white;
-       font-size: 0.9em;
-       padding: 1px 4px;
-       border-radius: 4px;
-       z-index: 10;
-       font-weight: bold;
-       border: 1px solid #666;
-    }
+    /* Siege Fade Effect */
+    .builder-champion-card.filtered-out { opacity: 0.2; pointer-events: none; }
 
-    .builder-champion-card.filtered-out {
-        opacity: 0.2;
-        pointer-events: none;
-    }
+    /* Selection Effect */
+    .builder-champion-card.picked .image-container { border-color: #2ecc71 !important; box-shadow: 0 0 10px rgba(46, 204, 113, 0.5); }
 
-    .builder-champion-card.picked .image-container {
-        border-color: #2ecc71 !important;
-        box-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
-    }
+    .pick-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(46, 204, 113, 0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 2em; opacity: 0; transition: opacity 0.2s; z-index: 20; }
+    .builder-champion-card:hover .pick-overlay { opacity: 1; }
+    .builder-champion-card.picked .pick-overlay { opacity: 1; background: rgba(46, 204, 113, 0.6); }
 
-    .pick-overlay {
-       position: absolute;
-       top: 0; left: 0; width: 100%; height: 100%;
-       background: rgba(46, 204, 113, 0.3);
-       display: flex;
-       align-items: center; justify-content: center;
-       color: white;
-       font-size: 2em;
-       opacity: 0;
-       transition: opacity 0.2s;
-       z-index: 20;
-    }
-
-    .builder-champion-card:hover .pick-overlay {
-        opacity: 1;
-    }
-
-    .builder-champion-card.picked .pick-overlay {
-        opacity: 1;
-        background: rgba(46, 204, 113, 0.6);
-    }
+    /* Filter Styles */
+    #filter-wrapper label { display: inline-block; margin-right: 5px; font-size: 0.9em; }
+    #filter-wrapper table td { font-size: 0.85em; }
 </style>
 
 <script>
-    console.log("TEAM BUILDER SCRIPT STARTING...");
+    console.log("TEAM BUILDER LOCAL SCRIPT STARTING...");
 
     let selectedSlotIndex = null;
     const LEADER_PLACEHOLDER = '/images/leader-image.png';
     const MEMBER_PLACEHOLDER = '/images/teammember-image.png';
 
-    document.addEventListener("DOMContentLoaded", function() {
-        console.log("Checking for existing team data...");
+    // --- 1. LOCAL FILTER & SORTING LOGIC ---
 
+    function toggleFilter() {
+        const wrapper = document.getElementById('filter-wrapper');
+        const arrow = document.getElementById('filter-arrow');
+        const btnText = document.getElementById('filter-text');
+
+        if (!wrapper) return;
+
+        const isHidden = (wrapper.style.maxHeight === '0px' || wrapper.style.maxHeight === '' || wrapper.style.maxHeight === '0');
+
+        if (isHidden) {
+            wrapper.style.maxHeight = '1000px';
+            wrapper.style.opacity = '1';
+            wrapper.style.padding = '20px';
+            wrapper.style.marginBottom = '20px';
+            wrapper.style.borderColor = '#ddd';
+            if(arrow) arrow.textContent = '▲';
+            if(btnText) btnText.textContent = 'Hide Filters & Sorting';
+        } else {
+            wrapper.style.maxHeight = '0px';
+            wrapper.style.opacity = '0';
+            wrapper.style.padding = '0 20px';
+            wrapper.style.marginBottom = '0';
+            wrapper.style.borderColor = 'transparent';
+            if(arrow) arrow.textContent = '▼';
+            if(btnText) btnText.textContent = 'Show Filters & Sorting';
+        }
+    }
+
+    function checkAll(checked) {
+        document.querySelectorAll('.filter-checkbox').forEach(cb => cb.checked = checked);
+        applyChampionFilters();
+    }
+
+    function applyChampionFilters() {
+        const searchInput = document.getElementById('champion-search');
+        const searchText = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        const sortValue = document.getElementById('champion-sort').value;
+
+        // Helper to get checked values
+        const getChecked = (cls) => Array.from(document.querySelectorAll('.' + cls + ':checked')).map(cb => cb.getAttribute('data-filter-name'));
+
+        const checkedRarities = getChecked('filter-rarity');
+        const checkedTypes = getChecked('filter-type');
+        const checkedAffinities = getChecked('filter-affinity');
+        const checkedFactions = getChecked('filter-faction');
+
+        const cards = Array.from(document.querySelectorAll('.builder-champion-card'));
+        const countSpan = document.getElementById('visible-champion-count');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            let matches = true;
+
+            // 1. Search
+            if (searchText && !card.getAttribute('data-name').includes(searchText)) matches = false;
+
+            // 2. Checkboxes
+            // FIXED LOGIC: If a list is empty (nothing checked), we treat it as "Show All" for that category (skip the filter).
+            // Only if the list has items do we check if the card is NOT in it.
+
+            if (matches && checkedRarities.length > 0 && !checkedRarities.includes(card.getAttribute('data-rarity'))) matches = false;
+            if (matches && checkedTypes.length > 0 && !checkedTypes.includes(card.getAttribute('data-type'))) matches = false;
+            if (matches && checkedAffinities.length > 0 && !checkedAffinities.includes(card.getAttribute('data-affinity'))) matches = false;
+            if (matches && checkedFactions.length > 0 && !checkedFactions.includes(card.getAttribute('data-faction'))) matches = false;
+
+            // 3. Visibility
+            if (matches) {
+                card.style.display = 'block';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        if (countSpan) countSpan.innerText = visibleCount;
+
+        // 4. Sort
+        sortChampions(cards, sortValue);
+    }
+
+    function sortChampions(cards, sortValue) {
+        const container = document.getElementById('champion-grid-container');
+        if (!container) return;
+
+        cards.sort((a, b) => {
+            if (sortValue === 'name_asc') return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
+            if (sortValue === 'name_desc') return b.getAttribute('data-name').localeCompare(a.getAttribute('data-name'));
+
+            // Default: Use Shadow Score (Rarity > Rank > Level)
+            const scoreA = parseFloat(a.getAttribute('data-score')) || 0;
+            const scoreB = parseFloat(b.getAttribute('data-score')) || 0;
+            return scoreB - scoreA; // High score first
+        });
+
+        // Re-append to DOM
+        cards.forEach(card => container.appendChild(card));
+    }
+
+
+    // --- 2. MAIN INITIALIZATION ---
+    document.addEventListener("DOMContentLoaded", function() {
+        console.log("Initializing Team Builder...");
+
+        // A. Load Slots
         for (let i = 0; i < 4; i++) {
             const input = document.getElementById(`input-${i}`);
             if (input && input.value) {
@@ -225,9 +367,15 @@
             }
         }
 
+        // B. Initialize Filters (Runs locally!)
+        applyChampionFilters();
+
+        // C. Initialize Siege Conditions
         applyConditionFilter();
     });
 
+
+    // --- 3. SIEGE CONDITION LOGIC (Existing) ---
     function applyConditionFilter() {
         const selector = document.getElementById('siege-condition-selector');
         const selectedOption = selector.options[selector.selectedIndex];
@@ -256,6 +404,7 @@
             }
         });
 
+        // Validate Slots
         for (let i = 0; i < 4; i++) {
             const input = document.getElementById(`input-${i}`);
             const slotDiv = document.getElementById(`slot-${i}`);
@@ -299,10 +448,11 @@
         }
     }
 
+
+    // --- 4. SLOT INTERACTION LOGIC (Existing) ---
     document.addEventListener("click", function(e) {
         const cardDiv = e.target.closest('.builder-champion-card');
         const grid = document.getElementById('champion-grid-container');
-
         if (cardDiv && grid && grid.contains(cardDiv)) {
             pickChampion(cardDiv);
         }
@@ -310,16 +460,8 @@
 
     function handleSlotClick(index) {
         const slotDiv = document.getElementById(`slot-${index}`);
-
-        if (selectedSlotIndex === index) {
-            deselectAll();
-            return;
-        }
-        if (selectedSlotIndex !== null) {
-            swapSlots(selectedSlotIndex, index);
-            deselectAll();
-            return;
-        }
+        if (selectedSlotIndex === index) { deselectAll(); return; }
+        if (selectedSlotIndex !== null) { swapSlots(selectedSlotIndex, index); deselectAll(); return; }
         deselectAll();
         selectedSlotIndex = index;
         slotDiv.classList.add('selected');
@@ -342,10 +484,7 @@
         } else {
             for (let i = 0; i < 4; i++) {
                 const inputVal = document.getElementById(`input-${i}`).value;
-                if (!inputVal) {
-                    targetIndex = i;
-                    break;
-                }
+                if (!inputVal) { targetIndex = i; break; }
             }
         }
 
@@ -354,6 +493,7 @@
             return;
         }
 
+        // Check Siege Condition again on Pick
         const selector = document.getElementById('siege-condition-selector');
         const selectedOption = selector.options[selector.selectedIndex];
         const category = selectedOption.getAttribute('data-category');
@@ -376,15 +516,12 @@
         if (currentInput.value) {
             const oldId = currentInput.value;
             const oldCard = document.getElementById(`roster-card-${oldId}`);
-            if (oldCard) {
-                oldCard.classList.remove('picked');
-            }
+            if (oldCard) oldCard.classList.remove('picked');
         }
 
         fillSlot(targetIndex, champId, fullImgUrl, auraLoc, auraDesc);
         deselectAll();
         cardDiv.classList.add('picked');
-
         applyConditionFilter();
     }
 
@@ -395,14 +532,12 @@
         const slotDiv = document.getElementById(`slot-${index}`);
         slotDiv.setAttribute('data-aura', auraLoc);
         slotDiv.setAttribute('data-aura-desc', auraDesc);
-
         slotDiv.classList.add('has-champion');
         if (index === 0) checkLeaderAura(auraLoc, auraDesc);
     }
 
     function clearSlot(index, event) {
         if (event) event.stopPropagation();
-
         const oldId = document.getElementById(`input-${index}`).value;
         if (oldId) {
             const rosterCard = document.getElementById(`roster-card-${oldId}`);
@@ -420,7 +555,6 @@
 
         if (index === 0) hideAuraInfo();
         if (selectedSlotIndex === index) deselectAll();
-
         applyConditionFilter();
     }
 
@@ -439,17 +573,13 @@
         const auraDescB = slotB.getAttribute('data-aura-desc');
         const hasB = !!idB;
 
-        if (hasA) fillSlot(indexB, idA, imgA, auraA, auraDescA);
-        else clearSlot(indexB);
-
-        if (hasB) fillSlot(indexA, idB, imgB, auraB, auraDescB);
-        else clearSlot(indexA);
+        if (hasA) fillSlot(indexB, idA, imgA, auraA, auraDescA); else clearSlot(indexB);
+        if (hasB) fillSlot(indexA, idB, imgB, auraB, auraDescB); else clearSlot(indexA);
 
         const newLeaderSlot = document.getElementById(`slot-0`);
         const newLeaderAura = newLeaderSlot.getAttribute('data-aura');
         const newLeaderDesc = newLeaderSlot.getAttribute('data-aura-desc');
         checkLeaderAura(newLeaderAura, newLeaderDesc);
-
         applyConditionFilter();
     }
 
@@ -466,17 +596,12 @@
 
         const leaderId = document.getElementById('input-0').value;
 
-        if (!leaderId) {
-            hideAuraInfo();
-            return;
-        }
+        if (!leaderId) { hideAuraInfo(); return; }
 
         if (auraDesc && auraDesc !== 'No Aura') {
             infoDiv.style.display = 'flex';
             infoText.innerText = auraDesc;
-        } else {
-            infoDiv.style.display = 'none';
-        }
+        } else { infoDiv.style.display = 'none'; }
 
         if (!auraLoc || auraLoc === 'NONE') {
             warningDiv.style.display = 'block';
@@ -488,9 +613,7 @@
         if (auraLoc !== 'ALL_BATTLES') {
             warningDiv.style.display = 'block';
             warningText.innerText = "Warning: Only 'All Battles' Auras work in Siege.";
-        } else {
-            warningDiv.style.display = 'none';
-        }
+        } else { warningDiv.style.display = 'none'; }
     }
 
     function hideAuraInfo() {
