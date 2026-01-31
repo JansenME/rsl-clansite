@@ -1,0 +1,39 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{inserts/head :: head(pageTitle='Terms of Service')}">
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container">
+        </div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <section>
+                <header class="main">
+                    <h2>Terms of Service</h2>
+                </header>
+                <p><strong>Last Updated: January 2026</strong></p>
+
+                <h3>1. Acceptance of Terms</h3>
+                <p>By accessing the FOTF Clan Site and using our Discord Bot, you agree to be bound by these Terms of Service. This service is intended exclusively for members of the FOTF Clan in Raid Shadow Legends.</p>
+
+                <h3>2. Usage Rules</h3>
+                <p>You agree to use this site and bot only for legitimate clan activities. Unauthorized access, data scraping, or attempting to exploit the system is strictly prohibited.</p>
+
+                <h3>3. Account Termination</h3>
+                <p>Your access to this site is tied to your membership in the FOTF Clan. If you leave or are removed from the clan, your account and data access will be revoked immediately.</p>
+
+                <h3>4. Disclaimer</h3>
+                <p>This site is a fan-made project and is not affiliated with Plarium Global Ltd.</p>
+            </section>
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{inserts/head :: head(pageTitle='Privacy Policy')}">
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container">
+        </div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <section>
+                <header class="main">
+                    <h2>Privacy Policy</h2>
+                </header>
+                <p><strong>Last Updated: January 2026</strong></p>
+
+                <h3>1. Data We Collect</h3>
+                <p>We collect the minimum amount of data required to manage clan operations:</p>
+                <ul>
+                    <li><strong>Discord Information:</strong> User ID, Username, and Avatar (provided via Discord OAuth2).</li>
+                    <li><strong>Clan Data:</strong> In-game Player Name, Power, and Team compositions related to Siege/HvH.</li>
+                    <li><strong>Logs:</strong> We log login activity and critical actions (Audit Log) for security purposes.</li>
+                </ul>
+
+                <h3>2. How We Use Data</h3>
+                <p>Your data is used solely for:</p>
+                <ul>
+                    <li>Authenticating your access to the site.</li>
+                    <li>Managing Clan Siege strategies and Roster coordination.</li>
+                    <li>Displaying clan statistics and history.</li>
+                </ul>
+
+                <h3>3. Data Sharing</h3>
+                <p>We do <strong>not</strong> sell, trade, or share your personal data with any third parties. Data is visible only to verified clan members and administrators.</p>
+
+                <h3>4. Cookies</h3>
+                <p>We use a single session cookie (JSESSIONID) to keep you logged in. This is essential for the site to function. This cookie is valid for 1 year after logging in. After that the website will require you to log in again.</p>
+            </section>
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright">
+    </div>
+</div>
+</body>
+</html>
