@@ -63,12 +63,13 @@ public class TeamController {
             String rarity,
             String type,
             String faction,
+            String alliance,
             String affinity,
             String auraLoc,
             String auraDesc,
             int level,
             int rank,
-            Double sortScore // Renamed for clarity, stores our "Shadow Score"
+            Double sortScore
     ) {}
 
     @GetMapping("/builder")
@@ -126,14 +127,18 @@ public class TeamController {
                             " in " + master.getAura().getLocation().getName();
                 }
 
-                // FIX 1: Use resolveEnumName so "Legendary" matches the Checkbox value
                 String rarityName = resolveEnumName(master.getRarity());
                 String typeName = resolveEnumName(master.getType());
                 String factionName = resolveEnumName(master.getFaction());
                 String affinityName = resolveEnumName(master.getAffinity());
 
-                // FIX 2: Calculate Shadow Score for Sorting
-                // This forces main.js to sort by Rarity > Rank > Level
+                // FIX: Resolve Alliance from Faction Enum
+                String allianceName = "";
+                if (master.getFaction() != null && master.getFaction().getAlliance() != null) {
+                    allianceName = resolveEnumName(master.getFaction().getAlliance());
+                }
+
+                // Calculate Shadow Score for Sorting
                 double sortScore = 0.0;
                 if (master.getRarity() != null) {
                     sortScore += master.getRarity().ordinal() * 10000;
@@ -148,6 +153,7 @@ public class TeamController {
                         rarityName,
                         typeName,
                         factionName,
+                        allianceName,
                         affinityName,
                         auraLoc,
                         auraDesc,

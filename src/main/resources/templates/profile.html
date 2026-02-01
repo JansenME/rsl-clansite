@@ -36,7 +36,7 @@
 										 style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
 								</div>
 								<div style="margin-left: 0; padding-left: 0;"><p style="margin: 0 0 10px 0; padding-left: 0;"><span th:text="${isOwnProfile ? 'Logged in as:' : 'Member:'}">User:</span><br /><strong th:text="${clanmemberViewData != null ? clanmemberViewData.discordUserName : 'User'}" style="margin-left: 0 !important; display: inline-block !important;">Discord User Name</strong>
-									</p>
+								</p>
 
 									<p style="font-weight: bold; margin-bottom: 5px; margin-left: 0; padding-left: 0;">Roles:</p>
 
@@ -260,10 +260,9 @@
 
 							<label for="champion-sort">Sort by:</label>
 							<select id="champion-sort" onchange="applyChampionFilters();">
+								<option value="score_desc" selected>Default (Rarity > Rank)</option>
 								<option value="name_asc">Name (A-Z)</option>
 								<option value="name_desc">Name (Z-A)</option>
-								<option value="score_desc">Arena Score (High to Low)</option>
-								<option value="score_asc">Arena Score (Low to High)</option>
 							</select>
 
 							<label for="champion-search" style="margin-left: 20px;">Search Name:</label>
@@ -286,31 +285,31 @@
 								</thead>
 								<tbody>
 								<tr>
-									<td style="vertical-align: text-top; padding-top:10px;">
+									<td data-label="Rarity" style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{rarities}">
                                         <input type="checkbox" class="filter-checkbox filter-rarity" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{rarities[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
                                      </span>
 									</td>
-									<td style="vertical-align: text-top; padding-top:10px;">
+									<td data-label="Type" style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{types}">
                                         <input type="checkbox" class="filter-checkbox filter-type" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{types[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
                                      </span>
 									</td>
-									<td style="vertical-align: text-top; padding-top:10px;">
+									<td data-label="Affinity" style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{affinities}">
                                         <input type="checkbox" class="filter-checkbox filter-affinity" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{affinities[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
                                      </span>
 									</td>
-									<td style="vertical-align: text-top; padding-top:10px;">
+									<td data-label="Faction" style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{factions}">
                                         <input type="checkbox" class="filter-checkbox filter-faction" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{factions[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
                                      </span>
 									</td>
-									<td style="vertical-align: text-top; padding-top:10px;">
+									<td data-label="Alliance" style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{alliances}">
                                         <input type="checkbox" class="filter-checkbox filter-alliance" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{alliances[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
@@ -334,6 +333,7 @@
 						<th:block th:each="entry : ${rosterEntries}">
 							<div class="roster-card custom-card"
 								 th:data-name="${entry.masterData.name.toLowerCase()}"
+								 th:data-score="${(entry.masterData.rarity != null ? entry.masterData.rarity.ordinal() * 10000 : 0) + (entry.instanceData.rank * 100) + entry.instanceData.level}"
 								 th:data-rarity="${entry.masterData.rarity != null ? entry.masterData.rarity.getName() : ''}"
 								 th:data-type="${entry.masterData.type != null ? entry.masterData.type.getName() : ''}"
 								 th:data-affinity="${entry.masterData.affinity != null ? entry.masterData.affinity.getName() : ''}"
@@ -426,7 +426,7 @@
     .custom-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; }
     .modal-content { background: #1f2226; padding: 30px; border-radius: 8px; width: 90%; max-width: 350px; box-shadow: 0 0 20px rgba(0,0,0,0.5); border: 1px solid #444; color: #ddd; }
 
-	.roster-header {
+    .roster-header {
         position: relative;
         display: flex;
         justify-content: flex-end;
@@ -514,13 +514,14 @@
         window.requestAnimationFrame(step);
     }
 
-    // --- FILTER LOGIC ---
+    // --- FILTER & SORTING LOGIC ---
     function applyChampionFilters() {
         const searchInput = document.getElementById('champion-search');
         if (!searchInput) return;
 
         const searchText = searchInput.value.toLowerCase().trim();
-        const cards = document.querySelectorAll('.roster-card');
+        const sortValue = document.getElementById('champion-sort').value;
+        const cards = Array.from(document.querySelectorAll('.roster-card'));
         const countSpan = document.getElementById('visible-champion-count');
 
         // 1. Get Checked Filters
@@ -562,6 +563,33 @@
                 animateCount(countSpan, currentCount, visibleCount, 500); // 500ms duration
             }
         }
+
+        // Apply Sort
+        sortChampions(cards, sortValue);
+    }
+
+    function sortChampions(cards, sortValue) {
+        const container = document.getElementById('champion-grid-container');
+        if (!container) return;
+
+        cards.sort((a, b) => {
+            if (sortValue === 'name_asc') return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
+            if (sortValue === 'name_desc') return b.getAttribute('data-name').localeCompare(a.getAttribute('data-name'));
+
+            // Default: Use Shadow Score (Rarity > Rank > Level)
+            const scoreA = parseFloat(a.getAttribute('data-score')) || 0;
+            const scoreB = parseFloat(b.getAttribute('data-score')) || 0;
+
+            if (scoreA !== scoreB) {
+                return scoreB - scoreA; // High score first
+            }
+
+            // Tie-breaker: Alphabetical Name
+            return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
+        });
+
+        // Re-append to DOM
+        cards.forEach(card => container.appendChild(card));
     }
 
     function toggleFilter() {
@@ -593,7 +621,8 @@
         const searchInput = document.getElementById('champion-search');
         if(searchInput) searchInput.value = '';
 
-        // Note: Filters not run on load (Safe Start)
+        // Initial Sort (Run filters once to sort by default)
+        applyChampionFilters();
 
         document.querySelectorAll('.utc-time').forEach(el => {
             const raw = el.innerText;

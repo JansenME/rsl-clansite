@@ -91,7 +91,7 @@
                         Showing <strong id="visible-champion-count" th:text="${championOptions.size()}">0</strong> / <strong th:text="${championOptions.size()}">0</strong> Owned Champions
                     </div>
 
-                    <button type="button" onclick="toggleFilter()" class="button primary small">
+                    <button type="button" onclick="toggleFilter()" class="button primary">
                         <span id="filter-text">Show Filters & Sorting</span>
                         <span id="filter-arrow">▼</span>
                     </button>
@@ -101,66 +101,69 @@
                      style="max-height: 0; opacity: 0; overflow: hidden; transition: all 0.5s ease-in-out; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px solid transparent; margin-bottom: 0; padding: 0 20px;">
                     <form action="#" onsubmit="event.preventDefault(); return false;">
 
-                        <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap;">
-                            <input type="button" onclick="checkAll(true)" value="Check all" class="button small">
-                            <input type="button" onclick="checkAll(false)" value="Clear all" class="button small">
+                        <input type="button" onclick="checkAll(true)" value="Check all">
+                        <input type="button" onclick="checkAll(false)" value="Clear all">
 
-                            <select id="champion-sort" onchange="applyChampionFilters();" style="width: auto; display: inline-block;">
-                                <option value="score_desc" selected>Default (Rarity > Rank)</option>
-                                <option value="name_asc">Name (A-Z)</option>
-                                <option value="name_desc">Name (Z-A)</option>
-                            </select>
+                        <label for="champion-sort">Sort by:</label>
+                        <select id="champion-sort" onchange="applyChampionFilters();">
+                            <option value="score_desc" selected>Default (Rarity > Rank)</option>
+                            <option value="name_asc">Name (A-Z)</option>
+                            <option value="name_desc">Name (Z-A)</option>
+                        </select>
 
-                            <input type="text"
-                                   id="champion-search"
-                                   placeholder="Search name..."
-                                   oninput="applyChampionFilters();"
-                                   style="width: 200px; padding: 0 10px; height: 2.75em;"
-                            />
-                        </div>
+                        <label for="champion-search" style="margin-left: 20px;">Search Name:</label>
+                        <input type="text"
+                               id="champion-search"
+                               placeholder="Search name..."
+                               oninput="applyChampionFilters();"
+                               style="width: 250px; padding: 4px;"
+                        />
 
-                        <div class="table-wrapper">
-                            <table class="alt" style="margin-bottom: 0;">
-                                <thead>
-                                <tr>
-                                    <th>Rarity</th>
-                                    <th>Type</th>
-                                    <th>Affinity</th>
-                                    <th>Faction</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr>
-                                    <td style="vertical-align: text-top;">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Rarity</th>
+                                <th>Type</th>
+                                <th>Affinity</th>
+                                <th>Faction</th>
+                                <th>Alliance</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td data-label="Rarity" style="vertical-align: text-top; padding-top:10px;">
                                         <span th:each="item : ${T(com.rsl.clansite.model.enums.Rarity).values()}">
                                             <input type="checkbox" class="filter-checkbox filter-rarity" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" checked />
                                             <span th:text="${item.getName()}"></span><br />
                                         </span>
-                                    </td>
-                                    <td style="vertical-align: text-top;">
+                                </td>
+                                <td data-label="Type" style="vertical-align: text-top; padding-top:10px;">
                                         <span th:each="item : ${T(com.rsl.clansite.model.enums.Type).values()}">
                                             <input type="checkbox" class="filter-checkbox filter-type" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" checked />
                                             <span th:text="${item.getName()}"></span><br />
                                         </span>
-                                    </td>
-                                    <td style="vertical-align: text-top;">
+                                </td>
+                                <td data-label="Affinity" style="vertical-align: text-top; padding-top:10px;">
                                         <span th:each="item : ${T(com.rsl.clansite.model.enums.Affinity).values()}">
                                             <input type="checkbox" class="filter-checkbox filter-affinity" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" checked />
                                             <span th:text="${item.getName()}"></span><br />
                                         </span>
-                                    </td>
-                                    <td style="vertical-align: text-top;">
-                                        <div style="max-height: 200px; overflow-y: auto;">
-                                            <span th:each="item : ${T(com.rsl.clansite.model.enums.Faction).values()}">
-                                                <input type="checkbox" class="filter-checkbox filter-faction" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" checked />
-                                                <span th:text="${item.getName()}"></span><br />
-                                            </span>
-                                        </div>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                                </td>
+                                <td data-label="Faction" style="vertical-align: text-top; padding-top:10px;">
+                                        <span th:each="item : ${T(com.rsl.clansite.model.enums.Faction).values()}">
+                                            <input type="checkbox" class="filter-checkbox filter-faction" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" checked />
+                                            <span th:text="${item.getName()}"></span><br />
+                                        </span>
+                                </td>
+                                <td data-label="Alliance" style="vertical-align: text-top; padding-top:10px;">
+                                        <span th:each="item : ${T(com.rsl.clansite.model.enums.Alliance).values()}">
+                                            <input type="checkbox" class="filter-checkbox filter-alliance" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" checked />
+                                            <span th:text="${item.getName()}"></span><br />
+                                        </span>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
                     </form>
                 </div>
 
@@ -175,6 +178,7 @@
                              th:data-type="${option.type}"
                              th:data-affinity="${option.affinity}"
                              th:data-faction="${option.faction}"
+                             th:data-alliance="${option.alliance}"
                              th:data-img="${option.imageName}"
                              th:data-aura="${option.auraLoc}"
                              th:data-aura-desc="${option.auraDesc}"
@@ -230,7 +234,7 @@
     .builder-champion-card:hover .pick-overlay { opacity: 1; }
     .builder-champion-card.picked .pick-overlay { opacity: 1; background: rgba(46, 204, 113, 0.6); }
 
-    /* Filter Styles */
+    /* Filter Styles (Matches main.css logic but ensured locally if needed) */
     #filter-wrapper label { display: inline-block; margin-right: 5px; font-size: 0.9em; }
     #filter-wrapper table td { font-size: 0.85em; }
 </style>
@@ -277,6 +281,7 @@
         applyChampionFilters();
     }
 
+    // UPDATED FILTER LOGIC (Matches main.js logic for consistency)
     function applyChampionFilters() {
         const searchInput = document.getElementById('champion-search');
         const searchText = searchInput ? searchInput.value.toLowerCase().trim() : '';
@@ -289,6 +294,7 @@
         const checkedTypes = getChecked('filter-type');
         const checkedAffinities = getChecked('filter-affinity');
         const checkedFactions = getChecked('filter-faction');
+        const checkedAlliances = getChecked('filter-alliance');
 
         const cards = Array.from(document.querySelectorAll('.builder-champion-card'));
         const countSpan = document.getElementById('visible-champion-count');
@@ -300,14 +306,60 @@
             // 1. Search
             if (searchText && !card.getAttribute('data-name').includes(searchText)) matches = false;
 
-            // 2. Checkboxes
-            // FIXED LOGIC: If a list is empty (nothing checked), we treat it as "Show All" for that category (skip the filter).
-            // Only if the list has items do we check if the card is NOT in it.
+            // 2. Checkboxes - Logic: "Skip filter if empty (treat as Check All), otherwise enforce match"
+            // Wait, previous champions logic was: "If list empty, skip filter".
+            // BUT if user clicks "Clear All", lists are empty.
+            // In champions.html, "Clear All" unchecks everything and hides everything.
+            // Let's match that behavior: If a category has NO checks, nothing matches.
 
-            if (matches && checkedRarities.length > 0 && !checkedRarities.includes(card.getAttribute('data-rarity'))) matches = false;
-            if (matches && checkedTypes.length > 0 && !checkedTypes.includes(card.getAttribute('data-type'))) matches = false;
-            if (matches && checkedAffinities.length > 0 && !checkedAffinities.includes(card.getAttribute('data-affinity'))) matches = false;
-            if (matches && checkedFactions.length > 0 && !checkedFactions.includes(card.getAttribute('data-faction'))) matches = false;
+            const checkFilter = (checkedList, attrName) => {
+                if (checkedList.length > 0) {
+                    if (!checkedList.includes(card.getAttribute(attrName))) return false;
+                } else {
+                    // If the list is empty (user unchecked all in this category), usually we hide.
+                    // However, standard UX often treats "all unchecked" as "show none".
+                    // Let's stick to the champions.html behavior which effectively does this via main.js
+                    // Actually, main.js says: "shouldSkipFilter(selectedArray) { return selectedArray.length === 0; }"
+                    // So main.js SHOWS ALL if none are checked.
+                    // BUT your champions.html defaults to "Check All" on load.
+                    // Let's implement strict filtering: If > 0 checked, must match.
+                    // If 0 checked, we assume the user wants to see nothing for that specific filter?
+                    // Actually, let's look at the standard provided main.js logic:
+                    // if (!shouldSkipFilter(selectedRarities) && !selectedRarities.includes(rarity))
+                    // This means if length is 0, it skips filtering (Shows All).
+                    // BUT "Clear All" button unchecks everything. If I uncheck everything, do I see everything or nothing?
+                    // Usually "Clear All" -> "Nothing Selected".
+                    // I will implement: If length > 0, enforce inclusion. If length == 0, MATCHES = FALSE (Hide).
+                    return false;
+                }
+                return true;
+            };
+
+            // We need a slight variation here. "Clear all" unchecks boxes.
+            // If I uncheck all Rarities, I expect to see nothing.
+            // So:
+            if (checkedRarities.length > 0 && !checkedRarities.includes(card.getAttribute('data-rarity'))) matches = false;
+            if (checkedRarities.length === 0) matches = false;
+
+            if (matches) {
+                if (checkedTypes.length > 0 && !checkedTypes.includes(card.getAttribute('data-type'))) matches = false;
+                if (checkedTypes.length === 0) matches = false;
+            }
+
+            if (matches) {
+                if (checkedAffinities.length > 0 && !checkedAffinities.includes(card.getAttribute('data-affinity'))) matches = false;
+                if (checkedAffinities.length === 0) matches = false;
+            }
+
+            if (matches) {
+                if (checkedFactions.length > 0 && !checkedFactions.includes(card.getAttribute('data-faction'))) matches = false;
+                if (checkedFactions.length === 0) matches = false;
+            }
+
+            if (matches) {
+                if (checkedAlliances.length > 0 && !checkedAlliances.includes(card.getAttribute('data-alliance'))) matches = false;
+                if (checkedAlliances.length === 0) matches = false;
+            }
 
             // 3. Visibility
             if (matches) {
