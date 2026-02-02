@@ -61,10 +61,15 @@ public class TeamController {
             String label,
             String imageName,
             String rarity,
+            String rarityKey, // Raw Enum Key
             String type,
+            String typeKey,   // Raw Enum Key
             String faction,
+            String factionKey,// Raw Enum Key
             String alliance,
+            String allianceKey, // NEW: Raw Enum Key for Alliance
             String affinity,
+            String affinityKey,// Raw Enum Key
             String auraLoc,
             String auraDesc,
             int level,
@@ -114,7 +119,6 @@ public class TeamController {
         for (OwnedChampion instance : roster) {
             Champion master = masterMap.get(instance.getChampionId());
             if (master != null) {
-                // Label can be simpler now that we have visual badges, but keeping it for searching/debug
                 String label = master.getName();
 
                 String auraLoc = "NONE";
@@ -127,15 +131,24 @@ public class TeamController {
                             " in " + master.getAura().getLocation().getName();
                 }
 
+                // Display Names (Localized/Capitalized)
                 String rarityName = resolveEnumName(master.getRarity());
                 String typeName = resolveEnumName(master.getType());
                 String factionName = resolveEnumName(master.getFaction());
                 String affinityName = resolveEnumName(master.getAffinity());
 
-                // FIX: Resolve Alliance from Faction Enum
+                // Raw Keys (For Logic Matching)
+                String rarityKey = master.getRarity() != null ? master.getRarity().name() : "";
+                String typeKey = master.getType() != null ? master.getType().name() : "";
+                String factionKey = master.getFaction() != null ? master.getFaction().name() : "";
+                String affinityKey = master.getAffinity() != null ? master.getAffinity().name() : "";
+
+                // Resolve Alliance & Key
                 String allianceName = "";
+                String allianceKey = "";
                 if (master.getFaction() != null && master.getFaction().getAlliance() != null) {
                     allianceName = resolveEnumName(master.getFaction().getAlliance());
+                    allianceKey = master.getFaction().getAlliance().name();
                 }
 
                 // Calculate Shadow Score for Sorting
@@ -151,10 +164,15 @@ public class TeamController {
                         master.getName(),
                         master.getImagename(),
                         rarityName,
+                        rarityKey,
                         typeName,
+                        typeKey,
                         factionName,
+                        factionKey,
                         allianceName,
+                        allianceKey, // Pass Key
                         affinityName,
+                        affinityKey,
                         auraLoc,
                         auraDesc,
                         instance.getLevel(),

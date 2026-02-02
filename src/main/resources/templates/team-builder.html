@@ -175,10 +175,15 @@
                              th:data-name="${option.label.toLowerCase()}"
                              th:data-score="${option.sortScore}"
                              th:data-rarity="${option.rarity}"
+                             th:data-rarity-key="${option.rarityKey}"
                              th:data-type="${option.type}"
+                             th:data-type-key="${option.typeKey}"
                              th:data-affinity="${option.affinity}"
+                             th:data-affinity-key="${option.affinityKey}"
                              th:data-faction="${option.faction}"
+                             th:data-faction-key="${option.factionKey}"
                              th:data-alliance="${option.alliance}"
+                             th:data-alliance-key="${option.allianceKey}"
                              th:data-img="${option.imageName}"
                              th:data-aura="${option.auraLoc}"
                              th:data-aura-desc="${option.auraDesc}"
@@ -281,7 +286,6 @@
         applyChampionFilters();
     }
 
-    // UPDATED FILTER LOGIC (Matches main.js logic for consistency)
     function applyChampionFilters() {
         const searchInput = document.getElementById('champion-search');
         const searchText = searchInput ? searchInput.value.toLowerCase().trim() : '';
@@ -306,38 +310,7 @@
             // 1. Search
             if (searchText && !card.getAttribute('data-name').includes(searchText)) matches = false;
 
-            // 2. Checkboxes - Logic: "Skip filter if empty (treat as Check All), otherwise enforce match"
-            // Wait, previous champions logic was: "If list empty, skip filter".
-            // BUT if user clicks "Clear All", lists are empty.
-            // In champions.html, "Clear All" unchecks everything and hides everything.
-            // Let's match that behavior: If a category has NO checks, nothing matches.
-
-            const checkFilter = (checkedList, attrName) => {
-                if (checkedList.length > 0) {
-                    if (!checkedList.includes(card.getAttribute(attrName))) return false;
-                } else {
-                    // If the list is empty (user unchecked all in this category), usually we hide.
-                    // However, standard UX often treats "all unchecked" as "show none".
-                    // Let's stick to the champions.html behavior which effectively does this via main.js
-                    // Actually, main.js says: "shouldSkipFilter(selectedArray) { return selectedArray.length === 0; }"
-                    // So main.js SHOWS ALL if none are checked.
-                    // BUT your champions.html defaults to "Check All" on load.
-                    // Let's implement strict filtering: If > 0 checked, must match.
-                    // If 0 checked, we assume the user wants to see nothing for that specific filter?
-                    // Actually, let's look at the standard provided main.js logic:
-                    // if (!shouldSkipFilter(selectedRarities) && !selectedRarities.includes(rarity))
-                    // This means if length is 0, it skips filtering (Shows All).
-                    // BUT "Clear All" button unchecks everything. If I uncheck everything, do I see everything or nothing?
-                    // Usually "Clear All" -> "Nothing Selected".
-                    // I will implement: If length > 0, enforce inclusion. If length == 0, MATCHES = FALSE (Hide).
-                    return false;
-                }
-                return true;
-            };
-
-            // We need a slight variation here. "Clear all" unchecks boxes.
-            // If I uncheck all Rarities, I expect to see nothing.
-            // So:
+            // 2. Checkboxes
             if (checkedRarities.length > 0 && !checkedRarities.includes(card.getAttribute('data-rarity'))) matches = false;
             if (checkedRarities.length === 0) matches = false;
 
@@ -387,7 +360,13 @@
             // Default: Use Shadow Score (Rarity > Rank > Level)
             const scoreA = parseFloat(a.getAttribute('data-score')) || 0;
             const scoreB = parseFloat(b.getAttribute('data-score')) || 0;
-            return scoreB - scoreA; // High score first
+
+            if (scoreA !== scoreB) {
+                return scoreB - scoreA; // High score first
+            }
+
+            // Tie-breaker: Alphabetical Name
+            return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
         });
 
         // Re-append to DOM
@@ -430,13 +409,13 @@
     });
 
 
-    // --- 3. SIEGE CONDITION LOGIC (Existing) ---
+    // --- 3. SIEGE CONDITION LOGIC (Updated to use KEYS) ---
     function applyConditionFilter() {
         const selector = document.getElementById('siege-condition-selector');
         const selectedOption = selector.options[selector.selectedIndex];
 
         const category = selectedOption.getAttribute('data-category');
-        const conditionValue = selectedOption.getAttribute('data-value');
+        const conditionValue = selectedOption.getAttribute('data-value'); // This is the Raw Key (e.g. LEGENDARY)
 
         const allCards = document.querySelectorAll('.builder-champion-card');
         let hasInvalidSlot = false;
@@ -446,10 +425,12 @@
                 card.classList.remove('filtered-out');
             } else {
                 let cardValue = '';
-                if (category === 'FACTION') cardValue = card.getAttribute('data-faction');
-                if (category === 'RARITY') cardValue = card.getAttribute('data-rarity');
-                if (category === 'TYPE') cardValue = card.getAttribute('data-type');
-                if (category === 'AFFINITY') cardValue = card.getAttribute('data-affinity');
+                // UPDATED: Read from Key Attributes, not Display Attributes
+                if (category === 'FACTION') cardValue = card.getAttribute('data-faction-key');
+                if (category === 'RARITY') cardValue = card.getAttribute('data-rarity-key');
+                if (category === 'TYPE') cardValue = card.getAttribute('data-type-key');
+                if (category === 'AFFINITY') cardValue = card.getAttribute('data-affinity-key');
+                if (category === 'ALLIANCE') cardValue = card.getAttribute('data-alliance-key');
 
                 if (cardValue === conditionValue) {
                     card.classList.remove('filtered-out');
@@ -459,7 +440,7 @@
             }
         });
 
-        // Validate Slots
+        // Validate Slots (Also updated to use KEYS)
         for (let i = 0; i < 4; i++) {
             const input = document.getElementById(`input-${i}`);
             const slotDiv = document.getElementById(`slot-${i}`);
@@ -471,10 +452,11 @@
                 if (rosterCard) {
                     if (category && category !== 'NONE') {
                         let cardValue = '';
-                        if (category === 'FACTION') cardValue = rosterCard.getAttribute('data-faction');
-                        if (category === 'RARITY') cardValue = rosterCard.getAttribute('data-rarity');
-                        if (category === 'TYPE') cardValue = rosterCard.getAttribute('data-type');
-                        if (category === 'AFFINITY') cardValue = rosterCard.getAttribute('data-affinity');
+                        if (category === 'FACTION') cardValue = rosterCard.getAttribute('data-faction-key');
+                        if (category === 'RARITY') cardValue = rosterCard.getAttribute('data-rarity-key');
+                        if (category === 'TYPE') cardValue = rosterCard.getAttribute('data-type-key');
+                        if (category === 'AFFINITY') cardValue = rosterCard.getAttribute('data-affinity-key');
+                        if (category === 'ALLIANCE') cardValue = rosterCard.getAttribute('data-alliance-key');
 
                         if (cardValue !== conditionValue) {
                             slotDiv.classList.add('invalid-slot');
@@ -504,7 +486,7 @@
     }
 
 
-    // --- 4. SLOT INTERACTION LOGIC (Existing) ---
+    // --- 4. SLOT INTERACTION LOGIC ---
     document.addEventListener("click", function(e) {
         const cardDiv = e.target.closest('.builder-champion-card');
         const grid = document.getElementById('champion-grid-container');
@@ -548,7 +530,7 @@
             return;
         }
 
-        // Check Siege Condition again on Pick
+        // Check Siege Condition again on Pick (Updated to use KEYS)
         const selector = document.getElementById('siege-condition-selector');
         const selectedOption = selector.options[selector.selectedIndex];
         const category = selectedOption.getAttribute('data-category');
@@ -556,10 +538,11 @@
 
         if (category && category !== 'NONE') {
              let cardValue = '';
-             if (category === 'FACTION') cardValue = cardDiv.getAttribute('data-faction');
-             if (category === 'RARITY') cardValue = cardDiv.getAttribute('data-rarity');
-             if (category === 'TYPE') cardValue = cardDiv.getAttribute('data-type');
-             if (category === 'AFFINITY') cardValue = cardDiv.getAttribute('data-affinity');
+             if (category === 'FACTION') cardValue = cardDiv.getAttribute('data-faction-key');
+             if (category === 'RARITY') cardValue = cardDiv.getAttribute('data-rarity-key');
+             if (category === 'TYPE') cardValue = cardDiv.getAttribute('data-type-key');
+             if (category === 'AFFINITY') cardValue = cardDiv.getAttribute('data-affinity-key');
+             if (category === 'ALLIANCE') cardValue = cardDiv.getAttribute('data-alliance-key');
 
              if (cardValue !== conditionValue) {
                  alert("This champion does not match the selected Siege Condition!");
