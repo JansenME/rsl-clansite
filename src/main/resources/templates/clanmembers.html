@@ -48,7 +48,9 @@
 									 th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
 									 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
 							</td>
-							<td data-label="Discord Name" th:text="${member.discordName}">Global Name</td>
+							<td data-label="Discord Name">
+								<span th:if="${member.discordName != 'null'}" th:text="${member.discordName}"></span>
+							</td>
 							<td data-label="Discord Nickname" th:text="${member.playerNickname}">Server Nickname</td>
 							<td data-label="Suggested Clan">
 								<span th:if="${member.clanGroup != null}" th:text="${member.clanGroup}"></span>
@@ -90,7 +92,9 @@
 								 th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
 								 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
 						</td>
-						<td sec:authorize="isAuthenticated()" data-label="Discord Name" th:text="${member.discordName}">Global Name</td>
+						<td sec:authorize="isAuthenticated()" data-label="Discord Name">
+							<span th:if="${member.discordName != 'null'}" th:text="${member.discordName}"></span>
+						</td>
 						<td sec:authorize="isAuthenticated()" data-label="Discord Nickname" th:text="${member.playerNickname}">Server Nickname</td>
 						<td data-label="In-Game Name" th:text="${(member.ingameName != null) ? member.ingameName : 'Unassigned'}">In-Game Name</td>
 						<td data-label="Rank" th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
@@ -141,7 +145,9 @@
 								 th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
 								 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
 						</td>
-						<td sec:authorize="isAuthenticated()" data-label="Discord Name" th:text="${member.discordName}">Global Name</td>
+						<td sec:authorize="isAuthenticated()" data-label="Discord Name">
+							<span th:if="${member.discordName != 'null'}" th:text="${member.discordName}"></span>
+						</td>
 						<td sec:authorize="isAuthenticated()" data-label="Discord Nickname" th:text="${member.playerNickname}">Server Nickname</td>
 						<td data-label="In-Game Name" th:text="${(member.ingameName != null) ? member.ingameName : 'Unassigned'}">In-Game Name</td>
 						<td data-label="Rank" th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
@@ -197,7 +203,9 @@
 									 th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
 									 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; filter: grayscale(100%);" />
 							</td>
-							<td data-label="Discord Name" th:text="${member.discordName}">Global Name</td>
+							<td data-label="Discord Name">
+								<span th:if="${member.discordName != 'null'}" th:text="${member.discordName}"></span>
+							</td>
 							<td data-label="In-Game Name" th:text="${member.ingameName}">IGN</td>
 							<td data-label="Clan" th:text="${member.clanGroup}">Clan</td>
 							<td data-label="Former Rank" th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
