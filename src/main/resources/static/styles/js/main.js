@@ -403,7 +403,9 @@ function setupImageFadeIn() {
 
         // Function to reveal card
         const revealCard = () => {
-            card.classList.remove('card-hidden');
+            if (card) {
+                card.classList.remove('card-hidden');
+            }
         };
 
         // 1. If image is already cached/loaded, reveal immediately

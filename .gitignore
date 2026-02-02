@@ -32,3 +32,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# --- Node & Playwright ---
+node_modules/
+playwright-report/
+test-results/
+
+# Auth & Session Data (Never commit these!)
+tests-e2e/userStorageState.json
