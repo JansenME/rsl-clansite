@@ -229,9 +229,6 @@
     .rank-badge { position: absolute; top: 3px; left: 3px; background: rgba(0,0,0,0.8); color: white; font-size: 0.8em; padding: 1px 4px; border-radius: 4px; z-index: 10; font-weight: bold; }
     .level-badge { position: absolute; bottom: 3px; right: 3px; background: rgba(0,0,0,0.8); color: white; font-size: 0.9em; padding: 1px 4px; border-radius: 4px; z-index: 10; font-weight: bold; border: 1px solid #666; }
 
-    /* Siege Fade Effect */
-    .builder-champion-card.filtered-out { opacity: 0.2; pointer-events: none; }
-
     /* Selection Effect */
     .builder-champion-card.picked .image-container { border-color: #2ecc71 !important; box-shadow: 0 0 10px rgba(46, 204, 113, 0.5); }
 
@@ -401,77 +398,64 @@
         const selector = document.getElementById('siege-condition-selector');
         const selectedOption = selector.options[selector.selectedIndex];
 
-        const category = selectedOption.getAttribute('data-category');
-        const conditionValue = selectedOption.getAttribute('data-value'); // This is the Raw Key (e.g. LEGENDARY)
+        const category = selectedOption.getAttribute('data-category'); // e.g., ALLIANCE
+        const conditionValue = selectedOption.getAttribute('data-value'); // e.g., NYRESAN_UNION
 
-        const allCards = document.querySelectorAll('.builder-champion-card');
+        // We get the label part after the ": " (e.g., "Nyresan Union")
+        const fullText = selectedOption.text;
+        const conditionLabel = fullText.includes(': ') ? fullText.split(': ')[1].trim() : fullText.trim();
+
+        // 1. HANDLE CHECKBOX SYNC
+        if (!category || category === 'NONE') {
+            // Reset: Select everything when no condition is active
+            checkAll(true);
+        } else {
+            // Step A: Reset everything to 'checked' so we don't have leftover
+            // filters from other categories interfering with the new condition.
+            document.querySelectorAll('.filter-checkbox').forEach(cb => cb.checked = true);
+
+            // Step B: Isolate the specific category for the condition
+            const categoryClass = 'filter-' + category.toLowerCase();
+            const categoryCheckboxes = document.querySelectorAll('.' + categoryClass);
+
+            categoryCheckboxes.forEach(cb => {
+                // Uncheck everything in THIS category EXCEPT the one we need
+                const filterName = cb.getAttribute('data-filter-name');
+                cb.checked = (filterName === conditionLabel);
+            });
+
+            // Step C: Trigger the grid refresh
+            applyChampionFilters();
+        }
+
+        // 2. SLOT VALIDATION
+        // Ensure the Save button and warnings update correctly
         let hasInvalidSlot = false;
-
-        allCards.forEach(card => {
-            if (!category || category === 'NONE') {
-                card.classList.remove('filtered-out');
-            } else {
-                let cardValue = '';
-                // UPDATED: Read from Key Attributes, not Display Attributes
-                if (category === 'FACTION') cardValue = card.getAttribute('data-faction-key');
-                if (category === 'RARITY') cardValue = card.getAttribute('data-rarity-key');
-                if (category === 'TYPE') cardValue = card.getAttribute('data-type-key');
-                if (category === 'AFFINITY') cardValue = card.getAttribute('data-affinity-key');
-                if (category === 'ALLIANCE') cardValue = card.getAttribute('data-alliance-key');
-
-                if (cardValue === conditionValue) {
-                    card.classList.remove('filtered-out');
-                } else {
-                    card.classList.add('filtered-out');
-                }
-            }
-        });
-
-        // Validate Slots (Also updated to use KEYS)
         for (let i = 0; i < 4; i++) {
             const input = document.getElementById(`input-${i}`);
             const slotDiv = document.getElementById(`slot-${i}`);
 
             if (input && input.value) {
-                const champId = input.value;
-                const rosterCard = document.getElementById(`roster-card-${champId}`);
-
-                if (rosterCard) {
-                    if (category && category !== 'NONE') {
-                        let cardValue = '';
-                        if (category === 'FACTION') cardValue = rosterCard.getAttribute('data-faction-key');
-                        if (category === 'RARITY') cardValue = rosterCard.getAttribute('data-rarity-key');
-                        if (category === 'TYPE') cardValue = rosterCard.getAttribute('data-type-key');
-                        if (category === 'AFFINITY') cardValue = rosterCard.getAttribute('data-affinity-key');
-                        if (category === 'ALLIANCE') cardValue = rosterCard.getAttribute('data-alliance-key');
-
-                        if (cardValue !== conditionValue) {
-                            slotDiv.classList.add('invalid-slot');
-                            hasInvalidSlot = true;
-                        } else {
-                            slotDiv.classList.remove('invalid-slot');
-                        }
+                const rosterCard = document.getElementById(`roster-card-${input.value}`);
+                if (rosterCard && category && category !== 'NONE') {
+                    const cardValue = rosterCard.getAttribute('data-' + category.toLowerCase() + '-key');
+                    if (cardValue !== conditionValue) {
+                        slotDiv.classList.add('invalid-slot');
+                        hasInvalidSlot = true;
                     } else {
                         slotDiv.classList.remove('invalid-slot');
                     }
+                } else {
+                    slotDiv.classList.remove('invalid-slot');
                 }
-            } else {
-                slotDiv.classList.remove('invalid-slot');
             }
         }
 
         const saveBtn = document.getElementById('save-btn');
         const warnDiv = document.getElementById('condition-warning');
-
-        if (hasInvalidSlot) {
-            saveBtn.disabled = true;
-            warnDiv.style.display = 'block';
-        } else {
-            saveBtn.disabled = false;
-            warnDiv.style.display = 'none';
-        }
+        if (saveBtn) saveBtn.disabled = hasInvalidSlot;
+        if (warnDiv) warnDiv.style.display = hasInvalidSlot ? 'block' : 'none';
     }
-
 
     // --- 4. SLOT INTERACTION LOGIC ---
     document.addEventListener("click", function(e) {

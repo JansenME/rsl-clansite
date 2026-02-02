@@ -192,7 +192,32 @@ public class TeamController {
 
         List<SiegeConditionEntity> activeEntities = siegeConditionService.findAllConditions().stream()
                 .filter(SiegeConditionEntity::isActive)
-                .toList();
+                .collect(Collectors.toList());
+
+        activeEntities.sort((a, b) -> {
+            // Sort by Category Priority (Rarity -> Type -> Affinity -> Faction -> Alliance)
+            if (a.getCategory() != b.getCategory()) {
+                return Integer.compare(a.getCategory().ordinal(), b.getCategory().ordinal());
+            }
+
+            // Sort by Value within Category (e.g., Legendary vs Epic)
+            try {
+                // Fix: Use raw 'Class' type to bypass generic capture error
+                Class enumClass = a.getCategory().getEnumClass();
+
+                // Suppress the "unchecked" warning since we know it's safe here
+                @SuppressWarnings("unchecked")
+                Enum<?> enumA = Enum.valueOf(enumClass, a.getConditionKey());
+
+                @SuppressWarnings("unchecked")
+                Enum<?> enumB = Enum.valueOf(enumClass, b.getConditionKey());
+
+                return Integer.compare(enumA.ordinal(), enumB.ordinal());
+            } catch (Exception e) {
+                // Fallback to alphabetical if Enum lookup fails
+                return a.getConditionKey().compareTo(b.getConditionKey());
+            }
+        });
 
         List<ConditionDropdownItem> dropdownItems = new ArrayList<>();
 
