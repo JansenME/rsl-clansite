@@ -17,6 +17,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.stream.Collectors.toList;
+
 @Document(collection = "clanmembers")
 @Data
 @NoArgsConstructor
@@ -58,4 +60,13 @@ public class ClanmemberEntity {
 
     private LocalDateTime rosterLastUpdated;
     private String rosterUpdatedBy;
+
+    public List<String> getRosterChampionIds() {
+        if (this.roster == null) {
+            return new ArrayList<>();
+        }
+        return this.roster.stream()
+                .map(OwnedChampion::getChampionId)
+                .collect(toList());
+    }
 }

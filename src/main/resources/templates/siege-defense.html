@@ -98,15 +98,20 @@
                             </div>
                         </div>
 
-                        <script th:if="${localProfile != null}" th:inline="javascript">
-                            if (!window.knownTeamsMap) window.knownTeamsMap = {};
-                            if (!window.rosterMap) window.rosterMap = {};
-                            if (!window.siegeGroupMap) window.siegeGroupMap = {};
+                        <script th:inline="javascript">
+                            (function() {
+                                if (!window.knownTeamsMap) window.knownTeamsMap = {};
+                                if (!window.rosterMap) window.rosterMap = {};
+                                if (!window.siegeGroupMap) window.siegeGroupMap = {};
 
-                            var siegeId = /*[[${siege.id.toString()}]]*/ 'default';
-                            window.siegeGroupMap[siegeId] = /*[[${siege.clanGroup.toString()}]]*/ 'T1';
-                            window.knownTeamsMap[siegeId] = /*[[${localProfile.knownTeams}]]*/ [];
-                            window.rosterMap[siegeId] = /*[[${localProfile.rosterChampionIds}]]*/ [];
+                                const sId = /*[[${siege.id.toHexString()}]]*/ '';
+                                window.siegeGroupMap[sId] = /*[[${siege.clanGroup}]]*/ 'T1';
+
+                                /*[# th:if="${localProfile != null}"]*/
+                                window.knownTeamsMap[sId] = /*[[${localProfile.knownTeams}]]*/ [];
+                                window.rosterMap[sId] = /*[[${localProfile.rosterChampionIds}]]*/ [];
+                                /*[/]*/
+                            })();
                         </script>
 
                     </div>
@@ -207,10 +212,12 @@
 </script>
 
 <script th:inline="javascript">
+    // --- GLOBAL VARIABLES ---
     var currentSiegeTeams = [];
     var currentGlobalUsedChampions = [];
     var currentRoster = [];
 
+    // --- HELPER FUNCTIONS ---
     function getGloballyUsedChampions(siegeId, memberId, currentStructureId, currentSlotNumber) {
         var used = [];
         var slots = document.querySelectorAll('.slot-card[data-siege-id="' + siegeId + '"]');
@@ -256,6 +263,7 @@
         });
     }
 
+    // --- MAIN MODAL LOGIC ---
     function openAssignModal(element) {
         var siegeId = element.getAttribute('data-siege-id');
         var structureId = element.getAttribute('data-structure-id');
@@ -277,8 +285,9 @@
             var select = document.getElementById('adminMemberSelect');
             select.innerHTML = "";
 
-            var group = window.siegeGroupMap ? window.siegeGroupMap[siegeId] : 'T1';
-            var list = (group === 'T2') ? t2Members : t1Members;
+            // ADMIN SAFETY FIX: Handle undefined maps using fallbacks
+            var group = (window.siegeGroupMap && window.siegeGroupMap[siegeId]) ? window.siegeGroupMap[siegeId] : 'T1';
+            var list = (group === 'T2') ? (t2Members || []) : (t1Members || []);
 
             if (list) {
                 list.forEach(function(m) {
@@ -343,15 +352,20 @@
     function updateAdminContext() {
         if (!isPrivilegedUser) return;
 
-        var selectedId = document.getElementById('adminMemberSelect').value;
+        var selectEl = document.getElementById('adminMemberSelect');
+        if (!selectEl) return;
+
+        var selectedId = selectEl.value;
         document.getElementById('modalMemberId').value = selectedId;
 
         var siegeId = document.getElementById('modalSiegeId').value;
         var structureId = document.getElementById('modalStructureId').value;
         var slotNumber = document.getElementById('modalSlotNumber').value;
 
-        var group = window.siegeGroupMap[siegeId];
-        var list = (group === 'T2') ? t2Members : t1Members;
+        // ADMIN SAFETY FIX: Ensure the map exists
+        var group = (window.siegeGroupMap && window.siegeGroupMap[siegeId]) ? window.siegeGroupMap[siegeId] : 'T1';
+        var list = (group === 'T2') ? (t2Members || []) : (t1Members || []);
+
         var memberObj = list.find(m => m.id === selectedId);
 
         if (memberObj) {
@@ -364,7 +378,7 @@
             var idsToCheck = ['modalLeader', 'modalSup1', 'modalSup2', 'modalSup3'];
             idsToCheck.forEach(function(id) {
                 var el = document.getElementById(id);
-                if (el.value && el.value !== "" && !currentRoster.includes(el.value)) {
+                if (el && el.value && !currentRoster.includes(el.value)) {
                     el.value = "";
                 }
             });
