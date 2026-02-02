@@ -25,7 +25,7 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
             String description = oauth2Ex.getError().getDescription();
 
             if ("not_in_guild".equals(errorCode)) {
-                messageToUser = (description != null) ? description : "Access Denied: You are not a member of the Clan Discord.";
+                messageToUser = (description != null) ? description : "Access Denied: You are not a member of the Clan Discord. If you are a member of the clan, please request access and try again.";
             }
         }
 
