@@ -1260,11 +1260,23 @@ public class ClanmemberService {
     }
 
     private int compareClanRanks(ClanmemberEntity m1, ClanmemberEntity m2) {
-        if (m1.getClanRank() == null && m2.getClanRank() == null) return 0;
+        if (m1.getClanRank() == null && m2.getClanRank() == null) return compareNames(m1, m2);
         if (m1.getClanRank() == null) return 1;
         if (m2.getClanRank() == null) return -1;
 
-        return m1.getClanRank().compareTo(m2.getClanRank());
+        int rankCompare = m1.getClanRank().compareTo(m2.getClanRank());
+
+        if (rankCompare == 0) {
+            return compareNames(m1, m2);
+        }
+
+        return rankCompare;
+    }
+
+    private int compareNames(ClanmemberEntity m1, ClanmemberEntity m2) {
+        String name1 = m1.getIngameName() != null ? m1.getIngameName() : "";
+        String name2 = m2.getIngameName() != null ? m2.getIngameName() : "";
+        return name1.compareToIgnoreCase(name2);
     }
 
     private List<String> resolveRoleNamesForUser(String discordId) {

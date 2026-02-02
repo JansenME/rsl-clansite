@@ -44,7 +44,8 @@
 						<tbody>
 						<tr th:each="member : ${pendingMembers}">
 							<td data-label="Avatar" style="text-align: center;">
-								<img th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
+								<img th:if="${member.discordName != null && !member.discordName.isEmpty()}"
+									 th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
 									 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
 							</td>
 							<td data-label="Discord Name" th:text="${member.discordName}">Global Name</td>
@@ -85,7 +86,8 @@
 						th:style="${!#authorization.expression('hasRole(''MEMBER'')')} ? 'cursor: default;' : ''">
 
 						<td sec:authorize="isAuthenticated()" data-label="Avatar">
-							<img th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
+							<img th:if="${member.discordName != null && !member.discordName.isEmpty()}"
+								 th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
 								 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
 						</td>
 						<td sec:authorize="isAuthenticated()" data-label="Discord Name" th:text="${member.discordName}">Global Name</td>
@@ -135,7 +137,8 @@
 						th:style="${!#authorization.expression('hasRole(''MEMBER'')')} ? 'cursor: default;' : ''">
 
 						<td sec:authorize="isAuthenticated()" data-label="Avatar">
-							<img th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
+							<img th:if="${member.discordName != null && !member.discordName.isEmpty()}"
+								 th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
 								 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" />
 						</td>
 						<td sec:authorize="isAuthenticated()" data-label="Discord Name" th:text="${member.discordName}">Global Name</td>
@@ -190,7 +193,8 @@
 						<tbody>
 						<tr th:each="member : ${inactiveMembers}">
 							<td data-label="Avatar">
-								<img th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
+								<img th:if="${member.discordName != null && !member.discordName.isEmpty()}"
+									 th:src="${@clanmemberService.buildAvatarUrl(member.discordId, member.avatarHash)}"
 									 alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; filter: grayscale(100%);" />
 							</td>
 							<td data-label="Discord Name" th:text="${member.discordName}">Global Name</td>
