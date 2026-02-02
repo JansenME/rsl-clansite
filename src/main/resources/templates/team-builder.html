@@ -310,29 +310,16 @@
             // 1. Search
             if (searchText && !card.getAttribute('data-name').includes(searchText)) matches = false;
 
-            // 2. Checkboxes
-            if (checkedRarities.length > 0 && !checkedRarities.includes(card.getAttribute('data-rarity'))) matches = false;
-            if (checkedRarities.length === 0) matches = false;
+            // 2. Checkboxes (Logic Harmonized with Profile: Empty = All)
+            if (matches && checkedRarities.length > 0 && !checkedRarities.includes(card.getAttribute('data-rarity'))) matches = false;
 
-            if (matches) {
-                if (checkedTypes.length > 0 && !checkedTypes.includes(card.getAttribute('data-type'))) matches = false;
-                if (checkedTypes.length === 0) matches = false;
-            }
+            if (matches && checkedTypes.length > 0 && !checkedTypes.includes(card.getAttribute('data-type'))) matches = false;
 
-            if (matches) {
-                if (checkedAffinities.length > 0 && !checkedAffinities.includes(card.getAttribute('data-affinity'))) matches = false;
-                if (checkedAffinities.length === 0) matches = false;
-            }
+            if (matches && checkedAffinities.length > 0 && !checkedAffinities.includes(card.getAttribute('data-affinity'))) matches = false;
 
-            if (matches) {
-                if (checkedFactions.length > 0 && !checkedFactions.includes(card.getAttribute('data-faction'))) matches = false;
-                if (checkedFactions.length === 0) matches = false;
-            }
+            if (matches && checkedFactions.length > 0 && !checkedFactions.includes(card.getAttribute('data-faction'))) matches = false;
 
-            if (matches) {
-                if (checkedAlliances.length > 0 && !checkedAlliances.includes(card.getAttribute('data-alliance'))) matches = false;
-                if (checkedAlliances.length === 0) matches = false;
-            }
+            if (matches && checkedAlliances.length > 0 && !checkedAlliances.includes(card.getAttribute('data-alliance'))) matches = false;
 
             // 3. Visibility
             if (matches) {
