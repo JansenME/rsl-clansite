@@ -1,1 +1,1 @@
-﻿{ "name": "rsl-clansite-e2e", "devDependencies": { "@playwright/test": "latest" } }
+{"name":"rsl-clansite-e2e","devDependencies":{"@playwright/test":"latest"},"dependencies":{"mongodb":"^7.0.0"}}

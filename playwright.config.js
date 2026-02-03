@@ -20,13 +20,13 @@ module.exports = defineConfig({
       testMatch: 'auth-setup.js',
     },
     {
-      name: 'chromium',
-      testMatch: 'filter-engine.spec.js',
-      use: {
-        ...devices['Desktop Chrome'],
-        storageState: 'tests-e2e/userStorageState.json',
+        name: 'chromium',
+        testMatch: '**/*.spec.js',
+        use: {
+          ...devices['Desktop Chrome'],
+          storageState: 'tests-e2e/userStorageState.json',
+        },
+        dependencies: ['setup'],
       },
-      dependencies: ['setup'],
-    },
   ],
 });
