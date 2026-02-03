@@ -59,13 +59,13 @@ public class DiscordBotService extends ListenerAdapter {
 
             jda.updateCommands().addCommands(
                     Commands.slash("hello", "I will help with anything you want!"),
-                    Commands.slash("robot", "What am I?")/*,
-                    Commands.slash("website", "We have a clan website!"),
+                    Commands.slash("robot", "What am I?"),
                     Commands.slash("siege-score", "Get the current Siege Score (Battle/Finished)")
                             .addOptions(new OptionData(OptionType.STRING, "tier", "Select T1 or T2 manually")
                                     .addChoice("T1", "T1")
                                     .addChoice("T2", "T2"))
-                            .setDefaultPermissions(DefaultMemberPermissions.ENABLED)*/
+                            .setDefaultPermissions(DefaultMemberPermissions.ENABLED)/*,
+                    Commands.slash("website", "We have a clan website!")*/
             ).queue();
 
         } catch (Exception e) {
