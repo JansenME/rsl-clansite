@@ -62,6 +62,7 @@ public class SiegeService {
     public void checkAndAdvanceState(ClanGroup clanGroup) {
         Optional<SiegeEntity> siegeOpt = getActiveSiege(clanGroup);
 
+        // Bootstrap if completely missing
         if (siegeOpt.isEmpty()) {
             log.info("[{}] No active siege found during check. Bootstrapping new cycle.", clanGroup);
             createNextSiege(clanGroup, LocalDateTime.now());
@@ -72,35 +73,51 @@ public class SiegeService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startDate = siege.getStartDate();
 
+        // Use HOURS for all checks to ensure precision across the 14-day cycle
         long hoursSinceStart = ChronoUnit.HOURS.between(startDate, now);
-        long daysSinceStart = ChronoUnit.DAYS.between(startDate, now);
 
-        if (siege.getStatus() == SiegeStatus.PREP) {
-            if (hoursSinceStart >= 288) {
-                log.info("[{}] Switching PREP -> MATCHMAKING (Hours: {})", clanGroup, hoursSinceStart);
-                siege.setStatus(SiegeStatus.MATCHMAKING);
-                siege.setLastModified(now);
-                siegeRepository.save(siege);
-                auditLogService.logSystemAction(AuditAction.SIEGE_SYSTEM_EVENT, clanGroup.name(), "Auto-advanced to MATCHMAKING");
+        switch (siege.getStatus()) {
+            case PREP -> {
+                // Thursday 3PM -> Tuesday 9AM (Week 2) = 282 Hours
+                if (hoursSinceStart >= 282) {
+                    log.info("[{}] Switching PREP -> MATCHMAKING (Hours: {})", clanGroup, hoursSinceStart);
+                    updateSiegeStatus(siege, SiegeStatus.MATCHMAKING, now, clanGroup);
+                }
+            }
+            case MATCHMAKING -> {
+                // Tuesday 9AM -> Tuesday 12PM = 3 Hours later (Total 285)
+                if (hoursSinceStart >= 285) {
+                    log.info("[{}] Switching MATCHMAKING -> BATTLE (Hours: {})", clanGroup, hoursSinceStart);
+                    updateSiegeStatus(siege, SiegeStatus.BATTLE, now, clanGroup);
+                }
+            }
+            case BATTLE -> {
+                // Tuesday 12PM -> Thursday 12PM (Week 2) = 48 Hours later (Total 333)
+                if (hoursSinceStart >= 333) {
+                    log.info("[{}] Switching BATTLE -> FINISHED (Hours: {}). Waiting for rotation.", clanGroup, hoursSinceStart);
+                    updateSiegeStatus(siege, SiegeStatus.FINISHED, now, clanGroup);
+                }
+            }
+            case FINISHED -> {
+                // Thursday 12PM -> Thursday 3PM = 3 Hours later (Total 336 / 14 Days)
+                if (hoursSinceStart >= 336) {
+                    log.info("[{}] Siege Cycle Complete (14 days). Rotating...", clanGroup);
+                    finishActiveSiege(clanGroup);
+
+                    // Ensure next start date is anchored to the previous start to prevent time drift
+                    LocalDateTime nextCycleStart = startDate.plusDays(14);
+                    createNextSiege(clanGroup, nextCycleStart);
+                }
             }
         }
-        else if (siege.getStatus() == SiegeStatus.MATCHMAKING) {
-            if (hoursSinceStart >= 292) {
-                log.info("[{}] Switching MATCHMAKING -> BATTLE (Hours: {})", clanGroup, hoursSinceStart);
-                siege.setStatus(SiegeStatus.BATTLE);
-                siege.setLastModified(now);
-                siegeRepository.save(siege);
-                auditLogService.logSystemAction(AuditAction.SIEGE_SYSTEM_EVENT, clanGroup.name(), "Auto-advanced to BATTLE");
-            }
-        }
-        else if (siege.getStatus() == SiegeStatus.BATTLE) {
-            if (daysSinceStart >= 14) {
-                log.info("[{}] Siege Cycle Complete ({} days). Rotating...", clanGroup, daysSinceStart);
-                finishActiveSiege(clanGroup);
-                LocalDateTime nextCycleStart = startDate.plusDays(14);
-                createNextSiege(clanGroup, nextCycleStart);
-            }
-        }
+    }
+
+    // Helper to keep the logic clean and DRY
+    private void updateSiegeStatus(SiegeEntity siege, SiegeStatus newStatus, LocalDateTime now, ClanGroup clanGroup) {
+        siege.setStatus(newStatus);
+        siege.setLastModified(now);
+        siegeRepository.save(siege);
+        auditLogService.logSystemAction(AuditAction.SIEGE_SYSTEM_EVENT, clanGroup.name(), "Auto-advanced to " + newStatus);
     }
 
     @Transactional

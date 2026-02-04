@@ -19,11 +19,6 @@ public class SiegeSchedulerService {
      * Runs every hour to check if a Siege phase transition is needed.
      * We run hourly to ensure that even if a specific time is missed due to downtime,
      * the state machine will catch up within the next hour.
-     *
-     * Transitions handled by the Service:
-     * - Thursday 10:00 UTC: Finish Old -> Start New (PREP)
-     * - Tuesday 10:00 UTC: PREP -> MATCHMAKING
-     * - Tuesday 14:00 UTC: MATCHMAKING -> BATTLE
      */
     @Scheduled(cron = "0 0 * * * *")
     public void runSiegeStateCheck() {
