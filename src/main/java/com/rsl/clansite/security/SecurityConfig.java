@@ -3,8 +3,6 @@ package com.rsl.clansite.security;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
-import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -30,13 +28,16 @@ public class SecurityConfig {
     private final OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService;
     private final CustomAuthenticationFailureHandler failureHandler;
     private final SessionSecurityFilter sessionSecurityFilter;
+    private final AppTokenAuthenticationFilter appTokenFilter; // <--- NEW
 
     public SecurityConfig(OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService,
                           CustomAuthenticationFailureHandler failureHandler,
-                          SessionSecurityFilter sessionSecurityFilter) {
+                          SessionSecurityFilter sessionSecurityFilter,
+                          AppTokenAuthenticationFilter appTokenFilter) { // <--- NEW
         this.customOAuth2UserService = customOAuth2UserService;
         this.failureHandler = failureHandler;
         this.sessionSecurityFilter = sessionSecurityFilter;
+        this.appTokenFilter = appTokenFilter; // <--- NEW
     }
 
     @Bean
@@ -57,18 +58,27 @@ public class SecurityConfig {
                 .securityContext(context -> context
                         .requireExplicitSave(false)
                 )
+                // NEW: Disable CSRF for the API endpoints so the C# App can POST later
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/api/recon/**")
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/index", "/", "/favicon.ico",
                                 "/styles/**", "/images/**",
                                 "/login", "/perform_logout", "/error/**",
                                 "/champions", "/champions/",
-                                "/clanmembers", "/clanmembers/"
+                                "/clanmembers", "/clanmembers/",
+                                "/api/recon/champions",
+                                "/api/recon/library",
+                                "/api/app/**"
                         ).permitAll()
                         .requestMatchers("/admin/masquerade").authenticated()
                         .requestMatchers("/profile", "/champions/**", "/clanmembers/**").hasRole("USER")
                         .anyRequest().hasRole("USER")
                 )
+                // ADDED: Our new Token Filter runs before the standard Authorization check
+                .addFilterBefore(appTokenFilter, AuthorizationFilter.class)
                 .addFilterBefore(sessionSecurityFilter, AuthorizationFilter.class)
                 .exceptionHandling(exception -> exception
                         .accessDeniedHandler((request, response, accessDeniedException) -> {

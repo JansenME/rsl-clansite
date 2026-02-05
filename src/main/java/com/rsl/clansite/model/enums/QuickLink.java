@@ -17,7 +17,8 @@ public enum QuickLink {
     AUDIT_LOG("Audit Log", "/audit-log", "ROLE_ADMIN"),
 
     ADD_CHAMPION("Add Champion", "/champions/new", "ROLE_OWNER"),
-    MANAGE_BACKUPS("Manage Backups", "/admin/backups", "ROLE_OWNER");
+    MANAGE_BACKUPS("Manage Backups", "/admin/backups", "ROLE_OWNER"),
+    OPEN_KLOEPIEBOT("Open Kloepiebot", "/profile/connect-app", "ROLE_OWNER");
 
     private final String label;
     private final String url;
