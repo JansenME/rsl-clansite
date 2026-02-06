@@ -13,7 +13,7 @@
 		<div class="container">
 			<section>
 
-				<div class="profile-container">
+				<div class="profile-container" th:if="${partOfDiscord}">
 
 					<div class="profile-main">
 						<h2>
@@ -133,6 +133,10 @@
 						</ul>
 					</div>
 
+				</div>
+
+				<div class="profile-container" th:unless="${partOfDiscord}">
+					<p>This user is not a part of the discord, therefore he/she does not deserve a place on this website!</p>
 				</div>
 			</section>
 
