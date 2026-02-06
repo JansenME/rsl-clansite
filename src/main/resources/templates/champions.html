@@ -305,7 +305,7 @@
         if (countSpan) countSpan.innerText = totalCount;
     }
 
-    function handleCardClick(champId, event) {
+    function handleCardClick(champId, event, forcedAction) {
         if (!isEditingRoster) return;
 
         if (event) {
@@ -313,10 +313,21 @@
             event.stopPropagation();
         }
 
-        const isRightClick = event && (event.button === 2 || event.which === 3);
+        let isRemove = false;
+
+        // 1. Check if we forced an action (from Long Press)
+        if (forcedAction === 'remove') {
+            isRemove = true;
+        }
+        // 2. Otherwise check Mouse Buttons
+        else if (event) {
+             const isRightClick = (event.button === 2 || event.which === 3);
+             isRemove = isRightClick;
+        }
+
         let count = championCounts.get(champId) || 0;
 
-        if (isRightClick) {
+        if (isRemove) {
             if (count > 0) count--;
         } else {
             count++;
@@ -355,13 +366,21 @@
         // Initialize badges
         updateCardVisuals();
 
-        // Attach listeners for Left/Right click
+        // Variables for Long Press Logic
+        let longPressTimer;
+        let isLongPress = false;
+
+        // Attach listeners
         document.querySelectorAll('.champion-card').forEach(card => {
+            const champId = card.id.replace('card-', '');
+
+            // --- MOUSE LISTENERS ---
             card.addEventListener('mousedown', function(e) {
                 if (!isEditingRoster) return;
-                e.preventDefault();
-                const champId = this.id.replace('card-', '');
-                handleCardClick(champId, e);
+                // Only trigger on Left (0) or Right (2) click, ignore others to prevent double firing
+                if (e.button === 0 || e.button === 2) {
+                    handleCardClick(champId, e);
+                }
             });
 
             card.addEventListener('contextmenu', e => {
@@ -371,6 +390,41 @@
             card.addEventListener('click', e => {
                 if(isEditingRoster) { e.preventDefault(); e.stopPropagation(); }
             }, true);
+
+            // --- TOUCH LISTENERS (MOBILE LONG PRESS) ---
+
+            // 1. Touch Start: Start the timer
+            card.addEventListener('touchstart', (e) => {
+                if (!isEditingRoster) return;
+                isLongPress = false;
+
+                longPressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    // Vibrate for feedback (Android mostly)
+                    if (navigator.vibrate) navigator.vibrate(50);
+
+                    // Force a "remove" action
+                    handleCardClick(champId, e, 'remove');
+                }, 600); // 600ms threshold
+            }, { passive: false });
+
+            // 2. Touch End: Clear timer
+            card.addEventListener('touchend', (e) => {
+                clearTimeout(longPressTimer);
+
+                // If it was a long press, we already handled the remove.
+                // We stop propagation so it doesn't trigger a "click" (add).
+                if (isLongPress) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+
+            // 3. Touch Move: If they scroll, cancel the timer
+            card.addEventListener('touchmove', () => {
+                clearTimeout(longPressTimer);
+                isLongPress = false;
+            });
         });
 
         if (autoOpenEditMode) {
