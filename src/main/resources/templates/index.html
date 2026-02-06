@@ -19,14 +19,16 @@
 		<div class="container">
 			<div th:replace="~{inserts/alerts :: warning-box(${roleWarning})}"></div>
 
-			<div sec:authorize="isAuthenticated() and !hasRole('ROLE_ADMIN')"
+			<div th:if="${#authorization.expression('isAuthenticated()')
+                     and !#authorization.expression('hasRole(''ROLE_ADMIN'')')
+                     and !isInBeta}"
 				 class="welcome-box warning">
 				<i class="fas fa-lock welcome-icon"></i>
 				<h3>Closed Beta Access</h3>
 				<p>Welcome, <strong th:text="${navUserViewData.discordUserName}">User</strong>! The website is currently in a <strong>Closed Beta</strong> phase for leadership. Access for all clan members will be opened soon.</p>
 			</div>
 
-			<div sec:authorize="hasRole('ROLE_ADMIN')"
+			<div th:if="${#authorization.expression('hasRole(''ROLE_ADMIN'')') or isInBeta}"
 				 class="welcome-box success">
 				<i class="fas fa-check-circle welcome-icon"></i>
 				<strong>Beta Access Active:</strong> You have full access to the Siege and Member management tools. I guess Kloep decided you are important enough! Now give him a cookie.

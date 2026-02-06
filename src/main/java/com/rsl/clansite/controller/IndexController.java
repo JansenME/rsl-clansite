@@ -1,6 +1,7 @@
 package com.rsl.clansite.controller;
 
 import com.rsl.clansite.service.CommonsService;
+import com.rsl.clansite.service.DiscordRoleService;
 import com.rsl.clansite.service.SiteAssetService;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -34,6 +35,13 @@ public class IndexController {
             Boolean needsWarning = oauth2User.getAttribute("needsRoleWarning");
             if (Boolean.TRUE.equals(needsWarning)) {
                 model.addAttribute("roleWarning", "You are logged in! However, it seems like you don't have the right roles in the Discord Server. Therefore we did not give you full access to the website yet. Please ask an admin to give you the right roles in the Discord Server and come back here!");
+            }
+
+            model.addAttribute("isInBeta", false);
+
+            String discordID = oauth2User.getAttribute("id");
+            if (DiscordRoleService.listOfDiscordIDsForBeta.contains(discordID)) {
+                model.addAttribute("isInBeta", true);
             }
         }
 

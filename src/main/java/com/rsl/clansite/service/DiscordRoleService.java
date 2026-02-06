@@ -51,6 +51,16 @@ public class DiscordRoleService {
     @Getter
     private List<String> orderedRoleIds = Collections.emptyList();
 
+    @Getter
+    public static List<String> listOfDiscordIDsForBeta = List.of(
+            "299731045371215875", //Assistor45
+            "213650990895726592", //MakeMyCakezz
+            "227866497916076032", //Xpload22
+            "1265425742389575783", //Hozeir
+            "1291861373726359585", //Timekeeper-
+            "870619657214754817" //Hap P. Hawg
+    );
+
     public DiscordRoleService(DiscordApiClient discordApiClient) {
         this.discordApiClient = discordApiClient;
     }
@@ -124,6 +134,10 @@ public class DiscordRoleService {
                 userDiscordRoles.contains(getT2RoleId())) {
             authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
         }*/
+
+        if (listOfDiscordIDsForBeta.contains(userId)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
+        }
 
         return authorities;
     }
