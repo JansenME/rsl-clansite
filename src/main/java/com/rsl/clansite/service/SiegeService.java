@@ -133,11 +133,12 @@ public class SiegeService {
 
     @Transactional
     public SiegeEntity createNextSiege(ClanGroup clanGroup, LocalDateTime startDate) {
+        LocalDateTime cleanDate = startDate.truncatedTo(ChronoUnit.HOURS);
         finishActiveSiege(clanGroup);
 
-        log.info("Creating new PREP siege for {} starting at {}", clanGroup, startDate);
+        log.info("Creating new PREP siege for {} starting at {}", clanGroup, cleanDate);
 
-        SiegeEntity newSiege = new SiegeEntity(clanGroup, startDate);
+        SiegeEntity newSiege = new SiegeEntity(clanGroup, cleanDate);
 
         newSiege.setDefensiveStructures(generateDefaultMap());
         newSiege.setTargetStructures(generateDefaultMap());
