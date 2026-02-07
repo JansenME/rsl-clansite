@@ -5,7 +5,6 @@ import com.rsl.clansite.model.dto.NewClanmemberDTO;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.DiscordRoleService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -39,11 +38,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oauth2User = fetchUserInfo(userRequest);
-
         String userId = oauth2User.getAttribute("id");
-        String globalName = oauth2User.getAttribute("global_name");
-        String avatarHash = oauth2User.getAttribute("avatar");
 
+        // STEP 1: Fetch the "Clean" DTO from our updated Client
+        // This runs the logic: GlobalName > Username (and handles "null" strings)
         NewClanmemberDTO memberDto = discordApiClient.getDiscordMember(userId)
                 .orElseThrow(() -> {
                     log.warn("Access Denied for user {}: Not a member of the clan server.", userId);
@@ -54,11 +52,16 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     ));
                 });
 
+        // STEP 2: Extract the "Clean" Data
+        String cleanDiscordName = memberDto.getDiscordName();
+        String cleanAvatarHash = memberDto.getAvatarHash(); // Use this too for consistency
         List<String> roleList = memberDto.getDiscordRoles();
         Set<String> userDiscordRoles = new HashSet<>(roleList);
 
-        clanmemberService.linkClanmember(userId, globalName, avatarHash, roleList);
+        // STEP 3: Pass the CLEAN name to the Service (Database Update)
+        clanmemberService.linkClanmember(userId, cleanDiscordName, cleanAvatarHash, roleList);
 
+        // --- Security Authorities Setup ---
         Set<SimpleGrantedAuthority> authorities = discordRoleService.getAuthoritiesForRoles(userDiscordRoles, userId);
 
         boolean hasRequiredRole = userDiscordRoles.contains(discordRoleService.getT1RoleId()) ||
@@ -68,7 +71,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         updatedAttributes.put("rawDiscordRoleIds", userDiscordRoles);
         updatedAttributes.put("needsRoleWarning", !hasRequiredRole);
 
-        log.info("Logged in user {} has the following roles: {}", globalName, authorities);
+        // Optional: Update the map with the clean name so the session has it right away too
+        updatedAttributes.put("global_name", cleanDiscordName);
+
+        log.info("Logged in user {} (Discord: {}) has authorities: {}",
+                cleanDiscordName, userId, authorities);
 
         return new DefaultOAuth2User(
                 authorities,

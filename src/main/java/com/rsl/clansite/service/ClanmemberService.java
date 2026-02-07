@@ -539,29 +539,57 @@ public class ClanmemberService {
 
     public ClanmemberViewData getUserViewData(Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof OAuth2User oauth2User)) {
-            // Updated constructor usage: No impersonation, Not owner
+            // Guest / Not Logged In
             return new ClanmemberViewData(null, List.of(), null, null, false);
         }
 
         String discordId = oauth2User.getAttribute("id");
-        String globalName = oauth2User.getAttribute("global_name");
-        String discordUserName = (globalName != null) ? globalName : "Unknown User";
-        String avatarHash = oauth2User.getAttribute("avatar");
 
+        // 1. Try to find the "Real" Linked Member in our DB
+        // We use a lookup here so we display the "Live" data from the database,
+        // not the "Stale" data from the session (which only updates on logout/login).
+        List<ClanmemberEntity> members = clanmemberRepository.findAllByDiscordId(discordId);
+        ClanmemberEntity activeMember = members.stream()
+                .filter(m -> m.getStatus() == MemberStatus.ACTIVE) // Optional: prioritize active
+                .findFirst()
+                .orElse(members.isEmpty() ? null : members.get(0));
+
+        // 2. Define Variables
+        String displayName;
+        String avatarHash;
         boolean isSystemOwner = false;
         String impersonatedRole = null;
 
-        if (discordId != null && discordId.equals(kloepDiscordId)) {
-            isSystemOwner = true;
-            List<ClanmemberEntity> members = clanmemberRepository.findAllByDiscordId(discordId);
-            if (!members.isEmpty()) {
-                impersonatedRole = members.get(0).getImpersonatedRole();
+        // 3. Resolve Data (DB Priority > Session Fallback)
+        if (activeMember != null) {
+            // --- OPTION A: Prioritize In-Game Name for the Website ---
+            // If they have an In-Game Name, show that. If not, show the clean Discord Name.
+            displayName = (activeMember.getIngameName() != null)
+                    ? activeMember.getIngameName()
+                    : activeMember.getDiscordName();
+
+            avatarHash = activeMember.getAvatarHash();
+            impersonatedRole = activeMember.getImpersonatedRole();
+
+            // Check System Owner (Hardcoded ID)
+            if (discordId.equals(kloepDiscordId)) {
+                isSystemOwner = true;
             }
+        } else {
+            // --- Fallback: User is logged in but NOT linked to a Clan Member ---
+            String globalName = oauth2User.getAttribute("global_name");
+            String username = oauth2User.getAttribute("username");
+
+            // Apply the same "Null String" fix here just in case
+            String cleanGlobal = (globalName != null && !globalName.equals("null")) ? globalName : null;
+
+            displayName = (cleanGlobal != null) ? cleanGlobal : (username != null && !username.equals("null") ? username : "Unknown User");
+            avatarHash = oauth2User.getAttribute("avatar");
         }
 
-        // Updated constructor usage
+        // 4. Return View Data
         return new ClanmemberViewData(
-                discordUserName,
+                displayName,
                 resolveRoleNamesForUser(discordId),
                 buildAvatarUrl(discordId, avatarHash),
                 impersonatedRole,

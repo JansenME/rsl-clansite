@@ -133,15 +133,31 @@ public class DiscordApiClient {
         JsonNode userNode = root.path("user");
         JsonNode nickNode = root.path("nick");
 
-        String globalName = userNode.path("global_name").asText();
+        // 1. Safe Extraction of Global Name (Prevent "null" string)
+        JsonNode globalNode = userNode.path("global_name");
+        String globalName = null;
+        if (!globalNode.isMissingNode() && !globalNode.isNull()) {
+            globalName = globalNode.asText();
+        }
+
+        // 2. Safe Extraction of Username
         String username = userNode.path("username").asText();
-        String avatarHash = userNode.path("avatar").asText();
 
-        String discordName = globalName.isBlank() ? username : globalName;
+        // 3. Hierarchy: Global Name (if valid) > Username (Fallback)
+        String discordName = (globalName != null && !globalName.isBlank()) ? globalName : username;
 
-        String nickname = (nickNode.isMissingNode() || nickNode.isNull() || nickNode.asText().isBlank())
-                ? discordName
-                : nickNode.asText();
+        // 4. Safe Extraction of Avatar
+        JsonNode avatarNode = userNode.path("avatar");
+        String avatarHash = (avatarNode.isMissingNode() || avatarNode.isNull()) ? null : avatarNode.asText();
+
+        // 5. Nickname Logic (Fallback to discordName if server nickname is missing)
+        String nickname;
+        if (nickNode.isMissingNode() || nickNode.isNull()) {
+            nickname = discordName;
+        } else {
+            String nickText = nickNode.asText();
+            nickname = nickText.isBlank() ? discordName : nickText;
+        }
 
         List<String> roleIds = new ArrayList<>();
         JsonNode rolesNode = root.path("roles");
