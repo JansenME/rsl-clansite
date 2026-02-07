@@ -426,7 +426,12 @@ public class ClanmemberService {
             ClanGroup newDetectedGroup = resolveClanGroup(sortedRoles);
 
             boolean rolesChanged = !sortedRoles.equals(member.getDiscordRoles());
-            boolean avatarChanged = member.getAvatarHash() == null || !newAvatarHash.equals(member.getAvatarHash());
+
+            boolean avatarChanged = false;
+            if(StringUtils.hasText(newAvatarHash)) {
+                avatarChanged = member.getAvatarHash() == null || !newAvatarHash.equals(member.getAvatarHash());
+            }
+
             boolean groupChanged = false;
 
             boolean discordNameChanged = !Objects.equals(member.getDiscordName(), discordData.getDiscordName());
