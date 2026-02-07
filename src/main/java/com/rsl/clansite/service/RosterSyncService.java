@@ -20,8 +20,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -64,7 +66,7 @@ public class RosterSyncService {
     }
 
     @Data
-    @Builder // Moved here to be accessible
+    @Builder
     public static class MatchEdge {
         private OwnedChampion db;
         private ParsedChampion csv;
@@ -127,7 +129,6 @@ public class RosterSyncService {
 
             // 1. Calculate score for EVERY combination
             for (OwnedChampion db : dbInstances) {
-                // Fix: Correct order is (Rank, Level) for calculation
                 int dbTrueLevel = calculateTrueLevel(db.getRank(), db.getLevel());
                 for (ParsedChampion csv : csvInstances) {
                     int diff = Math.abs(dbTrueLevel - csv.getTrueLevel());
@@ -169,21 +170,21 @@ public class RosterSyncService {
             for (OwnedChampion db : dbInstances) {
                 if (!matchedDbIds.contains(db.getId())) {
                     String name = resolveName(masterId);
-                    ProposedChange remove = ProposedChange.builder()
+
+                    ProposedChange.ProposedChangeBuilder removeBuilder = ProposedChange.builder()
                             .type("REMOVE")
                             .championName(name)
                             .masterId(masterId)
                             .instanceId(db.getId())
                             .oldState(formatState(db.getRank(), db.getLevel()))
-                            .newState("Deleted")
-                            .build();
+                            .newState("Deleted");
 
                     List<String> affectedTeams = findAffectedTeams(member, db.getId());
                     if (!affectedTeams.isEmpty()) {
-                        remove.setAffectedTeams(affectedTeams);
+                        removeBuilder.affectedTeams(affectedTeams);
                     }
 
-                    diffResult.getChanges().add(remove);
+                    diffResult.getChanges().add(removeBuilder.build());
                     diffResult.setTotalRemoves(diffResult.getTotalRemoves() + 1);
                 }
             }
@@ -218,6 +219,7 @@ public class RosterSyncService {
         List<ProposedChange> allChanges = diff.getChanges();
 
         if (selectedIndices == null) selectedIndices = new ArrayList<>();
+
         List<ProposedChange> changesToApply = new ArrayList<>();
         for (Integer index : selectedIndices) {
             if (index >= 0 && index < allChanges.size()) {
@@ -237,11 +239,10 @@ public class RosterSyncService {
         for (ProposedChange change : changesToApply) {
             switch (change.getType()) {
                 case "ADD":
-                    // Fixed Constructor Order: (id, level, rank)
                     member.getRoster().add(new OwnedChampion(
                             change.getMasterId(),
-                            change.getNewLevel(), // Correct
-                            change.getNewRank()   // Correct
+                            change.getNewLevel(),
+                            change.getNewRank()
                     ));
                     appliedAdds++;
                     break;
@@ -298,22 +299,14 @@ public class RosterSyncService {
     }
 
     // --- Helpers ---
-    // --- DEBUG VERSION of findAffectedTeams ---
     private List<String> findAffectedTeams(ClanmemberEntity member, String instanceId) {
-        if (member.getKnownTeams() == null) {
-            return Collections.emptyList();
-        }
-
+        if (member.getKnownTeams() == null) return Collections.emptyList();
         List<String> teamNames = new ArrayList<>();
-
         for (Team t : member.getKnownTeams()) {
-            // Check matches
-            boolean matchLeader = Objects.equals(t.getLeaderChampionId(), instanceId);
-            boolean match2 = Objects.equals(t.getChampion2Id(), instanceId);
-            boolean match3 = Objects.equals(t.getChampion3Id(), instanceId);
-            boolean match4 = Objects.equals(t.getChampion4Id(), instanceId);
-
-            if (matchLeader || match2 || match3 || match4) {
+            if (Objects.equals(t.getLeaderChampionId(), instanceId) ||
+                    Objects.equals(t.getChampion2Id(), instanceId) ||
+                    Objects.equals(t.getChampion3Id(), instanceId) ||
+                    Objects.equals(t.getChampion4Id(), instanceId)) {
                 teamNames.add(t.getTeamName());
             }
         }
@@ -327,32 +320,66 @@ public class RosterSyncService {
 
     private String formatState(int rank, int level) { return rank + "★ Lvl " + level; }
 
+    // --- UPDATED: Safe Name Normalizer ---
+    // Replaces all "fancy" quotes with a standard straight apostrophe and trims whitespace
+    private String normalizeName(String name) {
+        if (name == null) return "";
+        return name.toLowerCase()
+                .trim()
+                .replace("’", "'")  // Right Single Quote
+                .replace("‘", "'")  // Left Single Quote
+                .replace("`", "'")  // Backtick
+                .replace("´", "'"); // Acute Accent
+    }
+
     // --- Parsing & Storage (Standard) ---
     public SyncParseResult parseUpload(String discordId) throws IOException {
         File file = getExistingSyncFile(discordId);
         if (file == null) throw new IOException("No sync file found.");
-        SyncParseResult result = new SyncParseResult();
-        Map<String, ChampionEntity> masterMap = championRepository.findAll().stream()
-                .collect(Collectors.toMap(c -> c.getName().toLowerCase().trim(), c -> c, (c1, c2) -> c1));
 
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+        SyncParseResult result = new SyncParseResult();
+
+        // Use normalized keys for the master map
+        Map<String, ChampionEntity> masterMap = championRepository.findAll().stream()
+                .collect(Collectors.toMap(
+                        c -> normalizeName(c.getName()),
+                        c -> c,
+                        (c1, c2) -> c1
+                ));
+
+        // FIX: Explicitly use Windows-1252 to handle RSL Helper/Excel CSVs correctly
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), "Windows-1252"))) {
             String line;
             boolean isFirstLine = true;
+
             while ((line = br.readLine()) != null) {
+                // Remove BOM if present (rare but possible in some UTF-8 variants, harmless here)
+                line = line.replace("\uFEFF", "");
+
                 if (isFirstLine) { isFirstLine = false; continue; }
                 if (!StringUtils.hasText(line)) continue;
+
                 String[] cols = line.split(";");
                 if (cols.length < 5) continue;
-                String rawName = cols[2].trim();
-                ChampionEntity master = masterMap.get(rawName.toLowerCase());
+
+                String rawName = cols[2];
+
+                // The normalizeName method will now correctly see "’" and turn it into "'"
+                ChampionEntity master = masterMap.get(normalizeName(rawName));
+
                 if (master == null) {
-                    if (StringUtils.hasText(rawName) && !result.getUnknownNames().contains(rawName)) result.getUnknownNames().add(rawName);
+                    // Only add to unknown if it's truly new (and not just an empty line)
+                    if (StringUtils.hasText(rawName) && !result.getUnknownNames().contains(rawName)) {
+                        result.getUnknownNames().add(rawName);
+                    }
                     continue;
                 }
+
                 try {
                     int rank = Integer.parseInt(cols[3].trim());
                     int level = Integer.parseInt(cols[4].trim());
                     int trueLevel = calculateTrueLevel(rank, level);
+
                     result.getValidEntries().add(ParsedChampion.builder()
                             .masterId(master.getId().toHexString())
                             .name(master.getName())
@@ -360,11 +387,12 @@ public class RosterSyncService {
                             .level(level)
                             .trueLevel(trueLevel)
                             .build());
-                } catch (NumberFormatException e) { log.warn("Invalid number: {}", rawName); }
+                } catch (NumberFormatException e) { log.warn("Invalid number for {}: {}", rawName, e.getMessage()); }
             }
         }
         return result;
     }
+
     private int calculateTrueLevel(int rank, int level) { return ((rank - 1) * 5 * rank) + level; }
 
     public void saveUpload(MultipartFile file, String discordId) throws IOException {
@@ -375,15 +403,18 @@ public class RosterSyncService {
         Path dest = rootLocation.resolve(discordId + ".csv");
         try (var is = file.getInputStream()) { Files.copy(is, dest, StandardCopyOption.REPLACE_EXISTING); }
     }
+
     public File getExistingSyncFile(String discordId) {
         if (!StringUtils.hasText(discordId)) return null;
         Path p = Paths.get(uploadPath).resolve(discordId + ".csv");
         return (p.toFile().exists() && p.toFile().isFile()) ? p.toFile() : null;
     }
+
     public LocalDateTime getFileLastModified(String discordId) {
         File f = getExistingSyncFile(discordId);
         return f == null ? null : LocalDateTime.ofInstant(Instant.ofEpochMilli(f.lastModified()), ZoneId.systemDefault());
     }
+
     public void deleteSyncFile(String discordId) {
         try { Files.deleteIfExists(Paths.get(uploadPath).resolve(discordId + ".csv")); }
         catch (IOException e) { log.warn("Delete failed", e); }
