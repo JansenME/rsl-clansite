@@ -50,8 +50,6 @@ spring:
   application:
     name: Clansite Fury of the Fallen
 server:
-  tomcat:
-    max-parameter-count: 5000
   forward-headers-strategy: native
   servlet:
     session:
