@@ -174,7 +174,9 @@
 		<div style="margin-right: 20px;">
 			<span th:text="${isManagementMode ? 'Managing Roster for:' : 'Editing Roster for:'}">Editing:</span>
 			<strong th:text="${targetMember != null ? targetMember.ingameName : 'Unknown'}" style="color: #2ecc71;">User</strong>
-			<span style="margin-left: 10px; font-size: 0.9em; color: #ccc;">(Left-Click: +1 | Right-Click: -1)</span>
+
+			<span id="roster-help-text" style="margin-left: 10px; font-size: 0.9em; color: #ccc;">(Left-Click: +1 | Right-Click: -1)</span>
+
 			(<span id="selected-count">0</span> selected)
 		</div>
 
@@ -358,6 +360,24 @@
     }
 
     document.addEventListener("DOMContentLoaded", function() {
+
+        // --- NEW: Detect Touch Device and Update Text ---
+        const helpText = document.getElementById('roster-help-text');
+
+        // Robust touch detection (works on modern browsers + legacy IE)
+        const isTouchDevice = (('ontouchstart' in window) ||
+                               (navigator.maxTouchPoints > 0) ||
+                               (navigator.msMaxTouchPoints > 0));
+
+        if (helpText) {
+            if (isTouchDevice) {
+                helpText.innerText = '(Tap: +1 | Long press: -1)';
+            } else {
+                helpText.innerText = '(Left-Click: +1 | Right-Click: -1)';
+            }
+        }
+        // ------------------------------------------------
+
         const images = document.querySelectorAll("img.champion-portrait");
         images.forEach(function(img) {
             img.onerror = function() { this.src = "/images/champion-cards/placeholder.png"; };
