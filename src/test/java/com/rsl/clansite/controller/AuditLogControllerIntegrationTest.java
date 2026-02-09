@@ -46,7 +46,7 @@ class AuditLogControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(model().attributeExists("logs"))
                 .andExpect(content().string(not(containsString("<th>Delete</th>"))));
 
-        verify(auditLogService).searchLogs(any(), any(), any(), any(), any());
+        verify(auditLogService).searchLogs(any(), any(), any(), any(), any(), any());
         verify(commonsService).fillModel(any(), any());
     }
 
@@ -56,7 +56,7 @@ class AuditLogControllerIntegrationTest extends BaseControllerTest {
         String ownerId = "owner-view";
 
         AuditLogEntity log = new AuditLogEntity(ObjectId.get(), LocalDateTime.now(), "user", "User", AuditAction.MEMBER_ADD, "Target", "Details");
-        when(auditLogService.searchLogs(any(), any(), any(), any(), any())).thenReturn(List.of(log));
+        when(auditLogService.searchLogs(any(), any(), any(), any(), any(), any())).thenReturn(List.of(log));
 
         // FIX: Mock authorities for Filter
         when(clanmemberService.getFreshAuthorities(eq(ownerId)))
@@ -182,6 +182,7 @@ class AuditLogControllerIntegrationTest extends BaseControllerTest {
                 .andExpect(status().isOk());
 
         verify(auditLogService).searchLogs(
+                any(),
                 eq(java.time.LocalDate.parse(startDateStr)),
                 eq(java.time.LocalDate.parse(endDateStr)),
                 eq(actor),
@@ -200,7 +201,7 @@ class AuditLogControllerIntegrationTest extends BaseControllerTest {
             largeList.add(new AuditLogEntity(ObjectId.get(), LocalDateTime.now(), "user", "User", AuditAction.MEMBER_ADD, "Target", "Details"));
         }
 
-        when(auditLogService.searchLogs(any(), any(), any(), any(), any())).thenReturn(largeList);
+        when(auditLogService.searchLogs(any(), any(), any(), any(), any(), any())).thenReturn(largeList);
 
         when(clanmemberService.getFreshAuthorities(eq(adminId)))
                 .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
@@ -222,7 +223,7 @@ class AuditLogControllerIntegrationTest extends BaseControllerTest {
             largeList.add(new AuditLogEntity(ObjectId.get(), LocalDateTime.now(), "user", "User", AuditAction.MEMBER_ADD, "Target", "Details"));
         }
 
-        when(auditLogService.searchLogs(any(), any(), any(), any(), any())).thenReturn(largeList);
+        when(auditLogService.searchLogs(any(), any(), any(), any(), any(), any())).thenReturn(largeList);
 
         when(clanmemberService.getFreshAuthorities(eq(adminId)))
                 .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
@@ -252,7 +253,7 @@ class AuditLogControllerIntegrationTest extends BaseControllerTest {
                 longDetails
         );
 
-        when(auditLogService.searchLogs(any(), any(), any(), any(), any())).thenReturn(List.of(logEntry));
+        when(auditLogService.searchLogs(any(), any(), any(), any(), any(), any())).thenReturn(List.of(logEntry));
 
         when(clanmemberService.getFreshAuthorities(eq(adminId)))
                 .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
@@ -281,7 +282,7 @@ class AuditLogControllerIntegrationTest extends BaseControllerTest {
                 shortDetails
         );
 
-        when(auditLogService.searchLogs(any(), any(), any(), any(), any())).thenReturn(List.of(logEntry));
+        when(auditLogService.searchLogs(any(), any(), any(), any(), any(), any())).thenReturn(List.of(logEntry));
 
         when(clanmemberService.getFreshAuthorities(eq(adminId)))
                 .thenReturn(Optional.of(Set.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));

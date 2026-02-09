@@ -153,7 +153,7 @@ class AuditLogServiceTest {
         AuditAction action = AuditAction.MEMBER_ADD;
         String target = "NewGuy";
 
-        auditLogService.searchLogs(fromDate, toDate, actor, action, target);
+        auditLogService.searchLogs(any(), fromDate, toDate, actor, action, target);
 
         verify(auditLogRepository).searchAuditLogs(
                 eq(LocalDateTime.of(fromDate, LocalTime.MIN)),
@@ -167,7 +167,7 @@ class AuditLogServiceTest {
     @Test
     @DisplayName("searchLogs - Should handle NULL inputs safely")
     void searchLogs_WithNulls_ShouldPassNullsToRepository() {
-        auditLogService.searchLogs(null, null, null, null, null);
+        auditLogService.searchLogs(null, null, null, null, null, null);
 
         verify(auditLogRepository).searchAuditLogs(
                 eq(null),
