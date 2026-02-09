@@ -14,7 +14,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Controller
@@ -37,27 +40,32 @@ public class AuditLogController {
             @RequestParam(required = false) LocalDate endDate,
             @RequestParam(required = false) String actor,
             @RequestParam(required = false) AuditAction action,
-            @RequestParam(required = false) String target) {
+            @RequestParam(required = false) String target,
+            @RequestParam(required = false, defaultValue = "UTC") String userTimeZone) {
 
         commonsService.fillModel(model, authentication);
 
-        List<AuditLogEntity> logs = auditLogService.searchLogs(startDate, endDate, actor, action, target);
+        // 3. Search using Instants (Service must be updated to accept Instant instead of LocalDate)
+        List<AuditLogEntity> logs = auditLogService.searchLogs(userTimeZone, startDate, endDate, actor, action, target);
 
         if (logs.size() > 100) {
             logs = logs.subList(0, 100);
-
             model.addAttribute("limitWarning", "Showing the first 100 results only. There are more records matching your criteria. Please use the filters to narrow down your search.");
         }
 
         model.addAttribute("logs", logs);
 
+        // Pass original LocalDates back to the view so the <input type="date"> keeps its value
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
+
         model.addAttribute("actor", actor);
         model.addAttribute("selectedAction", action);
         model.addAttribute("target", target);
-
         model.addAttribute("auditActions", AuditAction.values());
+
+        // Pass the timezone back so the hidden input persists it
+        model.addAttribute("userTimeZone", userTimeZone);
 
         return "audit-log";
     }

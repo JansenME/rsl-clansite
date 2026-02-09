@@ -20,10 +20,6 @@
 				<a th:href="@{/clanmembers}" class="button alt small">
 					<i class="fas fa-arrow-left"></i> Back to Roster
 				</a>
-
-				<div class="timezone-badge">
-					<i class="fas fa-globe"></i> Times displayed in your local timezone: <strong id="user-timezone">Detecting...</strong>
-				</div>
 			</div>
 
 			<div class="card" style="margin-bottom: 40px;">
@@ -80,7 +76,7 @@
 							<td data-label="Clan" style="vertical-align: middle;">
 								<div th:each="acc : ${member.accounts}" style="height: 28px; display: flex; align-items: center;">
                                <span th:if="${acc.clanGroup != null}"
-									 th:text="${acc.clanGroup}"
+									 th:text="${acc.clanGroup.displayName}"
 									 style="padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; background-color: #d1ecf1; color: #0c5460; font-weight: bold;">
                                      Clan
                                </span>
@@ -88,11 +84,9 @@
 							</td>
 
 							<td data-label="Last Online" style="vertical-align: middle; text-align: center;">
-                               <span class="local-time"
-									 th:data-time="${member.lastLogin}"
-									 th:text="${#temporals.format(member.lastLogin, 'dd-MM-yyyy HH:mm')}">
-                            Date Placeholder
-                               </span>
+                         		<span class="utc-time" th:text="${member.lastLogin}">
+                            		Date Placeholder
+                            	</span>
 							</td>
 
 							<td data-label="Status" style="vertical-align: middle; text-align: center;">
@@ -165,11 +159,9 @@
 							</td>
 
 							<td data-label="Last Seen">
-                               <span class="local-time"
-									 th:data-time="${visitor.lastLogin}"
-									 th:text="${#temporals.format(visitor.lastLogin, 'dd-MM-yyyy HH:mm')}">
-                                     Date Placeholder
-                               </span>
+                         		<span class="utc-time" th:text="${member.lastLogin}">
+                            		Date Placeholder
+                            	</span>
 							</td>
 
 							<td data-label="Visit Count" th:text="${visitor.visitCount}" style="font-weight: bold;">1</td>
@@ -193,33 +185,5 @@
 <button id="backToTopBtn" title="Go to top">
 	↑
 </button>
-
-<script>
-	document.addEventListener("DOMContentLoaded", function() {
-        // 1. Detect and display User Timezone
-        const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const tzDisplay = document.getElementById('user-timezone');
-        if (tzDisplay) {
-            tzDisplay.innerText = userTz;
-        }
-
-        // 2. Format Timestamps
-        const timeElements = document.querySelectorAll('.local-time');
-        timeElements.forEach(function(el) {
-            const rawTime = el.getAttribute('data-time');
-            if (rawTime) {
-                const date = new Date(rawTime + 'Z');
-
-                el.textContent = date.toLocaleString(undefined, {
-                       year: 'numeric',
-                       month: 'numeric',
-                       day: 'numeric',
-                       hour: '2-digit',
-                       minute: '2-digit'
-                   });
-            }
-        });
-    });
-</script>
 </body>
 </html>

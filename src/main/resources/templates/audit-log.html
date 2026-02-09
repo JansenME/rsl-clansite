@@ -16,7 +16,10 @@
 				<p>Tracking administrative actions performed on the roster.</p>
 
 				<div class="filter-container">
-					<form th:action="@{/audit-log}" method="get">
+					<form th:action="@{/audit-log}" method="get" id="auditFilterForm">
+
+						<input type="hidden" name="userTimeZone" id="userTimeZoneInput" />
+
 						<div class="filter-row">
 
 							<div class="filter-group">
@@ -79,7 +82,11 @@
 					</thead>
 					<tbody>
 					<tr th:each="log : ${logs}">
-						<td data-label="Date & Time" th:text="${#temporals.format(log.timestamp, 'dd-MM-yyyy HH:mm')}">Date</td>
+						<td data-label="Date & Time">
+                      <span class="utc-time" th:text="${log.timestamp}">
+                         Date Placeholder
+                      </span>
+						</td>
 
 						<td data-label="Admin" th:text="${log.actorDiscordName}">Admin Name</td>
 
@@ -121,6 +128,18 @@
 
 	<div th:insert="~{inserts/copyright :: copyright}" id="copyright">
 	</div>
+
+	<script>
+		document.getElementById('auditFilterForm').addEventListener('submit', function() {
+            try {
+                // Gets "Europe/Paris", "America/New_York", etc.
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                document.getElementById('userTimeZoneInput').value = tz;
+            } catch (e) {
+                console.warn("Could not detect timezone for filter", e);
+            }
+        });
+	</script>
 </div>
 </body>
 </html>

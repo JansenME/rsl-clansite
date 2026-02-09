@@ -1797,10 +1797,17 @@ table.history-table tr:hover {
 .timezone-badge {
     background-color: #d1ecf1;
     color: #0c5460;
-    padding: 8px 15px;
+    border: 1px solid #bee5eb;
     border-radius: 4px;
     font-size: 0.9em;
-    border: 1px solid #bee5eb;
+
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 500px;
+    margin: 0px auto 15px;
+    padding: 8px 15px;
+    text-align: center;
 }
 
 .table-identity-cell {

@@ -11,9 +11,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Service
@@ -52,7 +55,7 @@ public class AuditLogService {
     private void saveLog(String actorId, String actorName, AuditAction action, String target, String details) {
         AuditLogEntity logEntry = new AuditLogEntity(
                 ObjectId.get(),
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC), // Explicitly store as UTC
                 actorId,
                 actorName,
                 action,
@@ -63,10 +66,32 @@ public class AuditLogService {
         log.debug("Audit Log recorded: [{}] {} - {} performed by {}", action, target, details, actorName);
     }
 
-    public List<AuditLogEntity> searchLogs(LocalDate fromDate, LocalDate toDate, String actor, AuditAction action, String target) {
-        LocalDateTime start = (fromDate != null) ? fromDate.atStartOfDay() : null;
-        LocalDateTime end = (toDate != null) ? toDate.atTime(LocalTime.MAX) : null;
+    public List<AuditLogEntity> searchLogs(String userTimeZone, LocalDate fromDate, LocalDate toDate, String actor, AuditAction action, String target) {
+        // 1. Resolve ZoneId
+        ZoneId zoneId;
+        try {
+            zoneId = (userTimeZone != null && !userTimeZone.isEmpty())
+                    ? ZoneId.of(userTimeZone)
+                    : ZoneId.of("UTC");
+        } catch (Exception e) {
+            zoneId = ZoneId.of("UTC");
+        }
 
+        // 2. Calculate Start Time (Midnight in User's Zone -> Converted to UTC LocalDateTime)
+        LocalDateTime start = null;
+        if (fromDate != null) {
+            Instant fromInstant = fromDate.atStartOfDay(zoneId).toInstant();
+            start = LocalDateTime.ofInstant(fromInstant, ZoneOffset.UTC);
+        }
+
+        // 3. Calculate End Time (End of Day in User's Zone -> Converted to UTC LocalDateTime)
+        LocalDateTime end = null;
+        if (toDate != null) {
+            Instant toInstant = toDate.atTime(LocalTime.MAX).atZone(zoneId).toInstant();
+            end = LocalDateTime.ofInstant(toInstant, ZoneOffset.UTC);
+        }
+
+        // 4. Query Repository using UTC times
         return auditLogRepository.searchAuditLogs(start, end, actor, action, target);
     }
 

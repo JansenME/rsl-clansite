@@ -8,13 +8,19 @@
 </head>
 <body>
 <div th:fragment="copyright">
-    &copy; 2025-<span th:text="${currentYear}"></span> Martijn Jansen. All rights reserved.
-    Version <span th:text="${versionNumber}"></span> (<span th:text="${applicationDate}"></span>)
-    <span th:if="${supportId != null and supportId != 'N/A'}"
-        style="margin-left: 10px; color: #666; font-size: 0.8em;"
-        title="Provide this ID to support for error tracking">
-            | SID: <span th:text="${supportId}"></span>
-    </span>
+    <div class="timezone-badge" style="color: #888; font-size: 0.85em;">
+        <i class="fas fa-globe"></i> Times displayed in your local timezone: <strong id="user-timezone" style="color: #aaa;">Detecting...</strong>
+    </div>
+
+    <div style="margin-bottom: 10px;">
+        &copy; 2025-<span th:text="${currentYear}"></span> Martijn Jansen. All rights reserved.
+        Version <span th:text="${versionNumber}"></span> (<span th:text="${applicationDate}"></span>)
+        <span th:if="${supportId != null and supportId != 'N/A'}"
+              style="margin-left: 10px; color: #666; font-size: 0.8em;"
+              title="Provide this ID to support for error tracking">
+                | SID: <span th:text="${supportId}"></span>
+        </span>
+    </div>
 
     <div id="loading-overlay">
         <div class="spinner"></div>
@@ -22,6 +28,63 @@
     </div>
 
     <div th:insert="~{inserts/notice-modal :: notice-modal}"></div>
+
+    <script th:inline="javascript">
+        document.addEventListener("DOMContentLoaded", function() {
+            // 1. Detect and Display User Timezone
+            try {
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const tzDisplay = document.getElementById('user-timezone');
+                if (tzDisplay) {
+                    tzDisplay.innerText = tz;
+                }
+            } catch (e) {
+                console.warn("Could not detect timezone", e);
+            }
+
+            // 2. Convert all elements with class 'utc-time' to Local Time
+            const timeElements = document.querySelectorAll('.utc-time');
+            timeElements.forEach(el => {
+                const rawTime = el.innerText.trim();
+                if (rawTime) {
+                    try {
+                        // Ensure it's treated as UTC (append Z if missing and not already ISO)
+                        // This handles generic SQL timestamps that might lack the 'Z'
+                        const timeString = rawTime.endsWith('Z') ? rawTime : rawTime + 'Z';
+                        const date = new Date(timeString);
+
+                        if (!isNaN(date.getTime())) {
+                            // Format: "10/02/2026, 14:30" (User's Locale)
+                            el.innerText = date.toLocaleString(undefined, {
+                                year: 'numeric',
+                                month: 'numeric',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                            el.title = "Original UTC: " + rawTime; // Tooltip shows server time
+                        }
+                    } catch (err) {
+                        console.error("Time conversion failed for:", rawTime);
+                    }
+                }
+            });
+        });
+
+        // Global Helper: Show Loading Overlay
+        function showLoading(text) {
+            const overlay = document.getElementById('loading-overlay');
+            const textEl = document.getElementById('loading-text');
+            if (text) textEl.innerText = text;
+            if (overlay) overlay.style.display = 'flex';
+        }
+
+        // Global Helper: Hide Loading Overlay
+        function hideLoading() {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+    </script>
 </div>
 </body>
 </html>
