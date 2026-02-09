@@ -265,4 +265,36 @@ public class SiegeService {
             }
         }
     }
+
+    public SiegeStructure upgradeStructure(String siegeId, String structureId) {
+        SiegeEntity siege = siegeRepository.findById(new ObjectId(siegeId))
+                .orElseThrow(() -> new IllegalArgumentException("Siege not found: " + siegeId));
+
+        SiegeStructure targetStructure = null;
+
+        // Find the structure in the list
+        for (SiegeStructure s : siege.getDefensiveStructures()) {
+            if (s.getId().equals(structureId)) {
+                targetStructure = s;
+                break;
+            }
+        }
+
+        if (targetStructure == null) {
+            throw new IllegalArgumentException("Structure not found: " + structureId);
+        }
+
+        // Check if we are already at max level
+        if (targetStructure.getLevel() >= targetStructure.getType().getMaxLevel()) {
+            return targetStructure; // Do nothing, just return current state
+        }
+
+        // Perform the upgrade (Models handles slot logic)
+        targetStructure.updateLevel(targetStructure.getLevel() + 1);
+
+        // Save the entire siege document
+        siegeRepository.save(siege);
+
+        return targetStructure;
+    }
 }

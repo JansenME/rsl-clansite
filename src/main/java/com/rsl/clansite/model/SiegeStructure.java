@@ -33,8 +33,34 @@ public class SiegeStructure {
         this.attackPoints = type.getDefaultAttackPoints();
         this.slots = new ArrayList<>();
 
-        for(int i = 0; i < type.getDefaultSlotsLevel1(); i++) {
+        // UPDATED: Use the new level-based getter (Level 1 default)
+        int initialSlots = type.getSlotsForLevel(1);
+        for(int i = 0; i < initialSlots; i++) {
             this.slots.add(new SiegeSlot(i + 1));
+        }
+    }
+
+    /**
+     * Updates the level and adjusts the slot count accordingly.
+     * Adds empty slots if leveling up.
+     * Removes last slots if leveling down.
+     */
+    public void updateLevel(int newLevel) {
+        if (newLevel < 1 || newLevel > type.getMaxLevel()) {
+            return;
+        }
+
+        this.level = newLevel;
+        int targetSize = this.type.getSlotsForLevel(newLevel);
+
+        // 1. Add slots if we need more
+        while (this.slots.size() < targetSize) {
+            this.slots.add(new SiegeSlot(this.slots.size() + 1));
+        }
+
+        // 2. Remove slots if we have too many (Truncate from end)
+        while (this.slots.size() > targetSize) {
+            this.slots.remove(this.slots.size() - 1);
         }
     }
 

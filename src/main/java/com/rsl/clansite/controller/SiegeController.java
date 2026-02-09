@@ -324,6 +324,18 @@ public class SiegeController {
         return "redirect:/siege/overview";
     }
 
+    @PostMapping("/{siegeId}/structure/{structureId}/upgrade")
+    @ResponseBody
+    @PreAuthorize("hasRole('ROLE_COORDINATOR')")
+    public ResponseEntity<SiegeStructure> upgradeStructure(
+            @PathVariable String siegeId,
+            @PathVariable String structureId) {
+
+        SiegeStructure updatedStructure = siegeService.upgradeStructure(siegeId, structureId);
+
+        return ResponseEntity.ok(updatedStructure);
+    }
+
     // --- HELPER METHODS ---
 
     private boolean hasPermission(HttpSession session, Authentication authentication, String targetMemberId) {

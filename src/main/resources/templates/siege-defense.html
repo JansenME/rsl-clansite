@@ -17,12 +17,6 @@
                 <i class="fas fa-exclamation-circle"></i> <span th:text="${error}">Error</span>
             </div>
 
-            <div style="background: rgba(255, 165, 0, 0.1); border: 1px solid #ffa500; color: #cc8400; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
-                <p style="margin: 0;">
-                    <strong>This page is currently Under Construction! It works, but it is possible that not all slots are shown, depending on the level the towers are. This page right now is based on everything on level 1.</strong>
-                </p>
-            </div>
-
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h2 style="margin: 0;"><i class="fas fa-shield-alt"></i> Defense Placement Map</h2>
                 <a th:href="@{/siege}" class="button alt small">
@@ -54,13 +48,35 @@
                             </div>
                         </div>
 
-                        <div th:each="struct : ${siege.defensiveStructures}" class="structure-row">
-                            <div class="structure-title">
-                                <span><i class="fas fa-archway"></i> <span th:text="${struct.name}">Stronghold</span></span>
-                                <span style="font-size:0.8em; color:#555;">Slots: <span th:text="${struct.slots.size()}">12</span></span>
+                        <div th:each="struct : ${siege.defensiveStructures}" class="structure-row" th:id="'struct-row-' + ${struct.id}">
+                            <div class="structure-title" style="display: flex; align-items: center; gap: 10px;">
+                                <span>
+                                    <i class="fas fa-archway"></i>
+                                    <span th:text="${struct.name}">Structure</span>
+
+                                    <span th:if="${struct.type.maxLevel > 1}"
+                                          style="font-size: 0.8em; color: #aaa; margin-left: 5px;">
+                                        (Level <span th:id="'lvl-' + ${struct.id}" th:text="${struct.level}">1</span>)
+                                    </span>
+                                </span>
+
+                                <div style="flex-grow: 1;"></div>
+
+                                <button th:if="${isPrivileged and struct.level < struct.type.maxLevel}"
+                                        type="button"
+                                        class="button small primary btn-upgrade"
+                                        th:id="'btn-upg-' + ${struct.id}"
+                                        th:onclick="upgradeStructure([[${siege.id.toHexString()}]], [[${struct.id}]])"
+                                        title="Upgrade Structure Level (+Slots)">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+
+                                <span style="font-size:0.8em; color:#555;">
+                                    Slots: <span th:id="'slots-count-' + ${struct.id}" th:text="${struct.slots.size()}">12</span>
+                                </span>
                             </div>
 
-                            <div class="group-container">
+                            <div class="group-container" th:id="'group-container-' + ${struct.id}">
                                 <div th:each="group, gStat : ${struct.getGroups()}" class="siege-group">
                                     <span class="group-label">Group <span th:text="${gStat.count}">1</span></span>
 
@@ -218,12 +234,59 @@
 </script>
 
 <script th:inline="javascript">
-    // --- GLOBAL VARIABLES ---
+    var csrfToken = /*[[${_csrf.token}]]*/ '';
+    var csrfHeader = /*[[${_csrf.headerName}]]*/ 'X-CSRF-TOKEN';
+</script>
+
+<script th:inline="javascript">
+    // --- GLOBAL VARIABLES (Existing) ---
     var currentSiegeTeams = [];
     var currentGlobalUsedChampions = [];
     var currentRoster = [];
 
-    // --- HELPER FUNCTIONS ---
+    // --- UPGRADE FUNCTION (NEW) ---
+    function upgradeStructure(siegeId, structureId) {
+        if(!confirm("Upgrade this structure level? This will add empty slots.")) return;
+
+        fetch(`/siege/${siegeId}/structure/${structureId}/upgrade`, {
+            method: 'POST',
+            headers: {
+                [csrfHeader]: csrfToken
+            }
+        })
+        .then(response => {
+            if(!response.ok) throw new Error('Upgrade failed');
+            return response.json();
+        })
+        .then(data => {
+            // Update UI Level Text
+            document.getElementById('lvl-' + structureId).innerText = data.level;
+
+            // Update UI Slot Count
+            document.getElementById('slots-count-' + structureId).innerText = data.slots.length;
+
+            // Hide Upgrade Button if Max Level Reached
+            if (data.level >= data.type.maxLevel) { // Ensure your Enum serializes maxLevel or handle this via known logic
+                var btn = document.getElementById('btn-upg-' + structureId);
+                if(btn) btn.style.display = 'none';
+            }
+
+            // REBUILD SLOTS - Reload Page Logic or Dynamic Append?
+            // Since dynamic append is complex with Thymeleaf variables, simplest reliable way
+            // is to reload. But you asked for AJAX.
+            // So we will refresh the page to get the new slots rendered correctly by server.
+            // Why? Because rendering the "slot-card" requires extensive Thymeleaf logic (profiles, permissions, etc.)
+            // that is hard to duplicate in JS.
+
+            window.location.reload();
+        })
+        .catch(err => {
+            alert("Error upgrading structure: " + err);
+        });
+    }
+
+    // ... (Rest of existing JS functions: getGloballyUsedChampions, openAssignModal, etc.) ...
+
     function getGloballyUsedChampions(siegeId, memberId, currentStructureId, currentSlotNumber) {
         var used = [];
         var slots = document.querySelectorAll('.slot-card[data-siege-id="' + siegeId + '"]');
@@ -291,7 +354,6 @@
             var select = document.getElementById('adminMemberSelect');
             select.innerHTML = "";
 
-            // ADMIN SAFETY FIX: Handle undefined maps using fallbacks
             var group = (window.siegeGroupMap && window.siegeGroupMap[siegeId]) ? window.siegeGroupMap[siegeId] : 'T1';
             var list = (group === 'T2') ? (t2Members || []) : (t1Members || []);
 
@@ -368,7 +430,6 @@
         var structureId = document.getElementById('modalStructureId').value;
         var slotNumber = document.getElementById('modalSlotNumber').value;
 
-        // ADMIN SAFETY FIX: Ensure the map exists
         var group = (window.siegeGroupMap && window.siegeGroupMap[siegeId]) ? window.siegeGroupMap[siegeId] : 'T1';
         var list = (group === 'T2') ? (t2Members || []) : (t1Members || []);
 
