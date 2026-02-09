@@ -26,6 +26,9 @@ spring:
         registration:
           discord:
             client-id: "1460257098439852084"
+server:
+  tomcat:
+    max-parameter-count: 10000
 logging:
   file:
     name: "C:/Development/rsl-clansite.log"

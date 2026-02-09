@@ -5,6 +5,7 @@ import com.rsl.clansite.repository.ClanmemberRepository;
 import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
 import com.rsl.clansite.service.RosterSyncService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -18,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Controller
@@ -121,11 +123,29 @@ public class RosterSyncController {
 
     @PostMapping("/commit")
     @PreAuthorize("isAuthenticated()")
-    public String commitSync(@RequestParam(required = false) List<Integer> selectedIndices,
+    public String commitSync(HttpServletRequest request,
                              Authentication authentication,
                              HttpSession session,
                              RedirectAttributes redirectAttributes) {
 
+        // 1. Manually extract the values (Bypasses the 400 Error)
+        String[] indicesArray = request.getParameterValues("selectedIndices");
+        List<Integer> selectedIndices = new java.util.ArrayList<>();
+
+        if (indicesArray != null) {
+            for (String indexStr : indicesArray) {
+                try {
+                    selectedIndices.add(Integer.parseInt(indexStr));
+                } catch (NumberFormatException e) {
+                    // Ignore weird values, don't crash
+                }
+            }
+        }
+
+        // Debug Log (Optional, but good to see what's happening)
+        System.out.println("DEBUG: Received indices: " + selectedIndices);
+
+        // ... The rest is your existing logic ...
         ClanmemberEntity sessionMember = clanmemberService.getActiveClanmember(session, authentication);
         if (sessionMember == null) return "redirect:/login";
 

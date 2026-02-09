@@ -113,24 +113,19 @@ public class ClanmemberService {
         ClanmemberEntity member = getMemberById(memberId);
         if (member.getKnownTeams() == null) return new ArrayList<>();
 
-        // 1. Build a Map of InstanceID -> Master Champion Data
-        // This lets us resolve "UUID-123" to "Kael" + "kael.png"
         Map<String, ChampionEntity> instanceToMasterMap = new java.util.HashMap<>();
 
         if (member.getRoster() != null) {
-            // Get all Master IDs from roster
             List<String> masterIds = member.getRoster().stream()
                     .map(OwnedChampion::getChampionId)
                     .collect(Collectors.toList());
 
-            // Fetch Master Entities
             List<ChampionEntity> masters = championRepository.findAllById(
                     masterIds.stream().map(ObjectId::new).collect(Collectors.toList())
             );
             Map<String, ChampionEntity> masterLookup = masters.stream()
                     .collect(Collectors.toMap(c -> c.getId().toHexString(), c -> c));
 
-            // Map Instance UUID -> Master Entity
             for (OwnedChampion oc : member.getRoster()) {
                 if (masterLookup.containsKey(oc.getChampionId())) {
                     instanceToMasterMap.put(oc.getId(), masterLookup.get(oc.getChampionId()));
@@ -138,19 +133,17 @@ public class ClanmemberService {
             }
         }
 
-        // 2. Convert Teams to DTOs
         List<TeamDisplayDTO> dtos = new ArrayList<>();
         for (Team team : member.getKnownTeams()) {
             String conditionLabel = null;
             if (team.getSiegeConditionId() != null) {
-                // You might need a lightweight lookup here or just skip the label for now if speed is key
-                // For now, let's leave it null or fetch if you have the service handy
+                // condition label logic
             }
 
             dtos.add(new TeamDisplayDTO(
                     team.getId(),
                     team.getTeamName(),
-                    conditionLabel, // Or resolve using siegeConditionService if needed
+                    conditionLabel,
                     resolveDisplay(team.getLeaderChampionId(), instanceToMasterMap),
                     resolveDisplay(team.getChampion2Id(), instanceToMasterMap),
                     resolveDisplay(team.getChampion3Id(), instanceToMasterMap),
@@ -433,7 +426,6 @@ public class ClanmemberService {
             }
 
             boolean groupChanged = false;
-
             boolean discordNameChanged = !Objects.equals(member.getDiscordName(), discordData.getDiscordName());
             boolean nicknameChanged = !Objects.equals(member.getPlayerNickname(), discordData.getPlayerNickname());
 
@@ -544,55 +536,34 @@ public class ClanmemberService {
 
     public ClanmemberViewData getUserViewData(Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof OAuth2User oauth2User)) {
-            // Guest / Not Logged In
             return new ClanmemberViewData(null, List.of(), null, null, false);
         }
 
         String discordId = oauth2User.getAttribute("id");
-
-        // 1. Try to find the "Real" Linked Member in our DB
-        // We use a lookup here so we display the "Live" data from the database,
-        // not the "Stale" data from the session (which only updates on logout/login).
         List<ClanmemberEntity> members = clanmemberRepository.findAllByDiscordId(discordId);
         ClanmemberEntity activeMember = members.stream()
-                .filter(m -> m.getStatus() == MemberStatus.ACTIVE) // Optional: prioritize active
+                .filter(m -> m.getStatus() == MemberStatus.ACTIVE)
                 .findFirst()
                 .orElse(members.isEmpty() ? null : members.get(0));
 
-        // 2. Define Variables
         String displayName;
         String avatarHash;
         boolean isSystemOwner = false;
         String impersonatedRole = null;
 
-        // 3. Resolve Data (DB Priority > Session Fallback)
         if (activeMember != null) {
-            // --- OPTION A: Prioritize In-Game Name for the Website ---
-            // If they have an In-Game Name, show that. If not, show the clean Discord Name.
-            displayName = (activeMember.getIngameName() != null)
-                    ? activeMember.getIngameName()
-                    : activeMember.getDiscordName();
-
+            displayName = (activeMember.getIngameName() != null) ? activeMember.getIngameName() : activeMember.getDiscordName();
             avatarHash = activeMember.getAvatarHash();
             impersonatedRole = activeMember.getImpersonatedRole();
-
-            // Check System Owner (Hardcoded ID)
-            if (discordId.equals(kloepDiscordId)) {
-                isSystemOwner = true;
-            }
+            if (discordId.equals(kloepDiscordId)) isSystemOwner = true;
         } else {
-            // --- Fallback: User is logged in but NOT linked to a Clan Member ---
             String globalName = oauth2User.getAttribute("global_name");
             String username = oauth2User.getAttribute("username");
-
-            // Apply the same "Null String" fix here just in case
             String cleanGlobal = (globalName != null && !globalName.equals("null")) ? globalName : null;
-
             displayName = (cleanGlobal != null) ? cleanGlobal : (username != null && !username.equals("null") ? username : "Unknown User");
             avatarHash = oauth2User.getAttribute("avatar");
         }
 
-        // 4. Return View Data
         return new ClanmemberViewData(
                 displayName,
                 resolveRoleNamesForUser(discordId),
@@ -604,14 +575,11 @@ public class ClanmemberService {
 
     public void saveNewClanmember(NewClanmemberDTO dto, Authentication authentication) {
         ClanmemberEntity newMember = new ClanmemberEntity();
-
         newMember.setDiscordId(dto.getDiscordId());
         newMember.setDiscordName(dto.getDiscordName());
         newMember.setPlayerNickname(dto.getPlayerNickname());
         newMember.setIngameName(dto.getIngameName());
-
         newMember.setClanRank(dto.getClanRank() != null ? dto.getClanRank() : ClanRank.SOLDIER);
-
         newMember.setClanGroup(dto.getClanGroup());
         newMember.setAvatarHash(dto.getAvatarHash());
         newMember.setDiscordRoles(dto.getDiscordRoles() != null ? dto.getDiscordRoles() : List.of());
@@ -625,7 +593,6 @@ public class ClanmemberService {
                 log.info("Migrated Visitor Log to new Member profile for: {}", dto.getIngameName());
             }
         }
-
         clanmemberRepository.save(newMember);
 
         auditLogService.logAction(
@@ -645,7 +612,6 @@ public class ClanmemberService {
             throw new AccessDeniedException("You do not have permission to modify this roster.");
         }
 
-        // 1. Calculate Submitted Frequencies (e.g., Kael=3, Elhain=1)
         List<String> safeSubmittedIds = submittedChampionIds != null ? submittedChampionIds : new ArrayList<>();
         Map<String, Long> submittedCounts = safeSubmittedIds.stream()
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
@@ -657,7 +623,6 @@ public class ClanmemberService {
         List<OwnedChampion> currentRoster = member.getRoster();
         boolean changed = false;
 
-        // 2. Identify all Master IDs involved (Union of Existing and Submitted)
         Set<String> allMasterIds = new HashSet<>(submittedCounts.keySet());
         currentRoster.forEach(oc -> allMasterIds.add(oc.getChampionId()));
 
@@ -669,24 +634,27 @@ public class ClanmemberService {
             if (diff > 0) {
                 // We need to ADD copies
                 for (int i = 0; i < diff; i++) {
-                    currentRoster.add(new OwnedChampion(masterId, 1, 1)); // Default Level 1
+                    currentRoster.add(new OwnedChampion(masterId, 1, 1));
                 }
                 changed = true;
             } else if (diff < 0) {
-                // We need to REMOVE copies (Remove `abs(diff)` instances)
-                // Logic: Prefer removing low level/rank instances first
+                // We need to REMOVE copies
                 long toRemove = Math.abs(diff);
 
-                // Get all instances of this champion
                 List<OwnedChampion> instances = currentRoster.stream()
                         .filter(oc -> oc.getChampionId().equals(masterId))
                         .sorted(Comparator.comparingInt(OwnedChampion::getRank)
-                                .thenComparingInt(OwnedChampion::getLevel)) // Sort Ascending (weakest first)
+                                .thenComparingInt(OwnedChampion::getLevel))
                         .collect(Collectors.toList());
 
                 for (int i = 0; i < toRemove; i++) {
                     if (i < instances.size()) {
-                        currentRoster.remove(instances.get(i));
+                        OwnedChampion championToRemove = instances.get(i);
+
+                        // FIX: Detach from teams properly using the helper method
+                        detachChampionFromTeams(member, championToRemove.getId());
+
+                        currentRoster.remove(championToRemove);
                     }
                 }
                 changed = true;
@@ -695,7 +663,6 @@ public class ClanmemberService {
 
         if (changed) {
             member.setRosterLastUpdated(LocalDateTime.now());
-
             String actorName = "Unknown";
             if (authentication.getPrincipal() instanceof OAuth2User oauthUser) {
                 String globalName = oauthUser.getAttribute("global_name");
@@ -705,13 +672,26 @@ public class ClanmemberService {
             member.setRosterUpdatedBy(actorName);
 
             clanmemberRepository.save(member);
-
             auditLogService.logAction(
                     authentication,
                     AuditAction.ROSTER_UPDATE,
                     member.getIngameName(),
                     "Bulk Roster Update (Synced Counts)"
             );
+        }
+    }
+
+    /**
+     * Helper to safely remove a champion from any known team slots to prevent orphaned IDs.
+     */
+    private void detachChampionFromTeams(ClanmemberEntity member, String instanceId) {
+        if (member.getKnownTeams() == null) return;
+
+        for (Team team : member.getKnownTeams()) {
+            if (Objects.equals(team.getLeaderChampionId(), instanceId)) team.setLeaderChampionId(null);
+            if (Objects.equals(team.getChampion2Id(), instanceId)) team.setChampion2Id(null);
+            if (Objects.equals(team.getChampion3Id(), instanceId)) team.setChampion3Id(null);
+            if (Objects.equals(team.getChampion4Id(), instanceId)) team.setChampion4Id(null);
         }
     }
 
@@ -734,7 +714,6 @@ public class ClanmemberService {
 
             member.setRosterLastUpdated(LocalDateTime.now());
 
-            // FIX: Resolve friendly name from OAuth2User instead of raw ID
             String actorName = "Unknown";
             if (authentication.getPrincipal() instanceof OAuth2User oauthUser) {
                 String globalName = oauthUser.getAttribute("global_name");
@@ -742,7 +721,6 @@ public class ClanmemberService {
                 actorName = globalName != null ? globalName : (username != null ? username : authentication.getName());
             }
             member.setRosterUpdatedBy(actorName);
-
             clanmemberRepository.save(member);
         }
     }
@@ -842,8 +820,6 @@ public class ClanmemberService {
         }
 
         String avatarUrl = buildAvatarUrl(member.getDiscordId(), member.getAvatarHash());
-
-        // Updated constructor usage: No impersonation or system owner status for public member view
         return new ClanmemberViewData(discordUserName, roleNames, avatarUrl, null, false);
     }
 
@@ -853,9 +829,7 @@ public class ClanmemberService {
         dto.setDiscordName(entity.getDiscordName());
         dto.setPlayerNickname(entity.getPlayerNickname());
         dto.setIngameName(entity.getIngameName());
-
         dto.setClanRank(entity.getClanRank());
-
         dto.setClanGroup(entity.getClanGroup());
         dto.setAvatarHash(entity.getAvatarHash());
         dto.setDiscordRoles(entity.getDiscordRoles());
@@ -864,7 +838,6 @@ public class ClanmemberService {
 
     public void updateClanmember(String id, NewClanmemberDTO dto, Authentication authentication) {
         ClanmemberEntity member = getMemberById(id);
-
         Optional<ClanmemberEntity> existingWithSameName = clanmemberRepository.findByIngameName(dto.getIngameName());
         if (existingWithSameName.isPresent() && !existingWithSameName.get().getId().toHexString().equals(id)) {
             throw new IllegalArgumentException("The In-Game Name '" + dto.getIngameName() + "' is already in use by another member.");
@@ -872,22 +845,17 @@ public class ClanmemberService {
 
         String oldDiscordId = member.getDiscordId();
         String newDiscordId = dto.getDiscordId();
-
         if (!StringUtils.hasText(newDiscordId)) {
             newDiscordId = null;
         }
 
         boolean discordIdChanged = !Objects.equals(oldDiscordId, newDiscordId);
-
         member.setIngameName(dto.getIngameName());
-
         member.setClanRank(dto.getClanRank());
-
         member.setClanGroup(dto.getClanGroup());
         member.setDiscordId(newDiscordId);
 
         clanmemberRepository.save(member);
-
         auditLogService.logAction(
                 authentication,
                 AuditAction.MEMBER_UPDATE,
@@ -899,10 +867,8 @@ public class ClanmemberService {
             try {
                 List<ClanmemberEntity> allLinked = clanmemberRepository.findAllByDiscordId(newDiscordId);
                 boolean isMultiAccount = allLinked.size() > 1;
-
                 tryUpdateMemberRoles(member, isMultiAccount);
                 log.info("Auto-synced member {} after manual Discord ID link.", member.getIngameName());
-
             } catch (Exception e) {
                 log.warn("Auto-sync failed after linking Discord ID for {}: {}", member.getIngameName(), e.getMessage());
             }
@@ -943,10 +909,8 @@ public class ClanmemberService {
                     status.setDiscordName("NOT FOUND");
                 } else {
                     NewClanmemberDTO liveData = apiResult.get();
-
                     String liveNick = liveData.getPlayerNickname();
                     String liveGlobal = liveData.getDiscordName();
-
                     String displayName = "Unknown";
 
                     if (isValidName(liveNick)) {
@@ -956,7 +920,6 @@ public class ClanmemberService {
                     }
 
                     status.setDiscordName(displayName);
-
                     boolean avatarMatch = java.util.Objects.equals(member.getAvatarHash(), liveData.getAvatarHash());
                     status.setAvatarSynced(avatarMatch);
 
@@ -975,33 +938,26 @@ public class ClanmemberService {
                 status.setRolesSynced(false);
                 status.setAvatarSynced(false);
             }
-
             statusList.add(status);
         }
 
         statusList.sort((a, b) -> {
             int scoreA = getSortScore(a);
             int scoreB = getSortScore(b);
-
-            if (scoreA != scoreB) {
-                return Integer.compare(scoreA, scoreB);
-            }
+            if (scoreA != scoreB) return Integer.compare(scoreA, scoreB);
             return a.getIngameName().compareToIgnoreCase(b.getIngameName());
         });
-
         return statusList;
     }
 
     public void syncSingleMember(String id, Authentication authentication) {
         ClanmemberEntity member = getMemberById(id);
-
         if (!StringUtils.hasText(member.getDiscordId())) {
             throw new IllegalArgumentException("Cannot sync: This member is not linked to a Discord ID.");
         }
 
         List<ClanmemberEntity> allLinked = clanmemberRepository.findAllByDiscordId(member.getDiscordId());
         boolean isMultiAccount = allLinked.size() > 1;
-
         boolean updated = tryUpdateMemberRoles(member, isMultiAccount);
 
         if (updated) {
@@ -1045,24 +1001,16 @@ public class ClanmemberService {
         return clanmemberRepository.findAllByDiscordId(discordId).stream()
                 .findFirst()
                 .map(member -> {
-                    // SECURE CHECK: Only allow impersonation if the ID matches the Owner ID from YAML
                     if (discordId.equals(kloepDiscordId) && member.getImpersonatedRole() != null) {
                         Set<SimpleGrantedAuthority> shadowAuths = new HashSet<>();
-
                         String role = member.getImpersonatedRole();
-
-                        // Add the specific role selected
                         shadowAuths.add(new SimpleGrantedAuthority(role));
-
                         if (!"ROLE_GUEST".equals(role)) {
                             shadowAuths.add(new SimpleGrantedAuthority("ROLE_USER"));
                         }
-
                         log.info("Masquerade active for Owner. Current shadow role: {}", role);
                         return shadowAuths;
                     }
-
-                    // Normal flow for everyone else (and Owner when not impersonating)
                     Set<String> dbRoles = new HashSet<>(member.getDiscordRoles());
                     return discordRoleService.getAuthoritiesForRoles(dbRoles, discordId);
                 });
@@ -1082,7 +1030,6 @@ public class ClanmemberService {
             member.setImpersonatedRole(role);
             clanmemberRepository.save(member);
         }
-
         log.info("Owner impersonation updated to: {}", role != null ? role : "NONE");
     }
 
@@ -1093,11 +1040,9 @@ public class ClanmemberService {
 
         if (StringUtils.hasText(targetMemberId)) {
             targetMember = getMemberById(targetMemberId);
-
             if (!isOwnProfile(targetMember, authentication) && !securityService.isCoordinator(authentication)) {
                 throw new AccessDeniedException("You do not have permission to manage teams for other members.");
             }
-
         } else {
             targetMember = activeUser;
         }
@@ -1136,9 +1081,7 @@ public class ClanmemberService {
         }
 
         clanmemberRepository.save(targetMember);
-
         String actorName = authentication.getName();
-
         auditLogService.logAction(
                 authentication,
                 AuditAction.MEMBER_UPDATE,
@@ -1164,7 +1107,6 @@ public class ClanmemberService {
 
         if (championInstanceIds.isEmpty()) return;
 
-        // Resolve OwnedChampion UUIDs to Master Champion IDs
         List<String> masterChampionIds = new ArrayList<>();
         if (member.getRoster() != null) {
             for (String instanceId : championInstanceIds) {
@@ -1196,7 +1138,6 @@ public class ClanmemberService {
         try {
             String getterName = "get" + capitalize(condition.getCategory().name());
             Method method = ChampionEntity.class.getMethod(getterName);
-
             Object value = method.invoke(champ);
 
             if (value instanceof Enum<?>) {
@@ -1222,30 +1163,20 @@ public class ClanmemberService {
 
     private int getSortScore(com.rsl.clansite.model.dto.SyncStatusDTO dto) {
         boolean hasId = StringUtils.hasText(dto.getDiscordId());
-
-        if (!hasId) {
-            return 3;
-        }
-
+        if (!hasId) return 3;
         boolean fullySynced = dto.isAvatarSynced() && dto.isRolesSynced() && dto.isNicknameSynced();
-
-        if (!fullySynced) {
-            return 1;
-        }
-
+        if (!fullySynced) return 1;
         return 2;
     }
 
     private void updateVisitorLog(String discordId, String username, String avatarHash) {
         VisitorLogEntity visitor = visitorLogRepository.findByDiscordId(discordId)
                 .orElse(new VisitorLogEntity(discordId, username, avatarHash));
-
         if (visitor.getId() != null) {
             visitor.setUsername(username);
             visitor.setAvatarHash(avatarHash);
             visitor.updateLogin();
         }
-
         visitorLogRepository.save(visitor);
     }
 
@@ -1254,14 +1185,12 @@ public class ClanmemberService {
             if (!StringUtils.hasText(member.getDiscordId())) {
                 return false;
             }
-
             Optional<NewClanmemberDTO> discordDataOpt = discordApiClient.getDiscordMember(member.getDiscordId());
 
             if (discordDataOpt.isEmpty()) {
                 log.warn("SYNC: User {} not found in guild. May have left the server.", member.getIngameName());
                 return false;
             }
-
             return applyDiscordDataToMember(member, discordDataOpt.get(), isMultiAccount);
 
         } catch (Exception e) {
@@ -1274,7 +1203,6 @@ public class ClanmemberService {
         member.setDiscordName(globalName);
         member.setAvatarHash(avatarHash);
         member.setDiscordRoles(sortedRoles);
-
         if (member.getClanGroup() == null && detectedGroup != null) {
             member.setClanGroup(detectedGroup);
         }
@@ -1283,10 +1211,8 @@ public class ClanmemberService {
 
     private ClanGroup resolveClanGroup(List<String> roles) {
         if (roles == null) return null;
-
         boolean hasT1 = roles.contains(discordRoleService.getT1RoleId());
         boolean hasT2 = roles.contains(discordRoleService.getT2RoleId());
-
         if (hasT1 && !hasT2) return ClanGroup.T1;
         if (hasT2 && !hasT1) return ClanGroup.T2;
         return null;
@@ -1296,13 +1222,8 @@ public class ClanmemberService {
         if (m1.getClanRank() == null && m2.getClanRank() == null) return compareNames(m1, m2);
         if (m1.getClanRank() == null) return 1;
         if (m2.getClanRank() == null) return -1;
-
         int rankCompare = m1.getClanRank().compareTo(m2.getClanRank());
-
-        if (rankCompare == 0) {
-            return compareNames(m1, m2);
-        }
-
+        if (rankCompare == 0) return compareNames(m1, m2);
         return rankCompare;
     }
 
@@ -1314,27 +1235,17 @@ public class ClanmemberService {
 
     private List<String> resolveRoleNamesForUser(String discordId) {
         List<ClanmemberEntity> linkedMembers = clanmemberRepository.findAllByDiscordId(discordId);
-        if (linkedMembers.isEmpty()) {
-            return List.of("No Discord Roles Found");
-        }
-
+        if (linkedMembers.isEmpty()) return List.of("No Discord Roles Found");
         List<String> roleIds = linkedMembers.get(0).getDiscordRoles();
-        if (roleIds == null || roleIds.isEmpty()) {
-            return List.of("No Discord Roles Found");
-        }
-
-        return roleIds.stream()
-                .map(discordRoleService::getRoleName)
-                .toList();
+        if (roleIds == null || roleIds.isEmpty()) return List.of("No Discord Roles Found");
+        return roleIds.stream().map(discordRoleService::getRoleName).toList();
     }
 
     public String buildAvatarUrl(String discordId, String avatarHash) {
         boolean hasValidHash = StringUtils.hasText(avatarHash) && !"null".equalsIgnoreCase(avatarHash);
-
         if (StringUtils.hasText(discordId) && hasValidHash) {
             return "https://cdn.discordapp.com/avatars/" + discordId + "/" + avatarHash + ".png";
         }
-
         if (StringUtils.hasText(discordId)) {
             try {
                 long id = Long.parseLong(discordId);
@@ -1344,7 +1255,6 @@ public class ClanmemberService {
                 log.debug("Could not parse Discord ID {} for default avatar generation.", discordId);
             }
         }
-
         return "/images/placeholder.png";
     }
 }

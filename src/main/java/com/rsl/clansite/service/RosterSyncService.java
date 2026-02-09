@@ -21,7 +21,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
@@ -102,7 +101,7 @@ public class RosterSyncService {
         private int totalRemoves = 0;
     }
 
-    // --- Phase 3: The Reconciliation Engine (Best Fit Algorithm) ---
+    // --- Phase 3: The Reconciliation Engine ---
 
     public SyncDiffResult generateDiff(String discordId, ClanmemberEntity member) throws IOException {
         SyncParseResult parseResult = parseUpload(discordId);
@@ -125,90 +124,90 @@ public class RosterSyncService {
             List<OwnedChampion> dbInstances = new ArrayList<>(dbMap.getOrDefault(masterId, new ArrayList<>()));
             List<ParsedChampion> csvInstances = new ArrayList<>(csvMap.getOrDefault(masterId, new ArrayList<>()));
 
-            List<MatchEdge> allEdges = new ArrayList<>();
-
-            // 1. Calculate score for EVERY combination
-            for (OwnedChampion db : dbInstances) {
-                int dbTrueLevel = calculateTrueLevel(db.getRank(), db.getLevel());
-                for (ParsedChampion csv : csvInstances) {
-                    int diff = Math.abs(dbTrueLevel - csv.getTrueLevel());
-                    allEdges.add(MatchEdge.builder().db(db).csv(csv).diff(diff).build());
-                }
-            }
-
-            // 2. Sort by SMALLEST difference (Closest match first)
-            allEdges.sort(Comparator.comparingInt(MatchEdge::getDiff));
-
-            Set<String> matchedDbIds = new HashSet<>();
-            Set<ParsedChampion> matchedCsv = Collections.newSetFromMap(new IdentityHashMap<>());
-
-            // 3. Greedy Matching: Lock in best matches
-            for (MatchEdge edge : allEdges) {
-                if (!matchedDbIds.contains(edge.db.getId()) && !matchedCsv.contains(edge.csv)) {
-                    // Lock it
-                    matchedDbIds.add(edge.db.getId());
-                    matchedCsv.add(edge.csv);
-
-                    // Add UPDATE or NO-OP
-                    if (edge.db.getRank() != edge.csv.getRank() || edge.db.getLevel() != edge.csv.getLevel()) {
-                        diffResult.getChanges().add(ProposedChange.builder()
-                                .type("UPDATE")
-                                .championName(edge.csv.getName())
-                                .masterId(masterId)
-                                .instanceId(edge.db.getId())
-                                .oldState(formatState(edge.db.getRank(), edge.db.getLevel()))
-                                .newState(formatState(edge.csv.getRank(), edge.csv.getLevel()))
-                                .newRank(edge.csv.getRank())
-                                .newLevel(edge.csv.getLevel())
-                                .build());
-                        diffResult.setTotalUpdates(diffResult.getTotalUpdates() + 1);
-                    }
-                }
-            }
-
-            // 4. Handle Leftovers (Removes)
-            for (OwnedChampion db : dbInstances) {
-                if (!matchedDbIds.contains(db.getId())) {
-                    String name = resolveName(masterId);
-
-                    ProposedChange.ProposedChangeBuilder removeBuilder = ProposedChange.builder()
-                            .type("REMOVE")
-                            .championName(name)
-                            .masterId(masterId)
-                            .instanceId(db.getId())
-                            .oldState(formatState(db.getRank(), db.getLevel()))
-                            .newState("Deleted");
-
-                    List<String> affectedTeams = findAffectedTeams(member, db.getId());
-                    if (!affectedTeams.isEmpty()) {
-                        removeBuilder.affectedTeams(affectedTeams);
-                    }
-
-                    diffResult.getChanges().add(removeBuilder.build());
-                    diffResult.setTotalRemoves(diffResult.getTotalRemoves() + 1);
-                }
-            }
-
-            // 5. Handle Leftovers (Adds)
-            for (ParsedChampion csv : csvInstances) {
-                if (!matchedCsv.contains(csv)) {
-                    diffResult.getChanges().add(ProposedChange.builder()
-                            .type("ADD")
-                            .championName(csv.getName())
-                            .masterId(masterId)
-                            .instanceId(null)
-                            .oldState("-")
-                            .newState(formatState(csv.getRank(), csv.getLevel()))
-                            .newRank(csv.getRank())
-                            .newLevel(csv.getLevel())
-                            .build());
-                    diffResult.setTotalAdds(diffResult.getTotalAdds() + 1);
-                }
-            }
+            processChampionGroup(masterId, dbInstances, csvInstances, diffResult, member);
         }
 
         diffResult.getChanges().sort(Comparator.comparing(ProposedChange::getType).thenComparing(ProposedChange::getChampionName));
         return diffResult;
+    }
+
+    private void processChampionGroup(String masterId, List<OwnedChampion> dbInstances, List<ParsedChampion> csvInstances, SyncDiffResult diffResult, ClanmemberEntity member) {
+        List<MatchEdge> allEdges = new ArrayList<>();
+
+        // 1. Calculate score for EVERY combination
+        for (OwnedChampion db : dbInstances) {
+            int dbTrueLevel = calculateTrueLevel(db.getRank(), db.getLevel());
+            for (ParsedChampion csv : csvInstances) {
+                int diff = Math.abs(dbTrueLevel - csv.getTrueLevel());
+                allEdges.add(MatchEdge.builder().db(db).csv(csv).diff(diff).build());
+            }
+        }
+
+        allEdges.sort(Comparator.comparingInt(MatchEdge::getDiff));
+
+        Set<String> matchedDbIds = new HashSet<>();
+        Set<ParsedChampion> matchedCsv = Collections.newSetFromMap(new IdentityHashMap<>());
+
+        // 3. Greedy Matching
+        for (MatchEdge edge : allEdges) {
+            if (!matchedDbIds.contains(edge.db.getId()) && !matchedCsv.contains(edge.csv)) {
+                matchedDbIds.add(edge.db.getId());
+                matchedCsv.add(edge.csv);
+
+                if (edge.db.getRank() != edge.csv.getRank() || edge.db.getLevel() != edge.csv.getLevel()) {
+                    diffResult.getChanges().add(ProposedChange.builder()
+                            .type("UPDATE")
+                            .championName(edge.csv.getName())
+                            .masterId(masterId)
+                            .instanceId(edge.db.getId())
+                            .oldState(formatState(edge.db.getRank(), edge.db.getLevel()))
+                            .newState(formatState(edge.csv.getRank(), edge.csv.getLevel()))
+                            .newRank(edge.csv.getRank())
+                            .newLevel(edge.csv.getLevel())
+                            .build());
+                    diffResult.setTotalUpdates(diffResult.getTotalUpdates() + 1);
+                }
+            }
+        }
+
+        // 4. Handle Removes
+        for (OwnedChampion db : dbInstances) {
+            if (!matchedDbIds.contains(db.getId())) {
+                String name = resolveName(masterId);
+                ProposedChange.ProposedChangeBuilder removeBuilder = ProposedChange.builder()
+                        .type("REMOVE")
+                        .championName(name)
+                        .masterId(masterId)
+                        .instanceId(db.getId())
+                        .oldState(formatState(db.getRank(), db.getLevel()))
+                        .newState("Deleted");
+
+                List<String> affectedTeams = findAffectedTeams(member, db.getId());
+                if (!affectedTeams.isEmpty()) {
+                    removeBuilder.affectedTeams(affectedTeams);
+                }
+
+                diffResult.getChanges().add(removeBuilder.build());
+                diffResult.setTotalRemoves(diffResult.getTotalRemoves() + 1);
+            }
+        }
+
+        // 5. Handle Adds
+        for (ParsedChampion csv : csvInstances) {
+            if (!matchedCsv.contains(csv)) {
+                diffResult.getChanges().add(ProposedChange.builder()
+                        .type("ADD")
+                        .championName(csv.getName())
+                        .masterId(masterId)
+                        .instanceId(null)
+                        .oldState("-")
+                        .newState(formatState(csv.getRank(), csv.getLevel()))
+                        .newRank(csv.getRank())
+                        .newLevel(csv.getLevel())
+                        .build());
+                diffResult.setTotalAdds(diffResult.getTotalAdds() + 1);
+            }
+        }
     }
 
     // --- Phase 5: Persistence (The Commit) ---
@@ -219,64 +218,82 @@ public class RosterSyncService {
         List<ProposedChange> allChanges = diff.getChanges();
 
         if (selectedIndices == null) selectedIndices = new ArrayList<>();
-
-        List<ProposedChange> changesToApply = new ArrayList<>();
-        for (Integer index : selectedIndices) {
-            if (index >= 0 && index < allChanges.size()) {
-                changesToApply.add(allChanges.get(index));
-            }
-        }
-
-        if (changesToApply.isEmpty()) return;
-
         if (member.getRoster() == null) member.setRoster(new ArrayList<>());
 
         int appliedAdds = 0;
         int appliedUpdates = 0;
         int appliedRemoves = 0;
-        int teamsDeleted = 0;
 
-        for (ProposedChange change : changesToApply) {
+        for (Integer index : selectedIndices) {
+            if (index < 0 || index >= allChanges.size()) continue;
+            ProposedChange change = allChanges.get(index);
+
             switch (change.getType()) {
-                case "ADD":
-                    member.getRoster().add(new OwnedChampion(
-                            change.getMasterId(),
-                            change.getNewLevel(),
-                            change.getNewRank()
-                    ));
+                case "ADD" -> {
+                    handleAddition(member, change);
                     appliedAdds++;
-                    break;
-
-                case "UPDATE":
-                    member.getRoster().stream()
-                            .filter(oc -> oc.getId().equals(change.getInstanceId()))
-                            .findFirst()
-                            .ifPresent(oc -> {
-                                oc.setRank(change.getNewRank());
-                                oc.setLevel(change.getNewLevel());
-                            });
+                }
+                case "UPDATE" -> {
+                    handleUpdate(member, change);
                     appliedUpdates++;
-                    break;
-
-                case "REMOVE":
-                    boolean removed = member.getRoster().removeIf(oc -> oc.getId().equals(change.getInstanceId()));
-                    if (removed) {
+                }
+                case "REMOVE" -> {
+                    if (handleRemoval(member, change)) {
                         appliedRemoves++;
-                        if (member.getKnownTeams() != null) {
-                            String instanceId = change.getInstanceId();
-                            boolean teamsRemoved = member.getKnownTeams().removeIf(t ->
-                                    Objects.equals(t.getLeaderChampionId(), instanceId) ||
-                                            Objects.equals(t.getChampion2Id(), instanceId) ||
-                                            Objects.equals(t.getChampion3Id(), instanceId) ||
-                                            Objects.equals(t.getChampion4Id(), instanceId)
-                            );
-                            if (teamsRemoved) teamsDeleted++;
-                        }
                     }
-                    break;
+                }
             }
         }
 
+        finalizeSync(member, discordId, authentication, appliedAdds, appliedUpdates, appliedRemoves);
+    }
+
+    private void handleAddition(ClanmemberEntity member, ProposedChange change) {
+        member.getRoster().add(new OwnedChampion(
+                change.getMasterId(),
+                change.getNewLevel(),
+                change.getNewRank()
+        ));
+    }
+
+    private void handleUpdate(ClanmemberEntity member, ProposedChange change) {
+        member.getRoster().stream()
+                .filter(oc -> oc.getId().equals(change.getInstanceId()))
+                .findFirst()
+                .ifPresent(oc -> {
+                    oc.setRank(change.getNewRank());
+                    oc.setLevel(change.getNewLevel());
+                });
+    }
+
+    /**
+     * Removes the champion from the roster and detaches it from any teams.
+     * @return true if a removal actually occurred
+     */
+    private boolean handleRemoval(ClanmemberEntity member, ProposedChange change) {
+        boolean removed = member.getRoster().removeIf(oc -> oc.getId().equals(change.getInstanceId()));
+        if (removed) {
+            detachChampionFromTeams(member, change.getInstanceId());
+        }
+        return removed;
+    }
+
+    /**
+     * THE FIX: Sets specific team slots to null instead of deleting the whole team.
+     * Used for both CSV Sync and Manual Deletion.
+     */
+    private void detachChampionFromTeams(ClanmemberEntity member, String instanceId) {
+        if (member.getKnownTeams() == null) return;
+
+        for (Team team : member.getKnownTeams()) {
+            if (Objects.equals(team.getLeaderChampionId(), instanceId)) team.setLeaderChampionId(null);
+            if (Objects.equals(team.getChampion2Id(), instanceId)) team.setChampion2Id(null);
+            if (Objects.equals(team.getChampion3Id(), instanceId)) team.setChampion3Id(null);
+            if (Objects.equals(team.getChampion4Id(), instanceId)) team.setChampion4Id(null);
+        }
+    }
+
+    private void finalizeSync(ClanmemberEntity member, String discordId, Authentication authentication, int adds, int updates, int removes) {
         member.setRosterLastUpdated(LocalDateTime.now());
         String actorName = "Unknown";
         if (authentication.getPrincipal() instanceof OAuth2User oauthUser) {
@@ -291,8 +308,7 @@ public class RosterSyncService {
                 authentication,
                 AuditAction.ROSTER_SYNC,
                 member.getIngameName(),
-                String.format("Sync Applied: +%d / ~%d / -%d (Teams Deleted: %d)",
-                        appliedAdds, appliedUpdates, appliedRemoves, teamsDeleted)
+                String.format("Sync Applied: +%d / ~%d / -%d", adds, updates, removes)
         );
 
         deleteSyncFile(discordId);
@@ -320,26 +336,23 @@ public class RosterSyncService {
 
     private String formatState(int rank, int level) { return rank + "★ Lvl " + level; }
 
-    // --- UPDATED: Safe Name Normalizer ---
-    // Replaces all "fancy" quotes with a standard straight apostrophe and trims whitespace
     private String normalizeName(String name) {
         if (name == null) return "";
         return name.toLowerCase()
                 .trim()
-                .replace("’", "'")  // Right Single Quote
-                .replace("‘", "'")  // Left Single Quote
-                .replace("`", "'")  // Backtick
-                .replace("´", "'"); // Acute Accent
+                .replace("’", "'")
+                .replace("‘", "'")
+                .replace("`", "'")
+                .replace("´", "'");
     }
 
-    // --- Parsing & Storage (Standard) ---
+    // --- Parsing & Storage ---
     public SyncParseResult parseUpload(String discordId) throws IOException {
         File file = getExistingSyncFile(discordId);
         if (file == null) throw new IOException("No sync file found.");
 
         SyncParseResult result = new SyncParseResult();
 
-        // Use normalized keys for the master map
         Map<String, ChampionEntity> masterMap = championRepository.findAll().stream()
                 .collect(Collectors.toMap(
                         c -> normalizeName(c.getName()),
@@ -347,15 +360,12 @@ public class RosterSyncService {
                         (c1, c2) -> c1
                 ));
 
-        // FIX: Explicitly use Windows-1252 to handle RSL Helper/Excel CSVs correctly
         try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), "Windows-1252"))) {
             String line;
             boolean isFirstLine = true;
 
             while ((line = br.readLine()) != null) {
-                // Remove BOM if present (rare but possible in some UTF-8 variants, harmless here)
-                line = line.replace("\uFEFF", "");
-
+                line = line.replace("\uFEFF", ""); // BOM fix
                 if (isFirstLine) { isFirstLine = false; continue; }
                 if (!StringUtils.hasText(line)) continue;
 
@@ -363,12 +373,9 @@ public class RosterSyncService {
                 if (cols.length < 5) continue;
 
                 String rawName = cols[2];
-
-                // The normalizeName method will now correctly see "’" and turn it into "'"
                 ChampionEntity master = masterMap.get(normalizeName(rawName));
 
                 if (master == null) {
-                    // Only add to unknown if it's truly new (and not just an empty line)
                     if (StringUtils.hasText(rawName) && !result.getUnknownNames().contains(rawName)) {
                         result.getUnknownNames().add(rawName);
                     }
