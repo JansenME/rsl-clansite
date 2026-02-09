@@ -31,24 +31,31 @@
     </nav>
 
     <div th:if="${navUserViewData != null && navUserViewData.isSystemOwner}"
-         style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: rgba(0,0,0,0.85); padding: 8px; border-radius: 8px; border: 1px solid #3498db; font-family: sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+         id="masquerade-widget"
+         style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: rgba(0,0,0,0.85); padding: 0; border-radius: 8px; border: 1px solid #3498db; font-family: sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.3); width: 160px; touch-action: none;">
 
-        <label style="color: #3498db; font-size: 10px; font-weight: bold; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px;">
-            View As Role
-        </label>
+        <div id="masquerade-handle"
+             style="cursor: move; padding: 8px 8px 4px 8px; border-bottom: 1px solid #444; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; background: rgba(52, 152, 219, 0.1); border-radius: 8px 8px 0 0;">
+            <label style="color: #3498db; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 0; pointer-events: none; user-select: none;">
+                View As
+            </label>
+            <i class="fas fa-arrows-alt" style="color: #3498db; font-size: 12px;"></i>
+        </div>
 
-        <select onchange="updateMasquerade(this.value)"
-                style="background: #111; color: #fff; border: 1px solid #444; border-radius: 4px; font-size: 12px; cursor: pointer; padding: 4px 8px; width: 140px; height: auto;">
-
-            <option value="NONE" th:selected="${navUserViewData.impersonatedRole == null}">-- OWNER (Full) --</option>
-            <option value="ROLE_ADMIN" th:selected="${navUserViewData.impersonatedRole == 'ROLE_ADMIN'}">Admin</option>
-            <option value="ROLE_COORDINATOR" th:selected="${navUserViewData.impersonatedRole == 'ROLE_COORDINATOR'}">Coordinator</option>
-            <option value="ROLE_MEMBER" th:selected="${navUserViewData.impersonatedRole == 'ROLE_MEMBER'}">Member</option>
-            <option value="ROLE_USER" th:selected="${navUserViewData.impersonatedRole == 'ROLE_USER'}">User</option>
-            <option value="ROLE_GUEST" th:selected="${navUserViewData.impersonatedRole == 'ROLE_GUEST'}">Guest</option>
-        </select>
+        <div style="padding: 4px 8px 8px 8px;">
+            <select onchange="updateMasquerade(this.value)"
+                    style="background: #111; color: #fff; border: 1px solid #444; border-radius: 4px; font-size: 12px; cursor: pointer; padding: 4px 8px; width: 100%; height: auto;">
+                <option value="NONE" th:selected="${navUserViewData.impersonatedRole == null}">-- OWNER --</option>
+                <option value="ROLE_ADMIN" th:selected="${navUserViewData.impersonatedRole == 'ROLE_ADMIN'}">Admin</option>
+                <option value="ROLE_COORDINATOR" th:selected="${navUserViewData.impersonatedRole == 'ROLE_COORDINATOR'}">Coordinator</option>
+                <option value="ROLE_MEMBER" th:selected="${navUserViewData.impersonatedRole == 'ROLE_MEMBER'}">Member</option>
+                <option value="ROLE_USER" th:selected="${navUserViewData.impersonatedRole == 'ROLE_USER'}">User</option>
+                <option value="ROLE_GUEST" th:selected="${navUserViewData.impersonatedRole == 'ROLE_GUEST'}">Guest</option>
+            </select>
+        </div>
 
         <script th:inline="javascript">
+            // --- MASQUERADE API LOGIC ---
             function updateMasquerade(role) {
                 const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
                 const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
@@ -60,7 +67,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
-                        [csrfHeader]: csrfToken
+                        [csrfHeader]: csrfHeader ? csrfToken : ''
                     },
                     body: formData.toString()
                 }).then(response => {
@@ -71,6 +78,95 @@
                     }
                 });
             }
+
+            // --- DRAG & DROP LOGIC ---
+            (function() {
+                const widget = document.getElementById("masquerade-widget");
+                const handle = document.getElementById("masquerade-handle");
+
+                if (!widget || !handle) return;
+
+                let isDragging = false;
+                let offsetX = 0;
+                let offsetY = 0;
+
+                // 1. Restore Position on Load
+                const savedPos = localStorage.getItem('masqueradePosition');
+                if (savedPos) {
+                    try {
+                        const {x, y} = JSON.parse(savedPos);
+                        // Apply fixed Top/Left positioning immediately
+                        widget.style.bottom = 'auto';
+                        widget.style.right = 'auto';
+                        widget.style.left = x + 'px';
+                        widget.style.top = y + 'px';
+                    } catch (e) {
+                        console.error("Failed to parse saved widget position", e);
+                    }
+                }
+
+                // 2. Event Listeners
+                handle.addEventListener('mousedown', dragStart);
+                handle.addEventListener('touchstart', dragStart, { passive: false });
+
+                document.addEventListener('mousemove', dragMove);
+                document.addEventListener('touchmove', dragMove, { passive: false });
+
+                document.addEventListener('mouseup', dragEnd);
+                document.addEventListener('touchend', dragEnd);
+
+                function dragStart(e) {
+                    // Prevent default to stop text selection or weird touch scrolling
+                    if (e.type === 'touchstart') {
+                        // e.preventDefault(); // Optional: might block scrolling if handle is large
+                    }
+
+                    isDragging = true;
+
+                    // Calculate the offset of the mouse relative to the widget's top-left corner
+                    // We use getBoundingClientRect() to get the TRUE visual position, regardless of CSS (bottom/right vs top/left)
+                    const rect = widget.getBoundingClientRect();
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                    offsetX = clientX - rect.left;
+                    offsetY = clientY - rect.top;
+
+                    // Switch to absolute positioning logic immediately to prevent "jumping"
+                    // when we start moving
+                    widget.style.bottom = 'auto';
+                    widget.style.right = 'auto';
+                    widget.style.left = rect.left + 'px';
+                    widget.style.top = rect.top + 'px';
+                }
+
+                function dragMove(e) {
+                    if (!isDragging) return;
+                    e.preventDefault(); // Stop scrolling while dragging
+
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                    // New position
+                    const newX = clientX - offsetX;
+                    const newY = clientY - offsetY;
+
+                    widget.style.left = newX + 'px';
+                    widget.style.top = newY + 'px';
+                }
+
+                function dragEnd() {
+                    if (!isDragging) return;
+                    isDragging = false;
+
+                    // Save final position
+                    const rect = widget.getBoundingClientRect();
+                    localStorage.setItem('masqueradePosition', JSON.stringify({
+                        x: rect.left,
+                        y: rect.top
+                    }));
+                }
+            })();
         </script>
     </div>
 </div>
