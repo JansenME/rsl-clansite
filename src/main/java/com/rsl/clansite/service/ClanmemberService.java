@@ -634,7 +634,7 @@ public class ClanmemberService {
             if (diff > 0) {
                 // We need to ADD copies
                 for (int i = 0; i < diff; i++) {
-                    currentRoster.add(new OwnedChampion(masterId, 1, 1));
+                    currentRoster.add(new OwnedChampion(masterId, 60, 6));
                 }
                 changed = true;
             } else if (diff < 0) {
