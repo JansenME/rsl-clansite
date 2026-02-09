@@ -22,4 +22,6 @@ public interface SiegeRepository extends MongoRepository<SiegeEntity, ObjectId> 
      * Used to find the current active or last finished siege (excluding PREP/MATCHMAKING).
      */
     Optional<SiegeEntity> findFirstByClanGroupAndStatusInOrderByStartDateDesc(ClanGroup clanGroup, List<SiegeStatus> statuses);
+
+    Optional<SiegeEntity> findFirstByClanGroupAndStatusOrderByStartDateDesc(ClanGroup clanGroup, SiegeStatus siegeStatus);
 }

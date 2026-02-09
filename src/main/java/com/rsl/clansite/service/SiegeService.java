@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -102,6 +103,7 @@ public class SiegeService {
                 // Thursday 12PM -> Thursday 3PM = 3 Hours later (Total 336 / 14 Days)
                 if (hoursSinceStart >= 336) {
                     log.info("[{}] Siege Cycle Complete (14 days). Rotating...", clanGroup);
+                    // Explicitly finish via helper to ensure logs
                     finishActiveSiege(clanGroup);
 
                     // Ensure next start date is anchored to the previous start to prevent time drift
@@ -134,19 +136,70 @@ public class SiegeService {
     @Transactional
     public SiegeEntity createNextSiege(ClanGroup clanGroup, LocalDateTime startDate) {
         LocalDateTime cleanDate = startDate.truncatedTo(ChronoUnit.HOURS);
+
+        // 1. Ensure any active siege is marked finished first
         finishActiveSiege(clanGroup);
 
         log.info("Creating new PREP siege for {} starting at {}", clanGroup, cleanDate);
 
         SiegeEntity newSiege = new SiegeEntity(clanGroup, cleanDate);
 
-        newSiege.setDefensiveStructures(generateDefaultMap());
+        // 2. Attempt to find the previous finished siege to inherit the defense map
+        // We look for the most recent FINISHED siege (which we likely just finished above)
+        Optional<SiegeEntity> lastFinishedOpt = siegeRepository.findFirstByClanGroupAndStatusOrderByStartDateDesc(clanGroup, SiegeStatus.FINISHED);
+
+        if (lastFinishedOpt.isPresent()) {
+            log.info("[{}] Inheriting Defense Map from Siege ID: {}", clanGroup, lastFinishedOpt.get().getId());
+            newSiege.setDefensiveStructures(deepCopyDefenseMap(lastFinishedOpt.get().getDefensiveStructures()));
+        } else {
+            log.info("[{}] No previous siege found. Generating default Defense Map.", clanGroup);
+            newSiege.setDefensiveStructures(generateDefaultMap());
+        }
+
+        // 3. Targets are always default (new opponent = new empty map)
         newSiege.setTargetStructures(generateDefaultMap());
 
         SiegeEntity savedSiege = siegeRepository.save(newSiege);
 
-        auditLogService.logSystemAction(AuditAction.SIEGE_SYSTEM_EVENT, clanGroup.name(), "Created new Siege Cycle (PREP)");
+        auditLogService.logSystemAction(AuditAction.SIEGE_SYSTEM_EVENT, clanGroup.name(), "Created new Siege Cycle (PREP) - Defense Map " + (lastFinishedOpt.isPresent() ? "Inherited" : "Generated"));
         return savedSiege;
+    }
+
+    /**
+     * Creates a deep copy of the defense map, including Structure Levels and Slot Assignments.
+     * Generates NEW IDs for structures and slots to prevent reference sharing.
+     */
+    private List<SiegeStructure> deepCopyDefenseMap(List<SiegeStructure> sourceStructures) {
+        List<SiegeStructure> newMap = new ArrayList<>();
+
+        for (SiegeStructure oldStruct : sourceStructures) {
+            // Create new instance (generates new ID)
+            SiegeStructure newStruct = new SiegeStructure(oldStruct.getName(), oldStruct.getType());
+
+            // 1. Sync Level (this automatically adjusts the slot count to match the old structure)
+            if (oldStruct.getLevel() > 1) {
+                newStruct.updateLevel(oldStruct.getLevel());
+            }
+
+            // 2. Copy Slot Assignments
+            // Map old slots by SlotNumber for easy lookup
+            Map<Integer, SiegeStructure.SiegeSlot> oldSlotMap = oldStruct.getSlots().stream()
+                    .collect(Collectors.toMap(SiegeStructure.SiegeSlot::getSlotNumber, s -> s));
+
+            for (SiegeStructure.SiegeSlot newSlot : newStruct.getSlots()) {
+                SiegeStructure.SiegeSlot oldSlot = oldSlotMap.get(newSlot.getSlotNumber());
+                if (oldSlot != null) {
+                    newSlot.setMemberId(oldSlot.getMemberId());
+                    newSlot.setPlayerName(oldSlot.getPlayerName());
+                    newSlot.setLeaderChampionId(oldSlot.getLeaderChampionId());
+                    // Create a new list for supports to ensure deep copy
+                    newSlot.setSupportChampionIds(new ArrayList<>(oldSlot.getSupportChampionIds()));
+                }
+            }
+
+            newMap.add(newStruct);
+        }
+        return newMap;
     }
 
     private List<SiegeStructure> generateDefaultMap() {
