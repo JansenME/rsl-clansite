@@ -72,8 +72,8 @@
 											<td th:text="${linked.ingameName}" style="font-weight: bold;">Name</td>
 											<td>
                                       <span th:if="${linked.clanGroup != null}"
-											th:text="${linked.clanGroup}"
-											style="background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">T1</span>
+											th:text="${linked.clanGroup.displayName}"
+											style="background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">Clan Name</span>
 												<span th:if="${linked.clanGroup == null}">-</span>
 											</td>
 											<td th:text="${linked.clanRank}">Soldier</td>

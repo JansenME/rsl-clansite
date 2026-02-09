@@ -20,10 +20,12 @@
             <p>Historical record of past battles and outcomes.</p>
 
             <div class="history-container">
-                <h3 class="clan-header"><span class="clan-badge badge-T1">T1</span> History</h3>
+                <h3 class="clan-header">
+                    <span class="clan-badge badge-T1" th:text="${T(com.rsl.clansite.model.enums.ClanGroup).T1.displayName}">T1</span> History
+                </h3>
 
                 <div th:if="${#lists.isEmpty(t1History)}" class="empty-state">
-                    No completed T1 sieges found in the archives.
+                    No completed sieges found in the archives.
                 </div>
 
                 <table th:if="${!#lists.isEmpty(t1History)}" class="history-table">
@@ -63,10 +65,12 @@
             </div>
 
             <div class="history-container">
-                <h3 class="clan-header"><span class="clan-badge badge-T2">T2</span> History</h3>
+                <h3 class="clan-header">
+                    <span class="clan-badge badge-T2" th:text="${T(com.rsl.clansite.model.enums.ClanGroup).T2.displayName}">T2</span> History
+                </h3>
 
                 <div th:if="${#lists.isEmpty(t2History)}" class="empty-state">
-                    No completed T2 sieges found in the archives.
+                    No completed sieges found in the archives.
                 </div>
 
                 <table th:if="${!#lists.isEmpty(t2History)}" class="history-table">

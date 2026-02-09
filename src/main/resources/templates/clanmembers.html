@@ -53,7 +53,7 @@
 							</td>
 							<td data-label="Discord Nickname" th:text="${member.playerNickname}">Server Nickname</td>
 							<td data-label="Suggested Clan">
-								<span th:if="${member.clanGroup != null}" th:text="${member.clanGroup}"></span>
+								<span th:if="${member.clanGroup != null}" th:text="${member.clanGroup.displayName}"></span>
 								<span th:if="${member.clanGroup == null}" style="color: #999;">Unknown</span>
 							</td>
 							<td data-label="Actions">
@@ -67,8 +67,8 @@
 					</table>
 				</div>
 
-				<h2 th:text="'T1 Clan (' + ${clanmembers.?[clanGroup != null and clanGroup.name() == 'T1'].size()} + ' members)'">
-					T1 Clan
+				<h2 th:text="${T(com.rsl.clansite.model.enums.ClanGroup).T1.displayName} + ' (' + ${clanmembers.?[clanGroup != null and clanGroup.name() == 'T1'].size()} + ' members)'">
+					Fury of the Fallen
 				</h2>
 
 				<table th:classappend="${#authorization.expression('isAuthenticated()')} ? '' : 'table-compact-view'">
@@ -123,8 +123,8 @@
 				</table>
 				<br />
 
-				<h2 th:text="'T2 Clan (' + ${clanmembers.?[clanGroup != null and clanGroup.name() == 'T2'].size()} + ' members)'">
-					T2 Clan
+				<h2 th:text="${T(com.rsl.clansite.model.enums.ClanGroup).T2.displayName} + ' (' + ${clanmembers.?[clanGroup != null and clanGroup.name() == 'T2'].size()} + ' members)'">
+					Raid Elite Newbz Own
 				</h2>
 
 				<table th:classappend="${#authorization.expression('isAuthenticated()')} ? '' : 'table-compact-view'">
@@ -213,7 +213,7 @@
 								<span th:if="${member.discordName != 'null'}" th:text="${member.discordName}"></span>
 							</td>
 							<td data-label="In-Game Name" th:text="${member.ingameName}">IGN</td>
-							<td data-label="Clan" th:text="${member.clanGroup}">Clan</td>
+							<td data-label="Clan" th:text="${member.clanGroup != null ? member.clanGroup.displayName : '-'}">Clan</td>
 							<td data-label="Former Rank" th:text="${member.clanRank != null ? member.clanRank.getName() : 'Unknown'}">Rank</td>
 							<td data-label="Champions" th:text="${member.roster != null ? member.roster.size() : 0}">0</td>
 							<td data-label="Left Date" th:text="${member.statusChangedDate != null ? #temporals.format(member.statusChangedDate, 'dd-MM-yyyy') : '-'}">Date</td>
