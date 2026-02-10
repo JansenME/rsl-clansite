@@ -893,9 +893,32 @@ public class ClanmemberService {
     }
 
     public List<SyncStatusDTO> getMemberSyncStatus() {
+        // 1. Filter DB members: Active ONLY and must have a Discord ID (Fixes Ghost Records)
         List<ClanmemberEntity> members = clanmemberRepository.findAll().stream()
                 .filter(m -> m.getStatus() == MemberStatus.ACTIVE)
+                .filter(m -> StringUtils.hasText(m.getDiscordId()))
                 .toList();
+
+        // 2. Bulk Fetch from Discord (Fixes 429 Rate Limiting)
+        Map<String, NewClanmemberDTO> discordDataMap;
+        try {
+            List<NewClanmemberDTO> allDiscordMembers = discordApiClient.getAllGuildMembers();
+            discordDataMap = allDiscordMembers.stream()
+                    .filter(d -> d.getDiscordId() != null)
+                    .collect(Collectors.toMap(NewClanmemberDTO::getDiscordId, Function.identity(), (a, b) -> a));
+        } catch (Exception e) {
+            log.error("Health Check: Failed to bulk fetch Discord members", e);
+            // Return a list indicating the error on the first member to alert admin
+            if (!members.isEmpty()) {
+                SyncStatusDTO errorDto = new SyncStatusDTO();
+                errorDto.setMemberId(members.get(0).getId().toHexString());
+                errorDto.setDiscordId("API ERROR");
+                errorDto.setIngameName("System Error");
+                errorDto.setStatusMessage("Could not fetch Discord Data: " + e.getMessage());
+                return List.of(errorDto);
+            }
+            return new ArrayList<>();
+        }
 
         List<SyncStatusDTO> statusList = new ArrayList<>();
 
@@ -905,55 +928,38 @@ public class ClanmemberService {
             status.setDiscordId(member.getDiscordId());
             status.setIngameName(member.getIngameName());
 
-            if (!StringUtils.hasText(member.getDiscordId())) {
-                status.setStatusMessage("No Discord ID linked");
+            // 3. In-Memory Lookup
+            NewClanmemberDTO liveData = discordDataMap.get(member.getDiscordId());
+
+            if (liveData == null) {
+                status.setStatusMessage("User not found in Discord Server");
                 status.setNicknameSynced(false);
                 status.setRolesSynced(false);
                 status.setAvatarSynced(false);
                 status.setDiscordName("NOT FOUND");
-                statusList.add(status);
-                continue;
-            }
+            } else {
+                String liveNick = liveData.getPlayerNickname();
+                String liveGlobal = liveData.getDiscordName();
+                String displayName = "Unknown";
 
-            try {
-                Optional<NewClanmemberDTO> apiResult = discordApiClient.getDiscordMember(member.getDiscordId());
-
-                if (apiResult.isEmpty()) {
-                    status.setStatusMessage("User not found in Discord Server");
-                    status.setNicknameSynced(false);
-                    status.setRolesSynced(false);
-                    status.setAvatarSynced(false);
-                    status.setDiscordName("NOT FOUND");
-                } else {
-                    NewClanmemberDTO liveData = apiResult.get();
-                    String liveNick = liveData.getPlayerNickname();
-                    String liveGlobal = liveData.getDiscordName();
-                    String displayName = "Unknown";
-
-                    if (isValidName(liveNick)) {
-                        displayName = liveNick;
-                    } else if (isValidName(liveGlobal)) {
-                        displayName = liveGlobal;
-                    }
-
-                    status.setDiscordName(displayName);
-                    boolean avatarMatch = java.util.Objects.equals(member.getAvatarHash(), liveData.getAvatarHash());
-                    status.setAvatarSynced(avatarMatch);
-
-                    List<String> liveRoles = discordRoleService.sortRoles(liveData.getDiscordRoles());
-                    List<String> dbRoles = discordRoleService.sortRoles(member.getDiscordRoles());
-                    status.setRolesSynced(liveRoles.equals(dbRoles));
-
-                    String dbNick = member.getPlayerNickname();
-                    status.setNicknameSynced(java.util.Objects.equals(dbNick, liveNick));
+                if (isValidName(liveNick)) {
+                    displayName = liveNick;
+                } else if (isValidName(liveGlobal)) {
+                    displayName = liveGlobal;
                 }
 
-            } catch (Exception e) {
-                status.setStatusMessage("API Error: " + e.getMessage());
-                status.setDiscordName("ERROR");
-                status.setNicknameSynced(false);
-                status.setRolesSynced(false);
-                status.setAvatarSynced(false);
+                status.setDiscordName(displayName);
+
+                // Fix Avatar False Positives: Normalize nulls vs empty strings
+                boolean avatarMatch = Objects.equals(normalizeStr(member.getAvatarHash()), normalizeStr(liveData.getAvatarHash()));
+                status.setAvatarSynced(avatarMatch);
+
+                List<String> liveRoles = discordRoleService.sortRoles(liveData.getDiscordRoles());
+                List<String> dbRoles = discordRoleService.sortRoles(member.getDiscordRoles());
+                status.setRolesSynced(liveRoles.equals(dbRoles));
+
+                String dbNick = member.getPlayerNickname();
+                status.setNicknameSynced(Objects.equals(normalizeStr(dbNick), normalizeStr(liveNick)));
             }
             statusList.add(status);
         }
@@ -965,6 +971,14 @@ public class ClanmemberService {
             return a.getIngameName().compareToIgnoreCase(b.getIngameName());
         });
         return statusList;
+    }
+
+    // Helper to treat null, empty, and "null" string as the same thing
+    private String normalizeStr(String input) {
+        if (input == null || input.isBlank() || "null".equalsIgnoreCase(input.trim())) {
+            return null;
+        }
+        return input.trim();
     }
 
     public void syncSingleMember(String id, Authentication authentication) {
