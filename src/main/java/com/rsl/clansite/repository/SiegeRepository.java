@@ -24,4 +24,6 @@ public interface SiegeRepository extends MongoRepository<SiegeEntity, ObjectId> 
     Optional<SiegeEntity> findFirstByClanGroupAndStatusInOrderByStartDateDesc(ClanGroup clanGroup, List<SiegeStatus> statuses);
 
     Optional<SiegeEntity> findFirstByClanGroupAndStatusOrderByStartDateDesc(ClanGroup clanGroup, SiegeStatus siegeStatus);
+
+    List<SiegeEntity> findByClanGroupAndStatusNot(ClanGroup clanGroup, SiegeStatus siegeStatus);
 }

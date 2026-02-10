@@ -59,6 +59,7 @@ public class ClanmemberService {
     private final ChampionRepository championRepository;
     private final SiegeConditionService siegeConditionService;
     private final SecurityService securityService;
+    private final SiegeService siegeService; // Added dependency
 
     @Value("${discord.kloep-id}")
     private String kloepDiscordId;
@@ -72,7 +73,8 @@ public class ClanmemberService {
                              final SiteAssetService siteAssetService,
                              final ChampionRepository championRepository,
                              final SiegeConditionService siegeConditionService,
-                             final SecurityService securityService) {
+                             final SecurityService securityService,
+                             final SiegeService siegeService) { // Injected here
         this.clanmemberRepository = clanmemberRepository;
         this.visitorLogRepository = visitorLogRepository;
         this.discordRoleService = discordRoleService;
@@ -82,6 +84,7 @@ public class ClanmemberService {
         this.championRepository = championRepository;
         this.siegeConditionService = siegeConditionService;
         this.securityService = securityService;
+        this.siegeService = siegeService;
     }
 
     public record AccountDetailDTO(String ingameName, ClanRank clanRank, ClanGroup clanGroup) {}
@@ -754,6 +757,13 @@ public class ClanmemberService {
 
         ClanmemberEntity member = memberOpt.get();
         String targetName = member.getIngameName();
+
+        // 1. CLEANUP SIEGE ASSIGNMENTS BEFORE INACTIVATING
+        try {
+            siegeService.removeMemberFromActiveSieges(id);
+        } catch (Exception e) {
+            log.error("Failed to cleanup siege assignments for deleted member {}: {}", targetName, e.getMessage());
+        }
 
         member.setStatus(MemberStatus.INACTIVE);
         member.setStatusChangedDate(LocalDateTime.now());

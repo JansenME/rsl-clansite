@@ -350,4 +350,34 @@ public class SiegeService {
 
         return targetStructure;
     }
+
+    @Transactional
+    public void removeMemberFromActiveSieges(String memberId) {
+        // Find all sieges that are NOT finished (History is preserved, active/future is cleaned)
+        List<SiegeEntity> activeSieges = siegeRepository.findByClanGroupAndStatusNot(ClanGroup.T1, SiegeStatus.FINISHED);
+        activeSieges.addAll(siegeRepository.findByClanGroupAndStatusNot(ClanGroup.T2, SiegeStatus.FINISHED));
+
+        for (SiegeEntity siege : activeSieges) {
+            boolean changed = false;
+
+            for (SiegeStructure structure : siege.getDefensiveStructures()) {
+                for (SiegeStructure.SiegeSlot slot : structure.getSlots()) {
+                    if (memberId.equals(slot.getMemberId())) {
+                        log.info("Removing deleted member [{}] from Siege {} - Structure {} - Slot {}",
+                                memberId, siege.getId(), structure.getName(), slot.getSlotNumber());
+
+                        slot.setMemberId(null);
+                        slot.setPlayerName(null);
+                        slot.setLeaderChampionId(null);
+                        slot.setSupportChampionIds(new ArrayList<>());
+                        changed = true;
+                    }
+                }
+            }
+
+            if (changed) {
+                siegeRepository.save(siege);
+            }
+        }
+    }
 }
