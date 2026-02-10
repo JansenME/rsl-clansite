@@ -654,8 +654,15 @@ public class ClanmemberService {
                     if (i < instances.size()) {
                         OwnedChampion championToRemove = instances.get(i);
 
-                        // FIX: Detach from teams properly using the helper method
+                        // 1. Detach from Saved Teams (Profile)
                         detachChampionFromTeams(member, championToRemove.getId());
+
+                        // 2. Detach from Active Siege Defense (War Map) [NEW]
+                        try {
+                            siegeService.removeChampionFromActiveSieges(member.getId().toHexString(), championToRemove.getId());
+                        } catch (Exception e) {
+                            log.error("Failed to clean up siege assignments for deleted champion {}: {}", championToRemove.getId(), e.getMessage());
+                        }
 
                         currentRoster.remove(championToRemove);
                     }

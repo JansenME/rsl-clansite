@@ -388,4 +388,44 @@ public class SiegeService {
             }
         }
     }
+
+    @Transactional
+    public void removeChampionFromActiveSieges(String memberId, String championInstanceId) {
+        if (!StringUtils.hasText(memberId) || !StringUtils.hasText(championInstanceId)) return;
+
+        List<SiegeEntity> activeSieges = siegeRepository.findByClanGroupAndStatusNot(ClanGroup.T1, SiegeStatus.FINISHED);
+        activeSieges.addAll(siegeRepository.findByClanGroupAndStatusNot(ClanGroup.T2, SiegeStatus.FINISHED));
+
+        for (SiegeEntity siege : activeSieges) {
+            boolean changed = false;
+
+            for (SiegeStructure structure : siege.getDefensiveStructures()) {
+                for (SiegeStructure.SiegeSlot slot : structure.getSlots()) {
+
+                    // Only check slots owned by this member
+                    if (memberId.equals(slot.getMemberId())) {
+
+                        // Check Leader Slot
+                        if (championInstanceId.equals(slot.getLeaderChampionId())) {
+                            log.info("Removing deleted Leader [{}] from Siege {} - Structure {}",
+                                    championInstanceId, siege.getId(), structure.getName());
+                            slot.setLeaderChampionId(null);
+                            changed = true;
+                        }
+
+                        // Check Support Slots
+                        if (slot.getSupportChampionIds() != null && slot.getSupportChampionIds().remove(championInstanceId)) {
+                            log.info("Removing deleted Support [{}] from Siege {} - Structure {}",
+                                    championInstanceId, siege.getId(), structure.getName());
+                            changed = true;
+                        }
+                    }
+                }
+            }
+
+            if (changed) {
+                siegeRepository.save(siege);
+            }
+        }
+    }
 }
