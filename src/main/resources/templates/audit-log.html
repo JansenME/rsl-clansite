@@ -83,9 +83,9 @@
 					<tbody>
 					<tr th:each="log : ${logs}">
 						<td data-label="Date & Time">
-						    <span class="utc-time" th:text="${log.timestamp}">
-							   Date Placeholder
-						    </span>
+                       <span class="local-datetime" th:data-iso-date="${log.timestamp}" th:text="${log.timestamp}">
+                         Date Placeholder
+                       </span>
 						</td>
 
 						<td data-label="Admin" th:text="${log.actorDiscordName}">Admin Name</td>
@@ -130,15 +130,16 @@
 	</div>
 
 	<script>
-		document.getElementById('auditFilterForm').addEventListener('submit', function() {
-            try {
-                // Gets "Europe/Paris", "America/New_York", etc.
-                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                document.getElementById('userTimeZoneInput').value = tz;
-            } catch (e) {
-                console.warn("Could not detect timezone for filter", e);
-            }
-        });
+		// This script is required to send the user's timezone to the backend
+        // so the "From Date" and "To Date" filters work correctly relative to the user's location.
+        document.getElementById('auditFilterForm').addEventListener('submit', function() {
+             try {
+                 const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                 document.getElementById('userTimeZoneInput').value = tz;
+             } catch (e) {
+                 console.warn("Could not detect timezone for filter", e);
+             }
+         });
 	</script>
 </div>
 </body>

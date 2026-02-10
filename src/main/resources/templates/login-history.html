@@ -84,9 +84,9 @@
 							</td>
 
 							<td data-label="Last Online" style="vertical-align: middle; text-align: center;">
-								<span class="utc-time" th:text="${member.lastLogin}">
-								   Date Placeholder
-								</span>
+                         <span class="local-datetime" th:data-iso-date="${member.lastLogin}" th:text="${member.lastLogin}">
+                            Date Placeholder
+                         </span>
 							</td>
 
 							<td data-label="Status" style="vertical-align: middle; text-align: center;">
@@ -159,9 +159,9 @@
 							</td>
 
 							<td data-label="Last Seen" style="vertical-align: middle; text-align: center;">
-								<span class="utc-time" th:text="${member.lastLogin}">
-								   Date Placeholder
-								</span>
+                         <span class="local-datetime" th:data-iso-date="${visitor.lastLogin}" th:text="${visitor.lastLogin}">
+                            Date Placeholder
+                         </span>
 							</td>
 
 							<td data-label="Visit Count" th:text="${visitor.visitCount}" style="font-weight: bold;">1</td>

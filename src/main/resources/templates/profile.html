@@ -241,7 +241,7 @@
 
 					<div th:if="${member.rosterLastUpdated != null}" style="text-align: center; color: #666; font-size: 0.9em; margin-bottom: 15px;">
 						<i class="fas fa-history"></i> Last updated:
-						<span class="utc-time" th:text="${member.rosterLastUpdated}"></span>
+						<span class="local-datetime" th:data-iso-date="${member.rosterLastUpdated}" th:text="${member.rosterLastUpdated}"></span>
 						by <strong th:text="${member.rosterUpdatedBy}">User</strong>
 					</div>
 

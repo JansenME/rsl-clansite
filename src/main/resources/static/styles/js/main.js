@@ -1,3 +1,5 @@
+// src/main/resources/static/js/main.js
+
 let allFilteredCards = [];
 let visibleCount = 0;
 const BATCH_SIZE = 24;
@@ -474,6 +476,61 @@ function hideLoading() {
     }
 }
 
+/**
+ * Finds all elements with class 'local-datetime' and converts their
+ * 'data-iso-date' attribute to the user's local string format.
+ */
+function localizeDates() {
+    const dateElements = document.querySelectorAll('.local-datetime');
+
+    dateElements.forEach(el => {
+        let isoDate = el.getAttribute('data-iso-date');
+        if (!isoDate) return;
+
+        // Force UTC if missing timezone info
+        if (!isoDate.endsWith('Z') && !isoDate.includes('+')) {
+            isoDate += 'Z';
+        }
+
+        const date = new Date(isoDate);
+        if (isNaN(date.getTime())) return;
+
+        // 1. Get the localized string with NUMERIC options
+        // This keeps the correct order (Day-Month vs Month-Day)
+        let localString = date.toLocaleString(undefined, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        // 2. Replace standard separators (slashes or dots) with dashes
+        // "10/02/2026" -> "10-02-2026"
+        // "02/10/2026" -> "02-10-2026"
+        localString = localString.replace(/\//g, '-').replace(/\./g, '-');
+
+        el.textContent = localString;
+        el.title = date.toString();
+    });
+}
+
+/**
+ * Detects the user's timezone and updates the copyright/timezone badge.
+ */
+function displayUserTimezone() {
+    const timezoneElement = document.getElementById('user-timezone');
+    if (!timezoneElement) return;
+
+    try {
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        timezoneElement.textContent = timezone;
+    } catch (e) {
+        console.warn("Could not detect timezone:", e);
+        timezoneElement.textContent = 'Local Time';
+    }
+}
+
 window.checkAll = (shouldCheck) => {
     const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
 
@@ -512,6 +569,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initChampionDetails();
     setupBackToTop();
     setupImageFadeIn();
+    localizeDates(); // Run date localization
+    displayUserTimezone(); // Show user's timezone
 
     window.checkAll(true);
 });
