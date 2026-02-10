@@ -198,14 +198,17 @@
 									<i class="fas fa-crown" style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); color: #f1c40f; text-shadow: 0 1px 2px black; font-size: 12px;"></i>
 								</div>
 
-								<th:block th:if="${team.member2 != null}"><img th:src="${team.member2.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member2.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" /></th:block>
-								<th:block th:if="${team.member2 == null}"><img src="/images/teammember-image.png" class="team-mini-portrait" style="opacity: 0.3;" /></th:block>
+								<th:block th:if="${team.member2 != null}">
+									<img th:src="${team.member2.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member2.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" />
+								</th:block>
 
-								<th:block th:if="${team.member3 != null}"><img th:src="${team.member3.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member3.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" /></th:block>
-								<th:block th:if="${team.member3 == null}"><img src="/images/teammember-image.png" class="team-mini-portrait" style="opacity: 0.3;" /></th:block>
+								<th:block th:if="${team.member3 != null}">
+									<img th:src="${team.member3.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member3.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" />
+								</th:block>
 
-								<th:block th:if="${team.member4 != null}"><img th:src="${team.member4.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member4.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" /></th:block>
-								<th:block th:if="${team.member4 == null}"><img src="/images/teammember-image.png" class="team-mini-portrait" style="opacity: 0.3;" /></th:block>
+								<th:block th:if="${team.member4 != null}">
+									<img th:src="${team.member4.imagename != null} ? @{/images/champion-cards/{name}(name=${team.member4.imagename})} : @{/images/champion-cards/placeholder.png}" class="team-mini-portrait" />
+								</th:block>
 							</div>
 						</div>
 					</div>

@@ -288,7 +288,6 @@
         const searchText = searchInput ? searchInput.value.toLowerCase().trim() : '';
         const sortValue = document.getElementById('champion-sort').value;
 
-        // Helper to get checked values
         const getChecked = (cls) => Array.from(document.querySelectorAll('.' + cls + ':checked')).map(cb => cb.getAttribute('data-filter-name'));
 
         const checkedRarities = getChecked('filter-rarity');
@@ -303,22 +302,13 @@
 
         cards.forEach(card => {
             let matches = true;
-
-            // 1. Search
             if (searchText && !card.getAttribute('data-name').includes(searchText)) matches = false;
-
-            // 2. Checkboxes (Logic Harmonized with Profile: Empty = All)
             if (matches && checkedRarities.length > 0 && !checkedRarities.includes(card.getAttribute('data-rarity'))) matches = false;
-
             if (matches && checkedTypes.length > 0 && !checkedTypes.includes(card.getAttribute('data-type'))) matches = false;
-
             if (matches && checkedAffinities.length > 0 && !checkedAffinities.includes(card.getAttribute('data-affinity'))) matches = false;
-
             if (matches && checkedFactions.length > 0 && !checkedFactions.includes(card.getAttribute('data-faction'))) matches = false;
-
             if (matches && checkedAlliances.length > 0 && !checkedAlliances.includes(card.getAttribute('data-alliance'))) matches = false;
 
-            // 3. Visibility
             if (matches) {
                 card.style.display = 'block';
                 visibleCount++;
@@ -328,8 +318,6 @@
         });
 
         if (countSpan) countSpan.innerText = visibleCount;
-
-        // 4. Sort
         sortChampions(cards, sortValue);
     }
 
@@ -340,20 +328,11 @@
         cards.sort((a, b) => {
             if (sortValue === 'name_asc') return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
             if (sortValue === 'name_desc') return b.getAttribute('data-name').localeCompare(a.getAttribute('data-name'));
-
-            // Default: Use Shadow Score (Rarity > Rank > Level)
             const scoreA = parseFloat(a.getAttribute('data-score')) || 0;
             const scoreB = parseFloat(b.getAttribute('data-score')) || 0;
-
-            if (scoreA !== scoreB) {
-                return scoreB - scoreA; // High score first
-            }
-
-            // Tie-breaker: Alphabetical Name
+            if (scoreA !== scoreB) return scoreB - scoreA;
             return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
         });
-
-        // Re-append to DOM
         cards.forEach(card => container.appendChild(card));
     }
 
@@ -362,79 +341,50 @@
     document.addEventListener("DOMContentLoaded", function() {
         console.log("Initializing Team Builder...");
 
-        // A. Load Slots
         for (let i = 0; i < 4; i++) {
             const input = document.getElementById(`input-${i}`);
             if (input && input.value) {
                 const champId = input.value;
                 const cardDiv = document.getElementById(`roster-card-${champId}`);
-
                 if (cardDiv) {
                     const imgName = cardDiv.getAttribute('data-img');
                     const auraLoc = cardDiv.getAttribute('data-aura');
                     const auraDesc = cardDiv.getAttribute('data-aura-desc');
-
-                    let fullImgUrl = '/images/champion-cards/placeholder.png';
-                    if (imgName && imgName !== 'null' && imgName !== '') {
-                        fullImgUrl = `/images/champion-cards/${imgName}`;
-                    }
-
+                    let fullImgUrl = (imgName && imgName !== 'null' && imgName !== '') ? `/images/champion-cards/${imgName}` : '/images/champion-cards/placeholder.png';
                     fillSlot(i, champId, fullImgUrl, auraLoc, auraDesc);
                     cardDiv.classList.add('picked');
                 }
             }
         }
-
-        // B. Initialize Filters (Runs locally!)
         applyChampionFilters();
-
-        // C. Initialize Siege Conditions
         applyConditionFilter();
     });
 
 
-    // --- 3. SIEGE CONDITION LOGIC (Updated to use KEYS) ---
+    // --- 3. SIEGE CONDITION LOGIC ---
     function applyConditionFilter() {
         const selector = document.getElementById('siege-condition-selector');
         const selectedOption = selector.options[selector.selectedIndex];
-
-        const category = selectedOption.getAttribute('data-category'); // e.g., ALLIANCE
-        const conditionValue = selectedOption.getAttribute('data-value'); // e.g., NYRESAN_UNION
-
-        // We get the label part after the ": " (e.g., "Nyresan Union")
+        const category = selectedOption.getAttribute('data-category');
+        const conditionValue = selectedOption.getAttribute('data-value');
         const fullText = selectedOption.text;
         const conditionLabel = fullText.includes(': ') ? fullText.split(': ')[1].trim() : fullText.trim();
 
-        // 1. HANDLE CHECKBOX SYNC
         if (!category || category === 'NONE') {
-            // Reset: Select everything when no condition is active
             checkAll(true);
         } else {
-            // Step A: Reset everything to 'checked' so we don't have leftover
-            // filters from other categories interfering with the new condition.
             document.querySelectorAll('.filter-checkbox').forEach(cb => cb.checked = true);
-
-            // Step B: Isolate the specific category for the condition
             const categoryClass = 'filter-' + category.toLowerCase();
-            const categoryCheckboxes = document.querySelectorAll('.' + categoryClass);
-
-            categoryCheckboxes.forEach(cb => {
-                // Uncheck everything in THIS category EXCEPT the one we need
-                const filterName = cb.getAttribute('data-filter-name');
-                cb.checked = (filterName === conditionLabel);
+            document.querySelectorAll('.' + categoryClass).forEach(cb => {
+                cb.checked = (cb.getAttribute('data-filter-name') === conditionLabel);
             });
-
-            // Step C: Trigger the grid refresh
             applyChampionFilters();
         }
 
-        // 2. SLOT VALIDATION
-        // Ensure the Save button and warnings update correctly
         let hasInvalidSlot = false;
         for (let i = 0; i < 4; i++) {
             const input = document.getElementById(`input-${i}`);
             const slotDiv = document.getElementById(`slot-${i}`);
-
             if (input && input.value) {
                 const rosterCard = document.getElementById(`roster-card-${input.value}`);
                 if (rosterCard && category && category !== 'NONE') {
@@ -450,7 +400,6 @@
                 }
             }
         }
-
         const saveBtn = document.getElementById('save-btn');
         const warnDiv = document.getElementById('condition-warning');
         if (saveBtn) saveBtn.disabled = hasInvalidSlot;
@@ -480,19 +429,14 @@
         const imgName = cardDiv.getAttribute('data-img');
         const auraLoc = cardDiv.getAttribute('data-aura');
         const auraDesc = cardDiv.getAttribute('data-aura-desc');
-
-        let fullImgUrl = '/images/champion-cards/placeholder.png';
-        if (imgName && imgName !== 'null' && imgName !== '') {
-            fullImgUrl = `/images/champion-cards/${imgName}`;
-        }
+        let fullImgUrl = (imgName && imgName !== 'null' && imgName !== '') ? `/images/champion-cards/${imgName}` : '/images/champion-cards/placeholder.png';
 
         let targetIndex = -1;
         if (selectedSlotIndex !== null) {
             targetIndex = selectedSlotIndex;
         } else {
             for (let i = 0; i < 4; i++) {
-                const inputVal = document.getElementById(`input-${i}`).value;
-                if (!inputVal) { targetIndex = i; break; }
+                if (!document.getElementById(`input-${i}`).value) { targetIndex = i; break; }
             }
         }
 
@@ -501,7 +445,6 @@
             return;
         }
 
-        // Check Siege Condition again on Pick (Updated to use KEYS)
         const selector = document.getElementById('siege-condition-selector');
         const selectedOption = selector.options[selector.selectedIndex];
         const category = selectedOption.getAttribute('data-category');
@@ -537,7 +480,6 @@
     function fillSlot(index, id, imgUrl, auraLoc, auraDesc) {
         document.getElementById(`input-${index}`).value = id;
         document.getElementById(`img-${index}`).src = imgUrl;
-
         const slotDiv = document.getElementById(`slot-${index}`);
         slotDiv.setAttribute('data-aura', auraLoc);
         slotDiv.setAttribute('data-aura-desc', auraDesc);
@@ -545,17 +487,21 @@
         if (index === 0) checkLeaderAura(auraLoc, auraDesc);
     }
 
-    function clearSlot(index, event) {
+    // FIXED: Added keepRosterState parameter
+    function clearSlot(index, event, keepRosterState = false) {
         if (event) event.stopPropagation();
-        const oldId = document.getElementById(`input-${index}`).value;
-        if (oldId) {
-            const rosterCard = document.getElementById(`roster-card-${oldId}`);
-            if (rosterCard) rosterCard.classList.remove('picked');
+
+        // Only remove 'picked' class if we are NOT just moving/swapping the champion
+        if (!keepRosterState) {
+            const oldId = document.getElementById(`input-${index}`).value;
+            if (oldId) {
+                const rosterCard = document.getElementById(`roster-card-${oldId}`);
+                if (rosterCard) rosterCard.classList.remove('picked');
+            }
         }
 
         document.getElementById(`input-${index}`).value = '';
         document.getElementById(`img-${index}`).src = (index === 0) ? LEADER_PLACEHOLDER : MEMBER_PLACEHOLDER;
-
         const slotDiv = document.getElementById(`slot-${index}`);
         slotDiv.removeAttribute('data-aura');
         slotDiv.removeAttribute('data-aura-desc');
@@ -582,8 +528,9 @@
         const auraDescB = slotB.getAttribute('data-aura-desc');
         const hasB = !!idB;
 
-        if (hasA) fillSlot(indexB, idA, imgA, auraA, auraDescA); else clearSlot(indexB);
-        if (hasB) fillSlot(indexA, idB, imgB, auraB, auraDescB); else clearSlot(indexA);
+        // FIXED: Pass 'true' to clearSlot so it doesn't un-pick the champion in the roster
+        if (hasA) fillSlot(indexB, idA, imgA, auraA, auraDescA); else clearSlot(indexB, null, true);
+        if (hasB) fillSlot(indexA, idB, imgB, auraB, auraDescB); else clearSlot(indexA, null, true);
 
         const newLeaderSlot = document.getElementById(`slot-0`);
         const newLeaderAura = newLeaderSlot.getAttribute('data-aura');
@@ -602,7 +549,6 @@
         const warningText = document.getElementById('aura-msg');
         const infoDiv = document.getElementById('leader-aura-display');
         const infoText = document.getElementById('aura-info-text');
-
         const leaderId = document.getElementById('input-0').value;
 
         if (!leaderId) { hideAuraInfo(); return; }
