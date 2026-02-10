@@ -48,21 +48,24 @@
                 const rawTime = el.innerText.trim();
                 if (rawTime) {
                     try {
-                        // Ensure it's treated as UTC (append Z if missing and not already ISO)
-                        // This handles generic SQL timestamps that might lack the 'Z'
+                        // 1. Force UTC interpretation (append Z if missing)
                         const timeString = rawTime.endsWith('Z') ? rawTime : rawTime + 'Z';
                         const date = new Date(timeString);
 
                         if (!isNaN(date.getTime())) {
-                            // Format: "10/02/2026, 14:30" (User's Locale)
-                            el.innerText = date.toLocaleString(undefined, {
+                            // 2. Convert to Local Time, but FORCE European Format (en-GB)
+                            // This gives "10/02/2026, 19:47"
+                            el.innerText = date.toLocaleString('en-GB', {
+                                day: '2-digit',
+                                month: '2-digit',
                                 year: 'numeric',
-                                month: 'numeric',
-                                day: 'numeric',
                                 hour: '2-digit',
-                                minute: '2-digit'
-                            });
-                            el.title = "Original UTC: " + rawTime; // Tooltip shows server time
+                                minute: '2-digit',
+                                hour12: false // Force 24-hour format
+                            }).replace(/\//g, '-'); // Optional: changes 10/02 to 10-02 if you prefer dashes
+
+                            // 3. Add tooltip so you can check the original server time if needed
+                            el.title = "Server (UTC): " + rawTime;
                         }
                     } catch (err) {
                         console.error("Time conversion failed for:", rawTime);

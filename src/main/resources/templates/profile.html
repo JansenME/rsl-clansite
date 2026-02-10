@@ -631,16 +631,7 @@
         // Initial Sort (Run filters once to sort by default)
         applyChampionFilters();
 
-        document.querySelectorAll('.utc-time').forEach(el => {
-            const raw = el.innerText;
-            if (raw) {
-                const dateStr = raw.endsWith('Z') ? raw : raw + 'Z';
-                el.innerText = new Date(dateStr).toLocaleString(undefined, {
-                    year: 'numeric', month: 'numeric', day: 'numeric',
-                    hour: '2-digit', minute: '2-digit'
-                });
-            }
-        });
+        // FIXED: Removed client-side .utc-time formatting logic since it is now handled by Thymeleaf on the server.
     });
 </script>
 </body>
