@@ -1,0 +1,198 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{inserts/head :: head(pageTitle='Defense Scroll Management')}">
+</head>
+<body>
+<div id="page-wrapper">
+    <section id="header">
+        <div th:insert="~{inserts/nav :: nav}" class="container"></div>
+    </section>
+
+    <section id="content">
+        <div class="container">
+            <section>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;"><i class="fas fa-scroll"></i> Defense Scroll Management</h2>
+                    <a th:href="@{/siege/overview}" class="button alt small">
+                        <i class="fas fa-arrow-left"></i> Back to Siege
+                    </a>
+                </div>
+
+                <p>Manage the defense capacity for each clan. Adjust scrolls based on member availability and roster strength.
+                    <br><strong>Target:</strong> The total number of slots required by the current active siege map.</p>
+
+                <div class="row" style="display: flex; flex-wrap: wrap; gap: 20px;">
+
+                    <div class="col-6 col-12-medium" style="flex: 1; min-width: 300px;">
+                        <div class="box">
+                            <h3 style="border-bottom: 2px solid #ccc; padding-bottom: 10px; margin-bottom: 15px;">
+                                Clan T1
+                                <span id="t1-header-badge"
+                                      class="badge"
+                                      th:classappend="${t1TotalScrolls == t1TargetSlots ? 'badge-success' : 'badge-danger'}"
+                                      style="float: right; font-size: 0.8em; padding: 2px 8px; border-radius: 4px; color: white;"
+                                      th:styleappend="${t1TotalScrolls == t1TargetSlots ? 'background-color: #27ae60;' : 'background-color: #c0392b;'}">
+                                    <span id="t1-total" th:text="${t1TotalScrolls}">60</span> / <span id="t1-target" th:text="${t1TargetSlots}">60</span>
+                                </span>
+                            </h3>
+
+                            <div class="table-wrapper">
+                                <table class="alt">
+                                    <thead>
+                                    <tr>
+                                        <th>Member</th>
+                                        <th style="text-align: center;">Scrolls</th>
+                                        <th style="text-align: right;">Action</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr th:each="member : ${t1Members}">
+                                        <td>
+                                            <strong th:text="${member.ingameName}">PlayerName</strong>
+                                        </td>
+                                        <td style="text-align: center; font-weight: bold; font-size: 1.1em;">
+                                            <span th:id="'count-' + ${member.id.toHexString()}"
+                                                  th:text="${member.maxDefenseScrolls > 0 ? member.maxDefenseScrolls : 2}">2</span>
+                                        </td>
+                                        <td style="text-align: right;">
+                                            <button type="button" class="button small" style="min-width: 30px; padding: 0 10px;"
+                                                    th:data-mid="${member.id.toHexString()}"
+                                                    onclick="updateScrolls(this.getAttribute('data-mid'), -1)">-</button>
+
+                                            <button type="button" class="button small primary" style="min-width: 30px; padding: 0 10px;"
+                                                    th:data-mid="${member.id.toHexString()}"
+                                                    onclick="updateScrolls(this.getAttribute('data-mid'), 1)">+</button>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-12-medium" style="flex: 1; min-width: 300px;">
+                        <div class="box">
+                            <h3 style="border-bottom: 2px solid #ccc; padding-bottom: 10px; margin-bottom: 15px;">
+                                Clan T2
+                                <span id="t2-header-badge"
+                                      class="badge"
+                                      th:classappend="${t2TotalScrolls == t2TargetSlots ? 'badge-success' : 'badge-danger'}"
+                                      style="float: right; font-size: 0.8em; padding: 2px 8px; border-radius: 4px; color: white;"
+                                      th:styleappend="${t2TotalScrolls == t2TargetSlots ? 'background-color: #27ae60;' : 'background-color: #c0392b;'}">
+                                    <span id="t2-total" th:text="${t2TotalScrolls}">60</span> / <span id="t2-target" th:text="${t2TargetSlots}">60</span>
+                                </span>
+                            </h3>
+
+                            <div class="table-wrapper">
+                                <table class="alt">
+                                    <thead>
+                                    <tr>
+                                        <th>Member</th>
+                                        <th style="text-align: center;">Scrolls</th>
+                                        <th style="text-align: right;">Action</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr th:each="member : ${t2Members}">
+                                        <td>
+                                            <strong th:text="${member.ingameName}">PlayerName</strong>
+                                        </td>
+                                        <td style="text-align: center; font-weight: bold; font-size: 1.1em;">
+                                            <span th:id="'count-' + ${member.id.toHexString()}"
+                                                  th:text="${member.maxDefenseScrolls > 0 ? member.maxDefenseScrolls : 2}">2</span>
+                                        </td>
+                                        <td style="text-align: right;">
+                                            <button type="button" class="button small" style="min-width: 30px; padding: 0 10px;"
+                                                    th:data-mid="${member.id.toHexString()}"
+                                                    onclick="updateScrolls(this.getAttribute('data-mid'), -1)">-</button>
+
+                                            <button type="button" class="button small primary" style="min-width: 30px; padding: 0 10px;"
+                                                    th:data-mid="${member.id.toHexString()}"
+                                                    onclick="updateScrolls(this.getAttribute('data-mid'), 1)">+</button>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </section>
+        </div>
+    </section>
+
+    <div th:insert="~{inserts/copyright :: copyright}" id="copyright"></div>
+</div>
+
+<script th:inline="javascript">
+    var csrfToken = /*[[${_csrf.token}]]*/ '';
+    var csrfHeader = /*[[${_csrf.headerName}]]*/ 'X-CSRF-TOKEN';
+
+    const MIN_SCROLLS = 1;
+
+    function updateScrolls(memberId, delta) {
+        if (!memberId) {
+            console.error("Member ID is missing!");
+            return;
+        }
+
+        const countSpan = document.getElementById('count-' + memberId);
+        let currentVal = parseInt(countSpan.innerText);
+
+        // Optimistic UI check
+        if (delta < 0 && currentVal <= MIN_SCROLLS) return;
+
+        const formData = new FormData();
+        formData.append('memberId', memberId);
+        formData.append('delta', delta);
+
+        fetch('/siege/scrolls/defense/update', {
+            method: 'POST',
+            headers: {
+                [csrfHeader]: csrfToken
+            },
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Update failed');
+            return response.json();
+        })
+        .then(data => {
+            // 1. Update Member Count
+            if (countSpan) countSpan.innerText = data.newValue;
+
+            // 2. Update Clan Total Header
+            const prefix = data.clanGroup === 'T1' ? 't1' : 't2';
+
+            const totalSpan = document.getElementById(prefix + '-total');
+            const targetSpan = document.getElementById(prefix + '-target');
+            const badgeSpan = document.getElementById(prefix + '-header-badge');
+
+            if (totalSpan && targetSpan && badgeSpan) {
+                totalSpan.innerText = data.clanTotal;
+
+                const currentTotal = parseInt(data.clanTotal);
+                const targetTotal = parseInt(targetSpan.innerText);
+
+                if (currentTotal === targetTotal) {
+                    badgeSpan.style.backgroundColor = '#27ae60'; // Green
+                    badgeSpan.classList.remove('badge-danger');
+                    badgeSpan.classList.add('badge-success');
+                } else {
+                    badgeSpan.style.backgroundColor = '#c0392b'; // Red
+                    badgeSpan.classList.remove('badge-success');
+                    badgeSpan.classList.add('badge-danger');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error details:', error);
+            alert('Failed to update scroll count.');
+        });
+    }
+</script>
+
+</body>
+</html>

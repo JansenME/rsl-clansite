@@ -9,6 +9,7 @@ public enum QuickLink {
     ADD_SIEGE_TEAM("Add Siege Team", "/teams/builder", "ROLE_MEMBER"),
 
     SIEGE_CONDITIONS("Siege Conditions", "/admin/siege-conditions", "ROLE_COORDINATOR"),
+    SIEGE_DEF_SCROLLS("Siege Def Scrolls", "/siege/scrolls", "ROLE_COORDINATOR"),
 
     ADD_CLANMEMBER("Add Clanmember", "/clanmembers/add", "ROLE_ADMIN"),
     LOGIN_HISTORY("Login History", "/clanmembers/admin/login-history", "ROLE_ADMIN"),

@@ -1267,4 +1267,31 @@ public class ClanmemberService {
         }
         return "/images/placeholder.png";
     }
+
+    @Transactional
+    public int updateDefenseScrolls(String memberId, int delta, Authentication authentication) {
+        ClanmemberEntity member = getMemberById(memberId);
+
+        // Default to 2 if for some reason it's 0 (legacy data safety)
+        int current = member.getMaxDefenseScrolls() > 0 ? member.getMaxDefenseScrolls() : 2;
+        int newVal = current + delta;
+
+        // Safety Bounds: Min 1 (everyone plays), Max 5 (reasonable limit)
+        if (newVal < 1) newVal = 1;
+
+        if (newVal != current) {
+            member.setMaxDefenseScrolls(newVal);
+            clanmemberRepository.save(member);
+
+            auditLogService.logAction(
+                    authentication,
+                    AuditAction.MEMBER_UPDATE, // Using MEMBER_UPDATE to keep Enums simple
+                    member.getIngameName(),
+                    "Defense Scrolls updated: " + current + " -> " + newVal
+            );
+            log.info("Updated Defense Scrolls for {} [{} -> {}]", member.getIngameName(), current, newVal);
+        }
+
+        return newVal;
+    }
 }

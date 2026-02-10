@@ -177,24 +177,6 @@ public class SiegeController {
         return "siege-defense";
     }
 
-    // --- UPDATED: Extract OwnedChampion UUIDs for JS ---
-    private List<Map<String, Object>> toJsList(List<ClanmemberEntity> members) {
-        return members.stream().map(m -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("id", m.getId().toHexString());
-            map.put("ingameName", m.getIngameName());
-
-            // Extract IDs from OwnedChampion list
-            List<String> instanceIds = (m.getRoster() != null) ?
-                    m.getRoster().stream().map(OwnedChampion::getId).collect(Collectors.toList()) :
-                    Collections.emptyList();
-
-            map.put("rosterChampionIds", instanceIds);
-            map.put("knownTeams", m.getKnownTeams());
-            return map;
-        }).collect(Collectors.toList());
-    }
-
     @GetMapping("/history")
     @PreAuthorize("hasRole('MEMBER')")
     public String siegeHistory(Model model, Authentication authentication, HttpSession session) {
@@ -336,6 +318,42 @@ public class SiegeController {
         return ResponseEntity.ok(updatedStructure);
     }
 
+    @GetMapping("/scrolls")
+    @PreAuthorize("hasRole('COORDINATOR') or hasRole('ADMIN') or hasRole('OWNER')")
+    public String siegeScrollsManagement(Model model, Authentication authentication, HttpSession session) {
+        commonsService.fillModel(model, authentication, session);
+
+        prepareScrollStats(model, ClanGroup.T1, "t1");
+        prepareScrollStats(model, ClanGroup.T2, "t2");
+
+        return "siege-scrolls";
+    }
+
+    @PostMapping("/scrolls/defense/update")
+    @ResponseBody
+    @PreAuthorize("hasRole('COORDINATOR') or hasRole('ADMIN') or hasRole('OWNER')")
+    public ResponseEntity<Map<String, Object>> updateDefenseScrolls(
+            @RequestParam String memberId,
+            @RequestParam int delta,
+            Authentication authentication) {
+
+        int newVal = clanmemberService.updateDefenseScrolls(memberId, delta, authentication);
+
+        ClanmemberEntity member = clanmemberService.getMemberById(memberId);
+
+        // Calculate the new total for the whole clan so the header updates instantly
+        List<ClanmemberEntity> clanMembers = clanmemberRepository.findByClanGroupAndStatus(member.getClanGroup(), MemberStatus.ACTIVE);
+        int newClanTotal = clanMembers.stream().mapToInt(m -> m.getMaxDefenseScrolls() > 0 ? m.getMaxDefenseScrolls() : 2).sum();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("memberId", memberId);
+        response.put("newValue", newVal);
+        response.put("clanTotal", newClanTotal);
+        response.put("clanGroup", member.getClanGroup().name());
+
+        return ResponseEntity.ok(response);
+    }
+
     // --- HELPER METHODS ---
 
     private boolean hasPermission(HttpSession session, Authentication authentication, String targetMemberId) {
@@ -388,5 +406,47 @@ public class SiegeController {
     private SiegeEntity getOrCreateSiege(ClanGroup group) {
         return siegeService.getActiveSiege(group)
                 .orElseGet(() -> siegeService.createNextSiege(group, LocalDateTime.now()));
+    }
+
+    private List<Map<String, Object>> toJsList(List<ClanmemberEntity> members) {
+        return members.stream().map(m -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", m.getId().toHexString());
+            map.put("ingameName", m.getIngameName());
+
+            // Extract IDs from OwnedChampion list
+            List<String> instanceIds = (m.getRoster() != null) ?
+                    m.getRoster().stream().map(OwnedChampion::getId).collect(Collectors.toList()) :
+                    Collections.emptyList();
+
+            map.put("rosterChampionIds", instanceIds);
+            map.put("knownTeams", m.getKnownTeams());
+            return map;
+        }).collect(Collectors.toList());
+    }
+
+    private void prepareScrollStats(Model model, ClanGroup group, String prefix) {
+        // 1. Get Active Members
+        List<ClanmemberEntity> members = clanmemberRepository.findByClanGroupAndStatus(group, MemberStatus.ACTIVE);
+        members.sort(Comparator.comparing(ClanmemberEntity::getIngameName, String.CASE_INSENSITIVE_ORDER));
+
+        // 2. Calculate Actual Capacity (Sum of Scrolls)
+        int totalScrolls = members.stream()
+                .mapToInt(m -> m.getMaxDefenseScrolls() > 0 ? m.getMaxDefenseScrolls() : 2)
+                .sum();
+
+        // 3. Calculate Target (Siege Slots)
+        // Try active siege first, fallback to latest finished if between wars
+        Optional<SiegeEntity> siegeOpt = siegeService.getActiveSiege(group);
+        if (siegeOpt.isEmpty()) {
+            siegeOpt = siegeService.getLatestBattleOrFinishedSiege(group);
+        }
+
+        int targetSlots = siegeOpt.map(siegeService::calculateTotalDefenseSlots).orElse(0);
+
+        // 4. Add to Model
+        model.addAttribute(prefix + "Members", members);
+        model.addAttribute(prefix + "TotalScrolls", totalScrolls);
+        model.addAttribute(prefix + "TargetSlots", targetSlots);
     }
 }

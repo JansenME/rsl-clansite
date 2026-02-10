@@ -15,6 +15,7 @@ import org.bson.types.ObjectId;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -292,6 +293,13 @@ public class SiegeService {
                 .flatMap(s -> s.getSlots().stream())
                 .filter(slot -> memberId.equals(slot.getMemberId()))
                 .count();
+    }
+
+    public int calculateTotalDefenseSlots(SiegeEntity siege) {
+        if (siege == null || CollectionUtils.isEmpty(siege.getDefensiveStructures())) return 0;
+        return siege.getDefensiveStructures().stream()
+                .mapToInt(s -> s.getSlots().size())
+                .sum();
     }
 
     private void validateGlobalUniqueness(SiegeEntity siege, String memberId, String leaderId, List<String> supportIds, String currentStructId, int currentSlotNum) {

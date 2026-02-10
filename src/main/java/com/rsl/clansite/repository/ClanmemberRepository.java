@@ -1,6 +1,8 @@
 package com.rsl.clansite.repository;
 
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.enums.ClanGroup;
+import com.rsl.clansite.model.enums.MemberStatus;
 import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
@@ -15,4 +17,6 @@ public interface ClanmemberRepository extends MongoRepository<ClanmemberEntity, 
     boolean existsByIngameName(String ingameName);
     List<ClanmemberEntity> findAllByDiscordIdIsNotNull();
     Optional<ClanmemberEntity> findByIngameName(String ingameName);
+
+    List<ClanmemberEntity> findByClanGroupAndStatus(ClanGroup group, MemberStatus memberStatus);
 }
