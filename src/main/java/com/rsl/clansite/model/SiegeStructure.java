@@ -4,30 +4,30 @@ import com.rsl.clansite.model.enums.SiegeStructureType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class SiegeStructure {
 
+    // ... (Fields remain the same) ...
     private String id = UUID.randomUUID().toString();
     private String name;
     private SiegeStructureType type;
     private int level = 1;
-
     private int defensePoints;
     private int attackPoints;
-
     private boolean isCleared;
-
-    // New field: Stores "CATEGORY-KEY" strings (e.g., "FACTION-LIZARDMEN")
     private List<String> conditionKeys = new ArrayList<>();
-
     private List<SiegeSlot> slots = new ArrayList<>();
+
+    // ... (Constructor & updateLevel remain the same) ...
 
     public SiegeStructure(String name, SiegeStructureType type) {
         this.name = name;
@@ -37,32 +37,21 @@ public class SiegeStructure {
         this.slots = new ArrayList<>();
         this.conditionKeys = new ArrayList<>();
 
-        // UPDATED: Use the new level-based getter (Level 1 default)
         int initialSlots = type.getSlotsForLevel(1);
         for(int i = 0; i < initialSlots; i++) {
             this.slots.add(new SiegeSlot(i + 1));
         }
     }
 
-    /**
-     * Updates the level and adjusts the slot count accordingly.
-     * Adds empty slots if leveling up.
-     * Removes last slots if leveling down.
-     */
     public void updateLevel(int newLevel) {
         if (newLevel < 1 || newLevel > type.getMaxLevel()) {
             return;
         }
-
         this.level = newLevel;
         int targetSize = this.type.getSlotsForLevel(newLevel);
-
-        // 1. Add slots if we need more
         while (this.slots.size() < targetSize) {
             this.slots.add(new SiegeSlot(this.slots.size() + 1));
         }
-
-        // 2. Remove slots if we have too many (Truncate from end)
         while (this.slots.size() > targetSize) {
             this.slots.remove(this.slots.size() - 1);
         }
@@ -71,7 +60,8 @@ public class SiegeStructure {
     /**
      * Custom setter to enforce business logic:
      * 1. Only POST type can have conditions.
-     * 2. Maximum of 3 conditions allowed.
+     * 2. Filter out nulls and empty strings.
+     * 3. Maximum of 3 conditions allowed.
      */
     public void setConditionKeys(List<String> keys) {
         if (this.type != SiegeStructureType.POST) {
@@ -84,14 +74,20 @@ public class SiegeStructure {
             return;
         }
 
+        // Filter out empty strings and nulls
+        List<String> validKeys = keys.stream()
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toList());
+
         // Enforce Max 3
-        if (keys.size() > 3) {
-            this.conditionKeys = new ArrayList<>(keys.subList(0, 3));
+        if (validKeys.size() > 3) {
+            this.conditionKeys = new ArrayList<>(validKeys.subList(0, 3));
         } else {
-            this.conditionKeys = new ArrayList<>(keys);
+            this.conditionKeys = new ArrayList<>(validKeys);
         }
     }
 
+    // ... (getGroups and SiegeSlot class remain the same) ...
     public List<List<SiegeSlot>> getGroups() {
         List<List<SiegeSlot>> groups = new ArrayList<>();
         int groupSize = 3;
@@ -108,7 +104,6 @@ public class SiegeStructure {
         private int slotNumber;
         private String memberId;
         private String playerName;
-
         private String leaderChampionId;
         private List<String> supportChampionIds = new ArrayList<>();
 

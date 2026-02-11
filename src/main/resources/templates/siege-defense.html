@@ -101,11 +101,26 @@
                                     </div>
 
                                     <div th:unless="${isPrivileged}" class="condition-readonly-container">
-                                        <span th:each="key : ${struct.conditionKeys}"
-                                              class="condition-badge"
-                                              th:text="${#strings.capitalizeWords(#strings.toLowerCase(#strings.arraySplit(key, '-')[1]).replace('_', ' '))}">Condition</span>
+                                        <th:block th:each="key : ${struct.conditionKeys}">
 
-                                        <span th:if="${struct.conditionKeys.isEmpty()}" style="font-size: 0.8em; color: #888; font-style: italic;">No Conditions</span>
+                                            <span th:if="${!#strings.isEmpty(key) and key.contains('-')}"
+                                                  th:with="parts=${#strings.arraySplit(key, '-')},
+                                                           catName=${#strings.capitalize(#strings.toLowerCase(parts[0]))},
+                                                           condName=${#strings.capitalizeWords(#strings.toLowerCase(parts[1]).replace('_', ' '))}"
+                                                  class="condition-badge"
+                                                  th:text="|${catName} - ${condName}|">
+                                                Faction - Lizardmen
+                                            </span>
+
+                                            <span th:if="${!#strings.isEmpty(key) and !key.contains('-')}"
+                                                  class="condition-badge"
+                                                  th:text="${key}">
+                                                Key
+                                            </span>
+                                        </th:block>
+
+                                        <span th:if="${struct.conditionKeys == null || struct.conditionKeys.isEmpty()}"
+                                              style="font-size: 0.8em; color: #888; font-style: italic;">No Conditions</span>
                                     </div>
                                 </div>
                                 <div class="spacer" style="flex-grow: 1;"></div>
