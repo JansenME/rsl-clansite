@@ -24,16 +24,28 @@ public class MDCFilter extends OncePerRequestFilter {
                                     @Nonnull HttpServletResponse response,
                                     @Nonnull FilterChain filterChain) throws ServletException, IOException {
         try {
+            // 1. Try to get the active session ID
+            String sessionId = null;
             HttpSession session = request.getSession(false);
 
             if (session != null) {
-                MDC.put(MDC_SESSION_KEY, session.getId());
+                sessionId = session.getId();
+            } else {
+                // 2. Fallback: Check if the client sent a session ID (cookie/url)
+                // This ensures we log the ID even if the Session object isn't fully hydrated yet
+                sessionId = request.getRequestedSessionId();
+            }
+
+            // 3. Populate MDC
+            if (sessionId != null) {
+                MDC.put(MDC_SESSION_KEY, sessionId);
             } else {
                 MDC.put(MDC_SESSION_KEY, "-");
             }
 
             filterChain.doFilter(request, response);
         } finally {
+            // 4. Cleanup to prevent thread pollution
             MDC.remove(MDC_SESSION_KEY);
         }
     }
