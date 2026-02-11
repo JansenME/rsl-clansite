@@ -24,6 +24,9 @@ public class SiegeStructure {
 
     private boolean isCleared;
 
+    // New field: Stores "CATEGORY-KEY" strings (e.g., "FACTION-LIZARDMEN")
+    private List<String> conditionKeys = new ArrayList<>();
+
     private List<SiegeSlot> slots = new ArrayList<>();
 
     public SiegeStructure(String name, SiegeStructureType type) {
@@ -32,6 +35,7 @@ public class SiegeStructure {
         this.defensePoints = type.getDefaultDefensePoints();
         this.attackPoints = type.getDefaultAttackPoints();
         this.slots = new ArrayList<>();
+        this.conditionKeys = new ArrayList<>();
 
         // UPDATED: Use the new level-based getter (Level 1 default)
         int initialSlots = type.getSlotsForLevel(1);
@@ -61,6 +65,30 @@ public class SiegeStructure {
         // 2. Remove slots if we have too many (Truncate from end)
         while (this.slots.size() > targetSize) {
             this.slots.remove(this.slots.size() - 1);
+        }
+    }
+
+    /**
+     * Custom setter to enforce business logic:
+     * 1. Only POST type can have conditions.
+     * 2. Maximum of 3 conditions allowed.
+     */
+    public void setConditionKeys(List<String> keys) {
+        if (this.type != SiegeStructureType.POST) {
+            this.conditionKeys = new ArrayList<>();
+            return;
+        }
+
+        if (keys == null) {
+            this.conditionKeys = new ArrayList<>();
+            return;
+        }
+
+        // Enforce Max 3
+        if (keys.size() > 3) {
+            this.conditionKeys = new ArrayList<>(keys.subList(0, 3));
+        } else {
+            this.conditionKeys = new ArrayList<>(keys);
         }
     }
 

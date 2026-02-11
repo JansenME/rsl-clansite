@@ -22,6 +22,7 @@ public enum AuditAction {
     SIEGE_SLOT_UPDATE("Siege Slot Assignment"),
     SIEGE_CONDITION_TOGGLE("Siege Condition Changed"),
     SIEGE_SYSTEM_EVENT("Siege System Event"),
+    SIEGE_STRUCTURE_UPDATE("Siege Structure Update"),
 
     // Notice Actions
     CREATE_NOTICE("Create Notice"),

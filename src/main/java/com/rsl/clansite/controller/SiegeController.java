@@ -5,6 +5,7 @@ import com.rsl.clansite.model.SiegeStructure;
 import com.rsl.clansite.model.dto.SiegeSlotAssignmentDTO;
 import com.rsl.clansite.model.entity.ChampionEntity;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.entity.SiegeConditionEntity;
 import com.rsl.clansite.model.entity.SiegeEntity;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.MemberStatus;
@@ -83,6 +84,11 @@ public class SiegeController {
     public String siegeDefenseMap(Model model, Authentication authentication, HttpSession session) {
         commonsService.fillModel(model, authentication, session);
         setupSiegeModel(model, session, authentication);
+
+        // --- NEW: Inject Active Conditions for Dropdowns ---
+        List<SiegeConditionEntity> activeConditions = siegeService.getActiveConditions();
+        model.addAttribute("activeConditions", activeConditions);
+        // ---------------------------------------------------
 
         ClanmemberEntity activeMember = clanmemberService.getActiveClanmember(session, authentication);
         String discordId = activeMember.getDiscordId();
@@ -316,6 +322,24 @@ public class SiegeController {
         SiegeStructure updatedStructure = siegeService.upgradeStructure(siegeId, structureId);
 
         return ResponseEntity.ok(updatedStructure);
+    }
+
+    // --- NEW ACTION: Update Structure Conditions ---
+    @PostMapping("/structure/conditions")
+    @PreAuthorize("hasRole('COORDINATOR') or hasRole('ADMIN') or hasRole('OWNER')")
+    public String updateStructureConditions(@RequestParam String siegeId,
+                                            @RequestParam String structureId,
+                                            @RequestParam(required = false) List<String> conditionKeys,
+                                            RedirectAttributes redirectAttributes,
+                                            Authentication authentication) {
+        try {
+            siegeService.updateStructureConditions(siegeId, structureId, conditionKeys, authentication);
+            redirectAttributes.addFlashAttribute("success", "Conditions updated successfully.");
+        } catch (Exception e) {
+            log.error("Failed to update structure conditions", e);
+            redirectAttributes.addFlashAttribute("error", "Update failed: " + e.getMessage());
+        }
+        return "redirect:/siege/defense";
     }
 
     @GetMapping("/scrolls")

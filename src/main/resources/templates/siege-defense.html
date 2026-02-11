@@ -49,31 +49,81 @@
                         </div>
 
                         <div th:each="struct : ${siege.defensiveStructures}" class="structure-row" th:id="'struct-row-' + ${struct.id}">
-                            <div class="structure-title" style="display: flex; align-items: center; gap: 10px;">
-                                <span>
+
+                            <div class="structure-title">
+
+                                <div class="title-text">
                                     <i class="fas fa-archway"></i>
-                                    <span th:text="${struct.name}">Structure</span>
+                                    <strong th:text="${struct.name}">Structure</strong>
 
                                     <span th:if="${struct.type.maxLevel > 1}"
                                           style="font-size: 0.8em; color: #aaa; margin-left: 5px;">
-                                        (Level <span th:id="'lvl-' + ${struct.id}" th:text="${struct.level}">1</span>)
+                                        (Lvl <span th:id="'lvl-' + ${struct.id}" th:text="${struct.level}">1</span>)
                                     </span>
-                                </span>
+                                </div>
 
-                                <div style="flex-grow: 1;"></div>
+                                <div th:if="${struct.type.name() == 'POST'}" class="condition-wrapper">
 
-                                <button th:if="${isPrivileged and struct.level < struct.type.maxLevel}"
-                                        type="button"
-                                        class="button small primary btn-upgrade"
-                                        th:id="'btn-upg-' + ${struct.id}"
-                                        th:onclick="upgradeStructure([[${siege.id.toHexString()}]], [[${struct.id}]])"
-                                        title="Upgrade Structure Level (+Slots)">
-                                    <i class="fas fa-plus"></i>
-                                </button>
+                                    <div th:if="${isPrivileged}" style="width: 100%;">
+                                        <form th:action="@{/siege/structure/conditions}" method="POST" class="condition-form">
+                                            <input type="hidden" name="siegeId" th:value="${siege.id.toHexString()}" />
+                                            <input type="hidden" name="structureId" th:value="${struct.id}" />
 
-                                <span style="font-size:0.8em; color:#555;">
-                                    Slots: <span th:id="'slots-count-' + ${struct.id}" th:text="${struct.slots.size()}">12</span>
-                                </span>
+                                            <select name="conditionKeys" class="condition-select small">
+                                                <option value="">- None -</option>
+                                                <option th:each="cond : ${activeConditions}"
+                                                        th:value="${cond.category + '-' + cond.conditionKey}"
+                                                        th:text="|${#strings.capitalize(#strings.toLowerCase(cond.category.getDisplayName()))} - ${#strings.capitalizeWords(#strings.toLowerCase(cond.conditionKey).replace('_', ' '))}|"
+                                                        th:selected="${struct.conditionKeys.size() > 0 && struct.conditionKeys[0] == (cond.category + '-' + cond.conditionKey)}">
+                                                </option>
+                                            </select>
+
+                                            <select name="conditionKeys" class="condition-select small">
+                                                <option value="">- None -</option>
+                                                <option th:each="cond : ${activeConditions}"
+                                                        th:value="${cond.category + '-' + cond.conditionKey}"
+                                                        th:text="|${#strings.capitalize(#strings.toLowerCase(cond.category.getDisplayName()))} - ${#strings.capitalizeWords(#strings.toLowerCase(cond.conditionKey).replace('_', ' '))}|"
+                                                        th:selected="${struct.conditionKeys.size() > 1 && struct.conditionKeys[1] == (cond.category + '-' + cond.conditionKey)}">
+                                                </option>
+                                            </select>
+
+                                            <select name="conditionKeys" class="condition-select small">
+                                                <option value="">- None -</option>
+                                                <option th:each="cond : ${activeConditions}"
+                                                        th:value="${cond.category + '-' + cond.conditionKey}"
+                                                        th:text="|${#strings.capitalize(#strings.toLowerCase(cond.category.getDisplayName()))} - ${#strings.capitalizeWords(#strings.toLowerCase(cond.conditionKey).replace('_', ' '))}|"
+                                                        th:selected="${struct.conditionKeys.size() > 2 && struct.conditionKeys[2] == (cond.category + '-' + cond.conditionKey)}">
+                                                </option>
+                                            </select>
+
+                                            <button type="submit" class="button small icon solid fa-save save-btn" title="Save Conditions"></button>
+                                        </form>
+                                    </div>
+
+                                    <div th:unless="${isPrivileged}" class="condition-readonly-container">
+                                        <span th:each="key : ${struct.conditionKeys}"
+                                              class="condition-badge"
+                                              th:text="${#strings.capitalizeWords(#strings.toLowerCase(#strings.arraySplit(key, '-')[1]).replace('_', ' '))}">Condition</span>
+
+                                        <span th:if="${struct.conditionKeys.isEmpty()}" style="font-size: 0.8em; color: #888; font-style: italic;">No Conditions</span>
+                                    </div>
+                                </div>
+                                <div class="spacer" style="flex-grow: 1;"></div>
+
+                                <div class="right-controls">
+                                    <button th:if="${isPrivileged and struct.level < struct.type.maxLevel}"
+                                            type="button"
+                                            class="button small primary btn-upgrade"
+                                            th:id="'btn-upg-' + ${struct.id}"
+                                            th:onclick="upgradeStructure([[${siege.id.toHexString()}]], [[${struct.id}]])"
+                                            title="Upgrade Structure Level (+Slots)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+
+                                    <span class="slots-label" style="font-size:0.8em; color:#555; white-space: nowrap;">
+                                        Slots: <span th:id="'slots-count-' + ${struct.id}" th:text="${struct.slots.size()}">12</span>
+                                    </span>
+                                </div>
                             </div>
 
                             <div class="group-container" th:id="'group-container-' + ${struct.id}">
@@ -125,10 +175,8 @@
                                 if (!window.knownTeamsMap) window.knownTeamsMap = {};
                                 if (!window.rosterMap) window.rosterMap = {};
                                 if (!window.siegeGroupMap) window.siegeGroupMap = {};
-
                                 const sId = /*[[${siege.id.toHexString()}]]*/ '';
                                 window.siegeGroupMap[sId] = /*[[${siege.clanGroup}]]*/ 'T1';
-
                                 /*[# th:if="${localProfile != null}"]*/
                                 window.knownTeamsMap[sId] = /*[[${localProfile.knownTeams}]]*/ [];
                                 window.rosterMap[sId] = /*[[${localProfile.rosterChampionIds}]]*/ [];
@@ -239,70 +287,42 @@
 </script>
 
 <script th:inline="javascript">
-    // --- GLOBAL VARIABLES (Existing) ---
     var currentSiegeTeams = [];
     var currentGlobalUsedChampions = [];
     var currentRoster = [];
 
-    // --- UPGRADE FUNCTION (NEW) ---
     function upgradeStructure(siegeId, structureId) {
         if(!confirm("Upgrade this structure level? This will add empty slots.")) return;
-
         fetch(`/siege/${siegeId}/structure/${structureId}/upgrade`, {
             method: 'POST',
-            headers: {
-                [csrfHeader]: csrfToken
-            }
+            headers: { [csrfHeader]: csrfToken }
         })
         .then(response => {
             if(!response.ok) throw new Error('Upgrade failed');
             return response.json();
         })
         .then(data => {
-            // Update UI Level Text
             document.getElementById('lvl-' + structureId).innerText = data.level;
-
-            // Update UI Slot Count
             document.getElementById('slots-count-' + structureId).innerText = data.slots.length;
-
-            // Hide Upgrade Button if Max Level Reached
-            if (data.level >= data.type.maxLevel) { // Ensure your Enum serializes maxLevel or handle this via known logic
+            if (data.level >= data.type.maxLevel) {
                 var btn = document.getElementById('btn-upg-' + structureId);
                 if(btn) btn.style.display = 'none';
             }
-
-            // REBUILD SLOTS - Reload Page Logic or Dynamic Append?
-            // Since dynamic append is complex with Thymeleaf variables, simplest reliable way
-            // is to reload. But you asked for AJAX.
-            // So we will refresh the page to get the new slots rendered correctly by server.
-            // Why? Because rendering the "slot-card" requires extensive Thymeleaf logic (profiles, permissions, etc.)
-            // that is hard to duplicate in JS.
-
             window.location.reload();
         })
-        .catch(err => {
-            alert("Error upgrading structure: " + err);
-        });
+        .catch(err => { alert("Error upgrading structure: " + err); });
     }
-
-    // ... (Rest of existing JS functions: getGloballyUsedChampions, openAssignModal, etc.) ...
 
     function getGloballyUsedChampions(siegeId, memberId, currentStructureId, currentSlotNumber) {
         var used = [];
         var slots = document.querySelectorAll('.slot-card[data-siege-id="' + siegeId + '"]');
-
         slots.forEach(function(slot) {
             if (slot.getAttribute('data-member-id') === memberId) {
                 var sStructId = slot.getAttribute('data-structure-id');
                 var sSlotNum = slot.getAttribute('data-slot-number');
-
-                if (sStructId === currentStructureId && sSlotNum === String(currentSlotNumber)) {
-                    return;
-                }
-
+                if (sStructId === currentStructureId && sSlotNum === String(currentSlotNumber)) return;
                 var leader = slot.getAttribute('data-leader-id');
                 if (leader && leader !== 'null') used.push(leader);
-
                 var supportsStr = slot.getAttribute('data-support-ids');
                 if (supportsStr && supportsStr !== 'null') {
                     var arr = supportsStr.replace('[','').replace(']','').split(',').map(s => s.trim());
@@ -321,24 +341,17 @@
             for (var i = 0; i < options.length; i++) {
                 var opt = options[i];
                 if (opt.value === "") continue;
-
-                if (currentRoster.includes(opt.value)) {
-                    opt.style.display = 'block';
-                } else {
-                    opt.style.display = 'none';
-                    opt.disabled = true;
-                }
+                if (currentRoster.includes(opt.value)) { opt.style.display = 'block'; }
+                else { opt.style.display = 'none'; opt.disabled = true; }
             }
         });
     }
 
-    // --- MAIN MODAL LOGIC ---
     function openAssignModal(element) {
         var siegeId = element.getAttribute('data-siege-id');
         var structureId = element.getAttribute('data-structure-id');
         var slotNumber = element.getAttribute('data-slot-number');
         var occupiedBy = element.getAttribute('data-occupied-by');
-
         var initialMemberId = element.getAttribute('data-member-id');
 
         document.getElementById('modalSiegeId').value = siegeId;
@@ -353,10 +366,8 @@
             document.getElementById('adminControls').style.display = 'block';
             var select = document.getElementById('adminMemberSelect');
             select.innerHTML = "";
-
             var group = (window.siegeGroupMap && window.siegeGroupMap[siegeId]) ? window.siegeGroupMap[siegeId] : 'T1';
             var list = (group === 'T2') ? (t2Members || []) : (t1Members || []);
-
             if (list) {
                 list.forEach(function(m) {
                     var opt = document.createElement('option');
@@ -365,29 +376,18 @@
                     select.appendChild(opt);
                 });
             }
-
-            if (occupiedBy && occupiedBy !== 'null') {
-                select.value = occupiedBy;
-            } else {
-                select.value = initialMemberId;
-            }
-
+            if (occupiedBy && occupiedBy !== 'null') { select.value = occupiedBy; }
+            else { select.value = initialMemberId; }
             updateAdminContext();
         } else {
             document.getElementById('adminControls').style.display = 'none';
             document.getElementById('modalMemberId').value = initialMemberId;
-
-            if (window.knownTeamsMap && window.knownTeamsMap[siegeId]) {
-                currentSiegeTeams = window.knownTeamsMap[siegeId];
-            } else { currentSiegeTeams = []; }
-
-            if (window.rosterMap && window.rosterMap[siegeId]) {
-                currentRoster = window.rosterMap[siegeId];
-            } else { currentRoster = []; }
-
+            if (window.knownTeamsMap && window.knownTeamsMap[siegeId]) { currentSiegeTeams = window.knownTeamsMap[siegeId]; }
+            else { currentSiegeTeams = []; }
+            if (window.rosterMap && window.rosterMap[siegeId]) { currentRoster = window.rosterMap[siegeId]; }
+            else { currentRoster = []; }
             setupQuickSelect();
             filterDropdownsByRoster();
-
             currentGlobalUsedChampions = getGloballyUsedChampions(siegeId, initialMemberId, structureId, slotNumber);
         }
 
@@ -395,61 +395,41 @@
         document.getElementById('modalSup1').value = "";
         document.getElementById('modalSup2').value = "";
         document.getElementById('modalSup3').value = "";
-
         var supports = [];
-        if (supportList && supportList !== 'null') {
-            supports = supportList.replace('[','').replace(']','').split(',').map(s => s.trim());
-        }
-
+        if (supportList && supportList !== 'null') { supports = supportList.replace('[','').replace(']','').split(',').map(s => s.trim()); }
         if (leaderId && leaderId !== 'null') document.getElementById('modalLeader').value = leaderId;
         if(supports[0]) document.getElementById('modalSup1').value = supports[0];
         if(supports[1]) document.getElementById('modalSup2').value = supports[1];
         if(supports[2]) document.getElementById('modalSup3').value = supports[2];
-
         var deleteBtn = document.getElementById('btnDelete');
-        if (leaderId && leaderId !== 'null' && leaderId !== '') {
-            deleteBtn.style.display = 'inline-block';
-        } else {
-            deleteBtn.style.display = 'none';
-        }
-
+        if (leaderId && leaderId !== 'null' && leaderId !== '') { deleteBtn.style.display = 'inline-block'; }
+        else { deleteBtn.style.display = 'none'; }
         validateChampionSelection();
         document.getElementById('assignModal').style.display = "block";
     }
 
     function updateAdminContext() {
         if (!isPrivilegedUser) return;
-
         var selectEl = document.getElementById('adminMemberSelect');
         if (!selectEl) return;
-
         var selectedId = selectEl.value;
         document.getElementById('modalMemberId').value = selectedId;
-
         var siegeId = document.getElementById('modalSiegeId').value;
         var structureId = document.getElementById('modalStructureId').value;
         var slotNumber = document.getElementById('modalSlotNumber').value;
-
         var group = (window.siegeGroupMap && window.siegeGroupMap[siegeId]) ? window.siegeGroupMap[siegeId] : 'T1';
         var list = (group === 'T2') ? (t2Members || []) : (t1Members || []);
-
         var memberObj = list.find(m => m.id === selectedId);
-
         if (memberObj) {
             currentRoster = memberObj.rosterChampionIds || [];
             currentSiegeTeams = memberObj.knownTeams || [];
-
             setupQuickSelect();
             filterDropdownsByRoster();
-
             var idsToCheck = ['modalLeader', 'modalSup1', 'modalSup2', 'modalSup3'];
             idsToCheck.forEach(function(id) {
                 var el = document.getElementById(id);
-                if (el && el.value && !currentRoster.includes(el.value)) {
-                    el.value = "";
-                }
+                if (el && el.value && !currentRoster.includes(el.value)) { el.value = ""; }
             });
-
             currentGlobalUsedChampions = getGloballyUsedChampions(siegeId, selectedId, structureId, slotNumber);
             validateChampionSelection();
         }
@@ -468,29 +448,20 @@
 
     function applyQuickTeam() {
         var index = document.getElementById('quickSelect').value;
-        if (index === "") {
-            validateChampionSelection();
-            return;
-        }
-
+        if (index === "") { validateChampionSelection(); return; }
         var team = currentSiegeTeams[index];
         if (team) {
             var setIfAvailable = function(elementId, champId) {
-                if (champId && champId !== 'null') {
-                    document.getElementById(elementId).value = champId;
-                }
+                if (champId && champId !== 'null') { document.getElementById(elementId).value = champId; }
             };
-
             document.getElementById('modalLeader').value = "";
             document.getElementById('modalSup1').value = "";
             document.getElementById('modalSup2').value = "";
             document.getElementById('modalSup3').value = "";
-
             setIfAvailable('modalLeader', team.leaderChampionId);
             setIfAvailable('modalSup1', team.champion2Id);
             setIfAvailable('modalSup2', team.champion3Id);
             setIfAvailable('modalSup3', team.champion4Id);
-
             validateChampionSelection();
         }
     }
@@ -499,40 +470,26 @@
         var selectIds = ['modalLeader', 'modalSup1', 'modalSup2', 'modalSup3'];
         var selects = selectIds.map(function(id) { return document.getElementById(id); });
         var localSelected = selects.map(function(s) { return s.value; }).filter(function(val) { return val !== ""; });
-
         selects.forEach(function(currentSelect) {
             var options = currentSelect.options;
             for (var i = 0; i < options.length; i++) {
                 var opt = options[i];
                 if (opt.value === "") continue;
-
                 if (opt.style.display === 'none') continue;
-
                 opt.text = opt.text.replace(" (Used elsewhere)", "");
-
                 var isGloballyUsed = currentGlobalUsedChampions.includes(opt.value);
                 var isLocallyUsed = localSelected.includes(opt.value) && currentSelect.value !== opt.value;
-
-                if (isGloballyUsed) {
-                    opt.disabled = true;
-                    opt.text = opt.text + " (Used elsewhere)";
-                } else if (isLocallyUsed) {
-                    opt.disabled = true;
-                } else {
-                    opt.disabled = false;
-                }
+                if (isGloballyUsed) { opt.disabled = true; opt.text = opt.text + " (Used elsewhere)"; }
+                else if (isLocallyUsed) { opt.disabled = true; }
+                else { opt.disabled = false; }
             }
         });
     }
 
     function validateForm() {
-        if (document.activeElement && document.activeElement.id === 'btnDelete') {
-            return true;
-        }
-
+        if (document.activeElement && document.activeElement.id === 'btnDelete') { return true; }
         var selectIds = ['modalLeader', 'modalSup1', 'modalSup2', 'modalSup3'];
         var conflicts = [];
-
         selectIds.forEach(function(id) {
             var val = document.getElementById(id).value;
             if (val && val !== "") {
@@ -543,28 +500,144 @@
                 }
             }
         });
-
         if (conflicts.length > 0) {
             var errorDiv = document.getElementById('validationError');
             errorDiv.innerHTML = "<strong>Cannot Save:</strong> The following champions are already used in other slots:<br/>" + conflicts.join(", ");
             errorDiv.style.display = 'block';
             return false;
         }
-
         return true;
     }
 
-    function closeModal() {
-        document.getElementById('assignModal').style.display = "none";
-    }
-
+    function closeModal() { document.getElementById('assignModal').style.display = "none"; }
     window.onclick = function(event) {
         var modal = document.getElementById('assignModal');
-        if (event.target == modal) {
-            modal.style.display = "none";
-        }
+        if (event.target == modal) { modal.style.display = "none"; }
     }
 </script>
+
+<style>
+    /* Styling for the condition badge and select boxes */
+    .structure-title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .title-text {
+        font-weight: bold;
+        white-space: nowrap;
+    }
+
+    .condition-wrapper {
+        margin-left: 15px;
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    .condition-form {
+        display: flex;
+        gap: 5px;
+        margin: 0;
+        align-items: center;
+    }
+
+    .condition-badge {
+        display: inline-block;
+        background: #34495e;
+        color: #ecf0f1;
+        font-size: 0.75em;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: capitalize;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+    }
+
+    /* Base style for selects (Desktop) */
+    .condition-select {
+        background-color: #fff;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        color: #333;
+        width: 140px;
+        padding: 2px;
+        height: 30px;
+        font-size: 0.85em;
+    }
+
+    .save-btn {
+        height: 30px;
+        line-height: 30px;
+        padding: 0 8px;
+        min-width: 40px;
+    }
+
+    .right-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: auto; /* Push to right on desktop */
+    }
+
+    /* Mobile Tweaks - ROBUST VERTICAL STACK */
+    @media (max-width: 768px) {
+        .structure-title {
+            align-items: flex-start; /* Align top */
+            flex-direction: column; /* Force vertical stack of main blocks */
+        }
+
+        .title-text {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        /* Move controls under title but above conditions */
+        .right-controls {
+            width: 100%;
+            margin-left: 0;
+            justify-content: flex-start;
+            margin-bottom: 5px;
+        }
+
+        .condition-wrapper {
+            width: 100%;
+            margin-left: 0;
+        }
+
+        .spacer {
+            display: none;
+        }
+
+        /* Stack Dropdowns Vertically */
+        .condition-form {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            gap: 5px;
+        }
+
+        .condition-select {
+            width: 100%; /* Full width bars */
+            height: 35px; /* Taller for fingers */
+            font-size: 16px;
+        }
+
+        .save-btn {
+            width: 100%;
+            margin-top: 5px;
+            background-color: #27ae60 !important;
+            color: white !important;
+        }
+
+        .condition-readonly-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+    }
+</style>
 
 </body>
 </html>

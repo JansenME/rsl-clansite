@@ -3,12 +3,14 @@ package com.rsl.clansite.service;
 import com.rsl.clansite.model.OwnedChampion;
 import com.rsl.clansite.model.SiegeStructure;
 import com.rsl.clansite.model.entity.ClanmemberEntity;
+import com.rsl.clansite.model.entity.SiegeConditionEntity;
 import com.rsl.clansite.model.entity.SiegeEntity;
 import com.rsl.clansite.model.enums.AuditAction;
 import com.rsl.clansite.model.enums.ClanGroup;
 import com.rsl.clansite.model.enums.SiegeStatus;
 import com.rsl.clansite.model.enums.SiegeStructureType;
 import com.rsl.clansite.repository.ClanmemberRepository;
+import com.rsl.clansite.repository.SiegeConditionRepository;
 import com.rsl.clansite.repository.SiegeRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
@@ -36,13 +38,16 @@ public class SiegeService {
     private final SiegeRepository siegeRepository;
     private final ClanmemberRepository clanmemberRepository;
     private final AuditLogService auditLogService;
+    private final SiegeConditionRepository siegeConditionRepository;
 
     public SiegeService(SiegeRepository siegeRepository,
                         ClanmemberRepository clanmemberRepository,
-                        AuditLogService auditLogService) {
+                        AuditLogService auditLogService,
+                        SiegeConditionRepository siegeConditionRepository) {
         this.siegeRepository = siegeRepository;
         this.clanmemberRepository = clanmemberRepository;
         this.auditLogService = auditLogService;
+        this.siegeConditionRepository = siegeConditionRepository;
     }
 
     public Optional<SiegeEntity> getActiveSiege(ClanGroup clanGroup) {
@@ -58,6 +63,36 @@ public class SiegeService {
                 clanGroup,
                 List.of(SiegeStatus.BATTLE, SiegeStatus.FINISHED)
         );
+    }
+
+    /**
+     * Fetches all active siege conditions to populate UI dropdowns.
+     */
+    public List<SiegeConditionEntity> getActiveConditions() {
+        return siegeConditionRepository.findAll().stream()
+                .filter(SiegeConditionEntity::isActive)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void updateStructureConditions(String siegeId, String structureId, List<String> conditionKeys, Authentication authentication) {
+        SiegeEntity siege = siegeRepository.findById(new ObjectId(siegeId))
+                .orElseThrow(() -> new IllegalArgumentException("Siege not found"));
+
+        SiegeStructure structure = siege.getDefensiveStructures().stream()
+                .filter(s -> s.getId().equals(structureId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Structure not found"));
+
+        if (structure.getType() != SiegeStructureType.POST) {
+            throw new IllegalArgumentException("Conditions can only be assigned to POST structures.");
+        }
+
+        structure.setConditionKeys(conditionKeys); // Logic for size limit is inside the setter
+        siegeRepository.save(siege);
+
+        String details = String.format("Updated conditions for %s: %s", structure.getName(), conditionKeys);
+        auditLogService.logAction(authentication, AuditAction.SIEGE_STRUCTURE_UPDATE, "System", details);
     }
 
     @Transactional
@@ -182,8 +217,10 @@ public class SiegeService {
                 newStruct.updateLevel(oldStruct.getLevel());
             }
 
-            // 2. Copy Slot Assignments
-            // Map old slots by SlotNumber for easy lookup
+            // 2. Conditions: Explicitly ensure they are empty for the new cycle
+            newStruct.setConditionKeys(new ArrayList<>());
+
+            // 3. Copy Slot Assignments
             Map<Integer, SiegeStructure.SiegeSlot> oldSlotMap = oldStruct.getSlots().stream()
                     .collect(Collectors.toMap(SiegeStructure.SiegeSlot::getSlotNumber, s -> s));
 
@@ -193,7 +230,6 @@ public class SiegeService {
                     newSlot.setMemberId(oldSlot.getMemberId());
                     newSlot.setPlayerName(oldSlot.getPlayerName());
                     newSlot.setLeaderChampionId(oldSlot.getLeaderChampionId());
-                    // Create a new list for supports to ensure deep copy
                     newSlot.setSupportChampionIds(new ArrayList<>(oldSlot.getSupportChampionIds()));
                 }
             }
