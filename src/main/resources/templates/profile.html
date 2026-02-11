@@ -266,7 +266,7 @@
 							<input type="button" onclick="checkAll(false)" value="Clear all">
 
 							<label for="champion-sort">Sort by:</label>
-							<select id="champion-sort" onchange="applyChampionFilters();">
+							<select id="champion-sort">
 								<option value="score_desc" selected>Default (Rarity > Rank)</option>
 								<option value="name_asc">Name (A-Z)</option>
 								<option value="name_desc">Name (Z-A)</option>
@@ -276,7 +276,6 @@
 							<input type="text"
 								   id="champion-search"
 								   placeholder="Search within roster..."
-								   oninput="applyChampionFilters();"
 								   style="width: 250px; padding: 4px;"
 							/>
 
@@ -294,31 +293,31 @@
 								<tr>
 									<td data-label="Rarity" style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{rarities}">
-                                        <input type="checkbox" class="filter-checkbox filter-rarity" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{rarities[__${stat.index}__].value}" />
+                                        <input type="checkbox" class="filter-checkbox filter-rarity" th:data-filter-name="${item.getName()}" th:field="*{rarities[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
                                      </span>
 									</td>
 									<td data-label="Type" style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{types}">
-                                        <input type="checkbox" class="filter-checkbox filter-type" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{types[__${stat.index}__].value}" />
+                                        <input type="checkbox" class="filter-checkbox filter-type" th:data-filter-name="${item.getName()}" th:field="*{types[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
                                      </span>
 									</td>
 									<td data-label="Affinity" style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{affinities}">
-                                        <input type="checkbox" class="filter-checkbox filter-affinity" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{affinities[__${stat.index}__].value}" />
+                                        <input type="checkbox" class="filter-checkbox filter-affinity" th:data-filter-name="${item.getName()}" th:field="*{affinities[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
                                      </span>
 									</td>
 									<td data-label="Faction" style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{factions}">
-                                        <input type="checkbox" class="filter-checkbox filter-faction" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{factions[__${stat.index}__].value}" />
+                                        <input type="checkbox" class="filter-checkbox filter-faction" th:data-filter-name="${item.getName()}" th:field="*{factions[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
                                      </span>
 									</td>
 									<td data-label="Alliance" style="vertical-align: text-top; padding-top:10px;">
                                      <span th:each="item, stat : *{alliances}">
-                                        <input type="checkbox" class="filter-checkbox filter-alliance" onchange="applyChampionFilters()" th:data-filter-name="${item.getName()}" th:field="*{alliances[__${stat.index}__].value}" />
+                                        <input type="checkbox" class="filter-checkbox filter-alliance" th:data-filter-name="${item.getName()}" th:field="*{alliances[__${stat.index}__].value}" />
                                         <span th:text="${item.getName()}"></span><br />
                                      </span>
 									</td>
@@ -349,7 +348,7 @@
 								 style="width: 120px; position: relative; margin-bottom: 10px;">
 
 								<div class="image-container" style="position: relative; width: 100%; height: 120px; border-radius: 8px; overflow: hidden; border: 2px solid #444;">
-									<img th:src="${entry.masterData.imagename != null} ? @{/images/champion-cards/{name}(name=${entry.masterData.imagename})} : @{/images/champion-cards/placeholder.png}"
+									<img class="champion-portrait" th:src="${entry.masterData.imagename != null} ? @{/images/champion-cards/{name}(name=${entry.masterData.imagename})} : @{/images/champion-cards/placeholder.png}"
 										 style="width: 100%; height: 100%; object-fit: cover;" />
 
 									<div th:if="${entry.masterData.affinity != null}" style="position: absolute; bottom: 3px; left: 3px; width: 20px; height: 20px; z-index: 5;">
@@ -505,6 +504,109 @@
         if (event.target == modal) closeEditModal();
     }
 
+    // --- OPTIMIZED FILTERING WITH BATCHING ---
+    let rosterCache = [];
+    let filteredRoster = [];
+    let profileVisibleCount = 0;
+    const PROFILE_BATCH_SIZE = 48; // Show 48 at a time
+    let debounceTimer;
+
+    function initRosterCache() {
+        const cards = Array.from(document.querySelectorAll('.roster-card'));
+        rosterCache = cards.map(card => ({
+            el: card,
+            name: (card.dataset.name || '').toLowerCase(),
+            score: parseFloat(card.dataset.score) || 0,
+            rarity: card.dataset.rarity || '',
+            type: card.dataset.type || '',
+            affinity: card.dataset.affinity || '',
+            faction: card.dataset.faction || '',
+            alliance: card.dataset.alliance || ''
+        }));
+    }
+
+    function debouncedApplyFilters() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(applyChampionFilters, 200); // Wait 200ms before running
+    }
+
+    function applyChampionFilters() {
+        // Initialize cache if needed
+        if (rosterCache.length === 0) initRosterCache();
+
+        const searchInput = document.getElementById('champion-search');
+        const searchText = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        const sortValue = document.getElementById('champion-sort').value;
+        const countSpan = document.getElementById('visible-champion-count');
+
+        // 1. Get Checked Filters
+        const getChecked = (cls) => Array.from(document.querySelectorAll('.' + cls + ':checked')).map(cb => cb.getAttribute('data-filter-name'));
+        const checkedRarities = getChecked('filter-rarity');
+        const checkedTypes = getChecked('filter-type');
+        const checkedAffinities = getChecked('filter-affinity');
+        const checkedFactions = getChecked('filter-faction');
+        const checkedAlliances = getChecked('filter-alliance');
+
+        // 2. Filter (Memory)
+        filteredRoster = rosterCache.filter(item => {
+            if (searchText && !item.name.includes(searchText)) return false;
+            if (checkedRarities.length && !checkedRarities.includes(item.rarity)) return false;
+            if (checkedTypes.length && !checkedTypes.includes(item.type)) return false;
+            if (checkedAffinities.length && !checkedAffinities.includes(item.affinity)) return false;
+            if (checkedFactions.length && !checkedFactions.includes(item.faction)) return false;
+            if (checkedAlliances.length && !checkedAlliances.includes(item.alliance)) return false;
+            return true;
+        });
+
+        // 3. Sort (Memory)
+        filteredRoster.sort((a, b) => {
+            if (sortValue === 'name_asc') return a.name.localeCompare(b.name);
+            if (sortValue === 'name_desc') return b.name.localeCompare(a.name);
+            if (a.score !== b.score) return b.score - a.score;
+            return a.name.localeCompare(b.name);
+        });
+
+        // 4. Update UI - Reset and Render First Batch
+        // Hide all original elements first (fastest way to clear grid without deleting nodes)
+        rosterCache.forEach(c => c.el.style.display = 'none');
+
+        // Reset counters
+        profileVisibleCount = 0;
+
+        // Render first batch
+        renderProfileBatch();
+
+        // 5. Update Count
+        if (countSpan) {
+            const currentCount = parseInt(countSpan.innerText) || 0;
+            if (currentCount !== filteredRoster.length) {
+                animateCount(countSpan, currentCount, filteredRoster.length, 300);
+            }
+        }
+    }
+
+    function renderProfileBatch() {
+        const container = document.getElementById('champion-grid-container');
+        if (!container || filteredRoster.length === 0) return;
+
+        const fragment = document.createDocumentFragment();
+        const nextBatch = filteredRoster.slice(profileVisibleCount, profileVisibleCount + PROFILE_BATCH_SIZE);
+
+        nextBatch.forEach(item => {
+            item.el.style.display = 'block'; // Show the card
+            fragment.appendChild(item.el);   // Re-order in DOM via fragment
+
+            // Image Lazy/Fade check (Manually trigger onload if cached)
+            const img = item.el.querySelector('img');
+            if(img && img.complete && img.classList.contains('champion-portrait')) {
+                 item.el.querySelector('.champion-portrait').closest('.image-container').classList.remove('card-hidden');
+            }
+        });
+
+        container.appendChild(fragment);
+        profileVisibleCount += nextBatch.length;
+    }
+
     // --- ANIMATION HELPER ---
     function animateCount(obj, start, end, duration) {
         let startTimestamp = null;
@@ -515,107 +617,18 @@
             if (progress < 1) {
                 window.requestAnimationFrame(step);
             } else {
-                obj.innerText = end; // Ensure it ends exactly on the target
+                obj.innerText = end;
             }
         };
         window.requestAnimationFrame(step);
     }
 
-    // --- FILTER & SORTING LOGIC ---
-    function applyChampionFilters() {
-        const searchInput = document.getElementById('champion-search');
-        if (!searchInput) return;
-
-        const searchText = searchInput.value.toLowerCase().trim();
-        const sortValue = document.getElementById('champion-sort').value;
-        const cards = Array.from(document.querySelectorAll('.roster-card'));
-        const countSpan = document.getElementById('visible-champion-count');
-
-        // 1. Get Checked Filters
-        const getChecked = (cls) => Array.from(document.querySelectorAll('.' + cls + ':checked')).map(cb => cb.getAttribute('data-filter-name'));
-
-        const checkedRarities = getChecked('filter-rarity');
-        const checkedTypes = getChecked('filter-type');
-        const checkedAffinities = getChecked('filter-affinity');
-        const checkedFactions = getChecked('filter-faction');
-        const checkedAlliances = getChecked('filter-alliance');
-
-        let visibleCount = 0;
-
-        cards.forEach(card => {
-            let matches = true;
-
-            // Name Search
-            if (searchText && !card.dataset.name.includes(searchText)) matches = false;
-
-            // Checkbox Filters
-            if (matches && checkedRarities.length > 0 && !checkedRarities.includes(card.dataset.rarity)) matches = false;
-            if (matches && checkedTypes.length > 0 && !checkedTypes.includes(card.dataset.type)) matches = false;
-            if (matches && checkedAffinities.length > 0 && !checkedAffinities.includes(card.dataset.affinity)) matches = false;
-            if (matches && checkedFactions.length > 0 && !checkedFactions.includes(card.dataset.faction)) matches = false;
-            if (matches && checkedAlliances.length > 0 && !checkedAlliances.includes(card.dataset.alliance)) matches = false;
-
-            if (matches) {
-                card.style.display = 'block';
-                visibleCount++;
-            } else {
-                card.style.display = 'none';
-            }
-        });
-
-        // ANIMATE THE COUNT CHANGE
-        if (countSpan) {
-            const currentCount = parseInt(countSpan.innerText) || 0;
-            if (currentCount !== visibleCount) {
-                animateCount(countSpan, currentCount, visibleCount, 500); // 500ms duration
-            }
-        }
-
-        // Apply Sort
-        sortChampions(cards, sortValue);
-    }
-
-    function sortChampions(cards, sortValue) {
-        const container = document.getElementById('champion-grid-container');
-        if (!container) return;
-
-        cards.sort((a, b) => {
-            if (sortValue === 'name_asc') return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
-            if (sortValue === 'name_desc') return b.getAttribute('data-name').localeCompare(a.getAttribute('data-name'));
-
-            // Default: Use Shadow Score (Rarity > Rank > Level)
-            const scoreA = parseFloat(a.getAttribute('data-score')) || 0;
-            const scoreB = parseFloat(b.getAttribute('data-score')) || 0;
-
-            if (scoreA !== scoreB) {
-                return scoreB - scoreA; // High score first
-            }
-
-            // Tie-breaker: Alphabetical Name
-            return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
-        });
-
-        // Re-append to DOM
-        cards.forEach(card => container.appendChild(card));
-    }
-
-    function toggleFilter() {
-        const wrapper = document.getElementById('filter-wrapper');
-        if (!wrapper) return;
-
-        const isHidden = (wrapper.style.maxHeight === '0px' || wrapper.style.maxHeight === '' || wrapper.style.maxHeight === '0');
-        wrapper.style.maxHeight = isHidden ? '1000px' : '0';
-        wrapper.style.opacity = isHidden ? '1' : '0';
-        wrapper.style.marginBottom = isHidden ? '20px' : '0';
-    }
-
-    // Helper for buttons
+    // --- HELPER FOR BUTTONS ---
     function checkAll(checked) {
         document.querySelectorAll('.filter-checkbox').forEach(cb => cb.checked = checked);
-        applyChampionFilters();
+        debouncedApplyFilters();
     }
 
-    // --- INITIALIZATION ---
     document.addEventListener("DOMContentLoaded", function() {
         const images = document.querySelectorAll("img");
         images.forEach(img => {
@@ -624,14 +637,38 @@
             };
         });
 
-        // Force Clear Search
+        // Init cache
+        initRosterCache();
+
+        // Listeners
         const searchInput = document.getElementById('champion-search');
-        if(searchInput) searchInput.value = '';
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.addEventListener('input', debouncedApplyFilters);
+        }
 
-        // Initial Sort (Run filters once to sort by default)
+        const sortInput = document.getElementById('champion-sort');
+        if (sortInput) {
+            sortInput.addEventListener('change', () => applyChampionFilters()); // Sort doesn't need strict debounce
+        }
+
+        // Attach listeners to checkboxes (overriding main.js potential conflicts)
+        const checkboxes = document.querySelectorAll('.filter-checkbox');
+        checkboxes.forEach(cb => {
+            cb.onclick = debouncedApplyFilters; // Using onclick to ensure it fires
+        });
+
+        // Infinite Scroll
+        window.addEventListener('scroll', () => {
+             if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 400) {
+                 if (profileVisibleCount < filteredRoster.length) {
+                     renderProfileBatch();
+                 }
+             }
+        });
+
+        // Initial Run
         applyChampionFilters();
-
-        // FIXED: Removed client-side .utc-time formatting logic since it is now handled by Thymeleaf on the server.
     });
 </script>
 </body>
