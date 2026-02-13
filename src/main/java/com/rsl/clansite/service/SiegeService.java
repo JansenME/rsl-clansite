@@ -93,31 +93,6 @@ public class SiegeService {
 
         String details = String.format("Updated conditions for %s: %s", structure.getName(), conditionKeys);
         auditLogService.logAction(authentication, AuditAction.SIEGE_STRUCTURE_UPDATE, "System", details);
-
-        // NEW: Sync to sibling
-        syncConditionsToSibling(siege, structure, conditionKeys);
-    }
-
-    /**
-     * Mirrors the condition changes to the active siege of the sibling clan (T1 <-> T2).
-     */
-    private void syncConditionsToSibling(SiegeEntity sourceSiege, SiegeStructure sourceStructure, List<String> conditionKeys) {
-        ClanGroup siblingGroup = (sourceSiege.getClanGroup() == ClanGroup.T1) ? ClanGroup.T2 : ClanGroup.T1;
-        Optional<SiegeEntity> siblingSiegeOpt = getActiveSiege(siblingGroup);
-
-        if (siblingSiegeOpt.isPresent()) {
-            SiegeEntity siblingSiege = siblingSiegeOpt.get();
-
-            // Find matching structure by Name and Type (IDs will be different between sieges)
-            siblingSiege.getDefensiveStructures().stream()
-                    .filter(s -> s.getType() == sourceStructure.getType() && s.getName().equals(sourceStructure.getName()))
-                    .findFirst()
-                    .ifPresent(siblingStruct -> {
-                        siblingStruct.setConditionKeys(conditionKeys);
-                        siegeRepository.save(siblingSiege);
-                        log.info("Synchronized conditions for {} to sibling siege ({}).", sourceStructure.getName(), siblingGroup);
-                    });
-        }
     }
 
     @Transactional
