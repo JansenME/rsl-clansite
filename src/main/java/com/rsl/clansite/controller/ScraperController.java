@@ -107,26 +107,17 @@ public class ScraperController {
         log.info("Received Target Update Request with {} params", allParams.size());
 
         for (Map.Entry<String, String> entry : allParams.entrySet()) {
-            if (entry.getKey().contains("_")) {
+            if (entry.getKey().contains("___")) {
                 try {
-                    // Expect format "Faction Name_RARITY"
-                    String[] parts = entry.getKey().split("_");
+                    String[] parts = entry.getKey().split("___");
                     if (parts.length != 2) continue;
 
-                    String factionName = parts[0].trim();
-                    String rarityName = parts[1].trim();
+                    String factionEnumName = parts[0];
+                    String rarityEnumName = parts[1];
 
-                    Faction faction = Faction.getFactionByName(factionName);
-                    if (faction == null) {
-                        faction = Faction.getFactionByName(factionName.replace("_", " "));
-                    }
+                    Faction faction = Faction.valueOf(factionEnumName);
+                    Rarity rarity = Rarity.valueOf(rarityEnumName);
 
-                    if (faction == null) {
-                        log.warn("Could not find faction for key: {}", factionName);
-                        continue;
-                    }
-
-                    Rarity rarity = Rarity.valueOf(rarityName);
                     int count = Integer.parseInt(entry.getValue());
                     int current = targetService.getTargetCount(faction, rarity);
 
@@ -134,6 +125,8 @@ public class ScraperController {
                         targetService.updateTarget(faction, rarity, count, authentication);
                         updatedCount++;
                     }
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid Enum in target update key: {}. Skipping.", entry.getKey());
                 } catch (Exception e) {
                     log.error("Failed to parse update for key {}: {}", entry.getKey(), e.getMessage());
                 }

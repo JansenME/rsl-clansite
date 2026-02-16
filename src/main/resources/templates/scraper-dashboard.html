@@ -65,7 +65,7 @@
                                         <td class="border-left-thick">
                                             <input type="number"
                                                    class="target-input"
-                                                   th:name="${row.faction.name} + '_' + ${rarity.name}"
+                                                   th:name="${row.faction.name()} + '___' + ${rarity.name()}"
                                                    th:value="${row.targets.get(rarity)}"
                                                    min="0" />
                                         </td>
