@@ -9,7 +9,7 @@
   },
   "High Elves": {
     "mythical": 1,
-    "legendary": 21,
+    "legendary": 22,
     "epic": 17,
     "rare": 13,
     "uncommon": 3,
@@ -24,7 +24,7 @@
     "common": 5
   },
   "Barbarians": {
-    "mythical": 1,
+    "mythical": 2,
     "legendary": 27,
     "epic": 19,
     "rare": 17,
@@ -81,7 +81,7 @@
   },
   "Dark Elves": {
     "mythical": 2,
-    "legendary": 23,
+    "legendary": 24,
     "epic": 18,
     "rare": 14,
     "uncommon": 3,
@@ -113,7 +113,7 @@
   },
   "Sylvan Watchers": {
     "mythical": 3,
-    "legendary": 20,
+    "legendary": 21,
     "epic": 17,
     "rare": 11,
     "uncommon": 2,
