@@ -15,6 +15,7 @@ import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.events.session.ReadyEvent; // Added Import
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -50,36 +51,45 @@ public class DiscordBotService extends ListenerAdapter {
     @PostConstruct
     public void startBot() {
         try {
-            log.info("Starting Discord Bot...");
+            log.info("Starting Discord Bot asynchronously...");
             EnumSet<GatewayIntent> intents = EnumSet.of(
                     GatewayIntent.GUILD_MEMBERS,
                     GatewayIntent.GUILD_MESSAGES
             );
 
+            // We build the bot but DO NOT wait for it to be ready.
+            // This prevents the Spring Boot startup from freezing if Discord is down.
             jda = JDABuilder.createDefault(token)
                     .enableIntents(intents)
                     .addEventListeners(this)
                     .build();
 
-            jda.awaitReady();
-            log.info("Discord Bot is ONLINE as: {}", jda.getSelfUser().getAsTag());
-
-            jda.updateCommands().addCommands(
-                    Commands.slash("hello", "I will help with anything you want!"),
-                    Commands.slash("robot", "What am I?"),
-                    Commands.slash("eventhub", "Initialize the Event Timer Hub in this channel")
-                            .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)),
-                    Commands.slash("siege-score", "Get the current Siege Score (Battle/Finished)")
-                            .addOptions(new OptionData(OptionType.STRING, "tier", "Select T1 or T2 manually")
-                                    .addChoice("T1", "T1")
-                                    .addChoice("T2", "T2"))
-                            .setDefaultPermissions(DefaultMemberPermissions.ENABLED)/*,
-                    Commands.slash("website", "We have a clan website!")*/
-            ).queue();
+            // Note: Command registration is moved to onReady() below
 
         } catch (Exception e) {
             log.error("Failed to start Discord Bot", e);
         }
+    }
+
+    /**
+     * This event fires when the Discord Bot has successfully connected and is ready.
+     * We perform our API calls (like registering commands) here to ensure stability.
+     */
+    @Override
+    public void onReady(ReadyEvent event) {
+        log.info("Discord Bot is ONLINE as: {}", event.getJDA().getSelfUser().getAsTag());
+
+        event.getJDA().updateCommands().addCommands(
+                Commands.slash("hello", "I will help with anything you want!"),
+                Commands.slash("robot", "What am I?"),
+                Commands.slash("eventhub", "Initialize the Event Timer Hub in this channel")
+                        .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)),
+                Commands.slash("siege-score", "Get the current Siege Score (Battle/Finished)")
+                        .addOptions(new OptionData(OptionType.STRING, "tier", "Select T1 or T2 manually")
+                                .addChoice("T1", "T1")
+                                .addChoice("T2", "T2"))
+                        .setDefaultPermissions(DefaultMemberPermissions.ENABLED)
+        ).queue();
     }
 
     @Bean
