@@ -1,5 +1,7 @@
 package com.rsl.clansite.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rsl.clansite.model.OwnedChampion;
 import com.rsl.clansite.model.Team;
 import com.rsl.clansite.model.entity.ChampionEntity;
@@ -41,6 +43,7 @@ public class RosterSyncService {
     private final ChampionRepository championRepository;
     private final ClanmemberRepository clanmemberRepository;
     private final AuditLogService auditLogService;
+    private final ObjectMapper objectMapper;
 
     public RosterSyncService(@Value("${app.upload.roster-path}") String uploadPath,
                              ChampionRepository championRepository,
@@ -50,9 +53,8 @@ public class RosterSyncService {
         this.championRepository = championRepository;
         this.clanmemberRepository = clanmemberRepository;
         this.auditLogService = auditLogService;
+        this.objectMapper = new ObjectMapper();
     }
-
-    // --- DTOs ---
 
     @Data
     @Builder
@@ -69,7 +71,7 @@ public class RosterSyncService {
     public static class MatchEdge {
         private OwnedChampion db;
         private ParsedChampion csv;
-        private int diff; // Absolute difference in TrueLevel
+        private int diff;
     }
 
     @Data
@@ -101,10 +103,17 @@ public class RosterSyncService {
         private int totalRemoves = 0;
     }
 
-    // --- Phase 3: The Reconciliation Engine ---
-
     public SyncDiffResult generateDiff(String discordId, ClanmemberEntity member) throws IOException {
-        SyncParseResult parseResult = parseUpload(discordId);
+        SyncParseResult parseResult;
+
+        if (getExistingJsonFile(discordId) != null) {
+            parseResult = parseJsonUpload(discordId);
+        } else if (getExistingSyncFile(discordId) != null) {
+            parseResult = parseUpload(discordId);
+        } else {
+            throw new IOException("No sync file found (neither JSON nor CSV).");
+        }
+
         List<OwnedChampion> currentRoster = member.getRoster() != null ? member.getRoster() : new ArrayList<>();
 
         Map<String, List<OwnedChampion>> dbMap = currentRoster.stream()
@@ -134,7 +143,6 @@ public class RosterSyncService {
     private void processChampionGroup(String masterId, List<OwnedChampion> dbInstances, List<ParsedChampion> csvInstances, SyncDiffResult diffResult, ClanmemberEntity member) {
         List<MatchEdge> allEdges = new ArrayList<>();
 
-        // 1. Calculate score for EVERY combination
         for (OwnedChampion db : dbInstances) {
             int dbTrueLevel = calculateTrueLevel(db.getRank(), db.getLevel());
             for (ParsedChampion csv : csvInstances) {
@@ -148,7 +156,6 @@ public class RosterSyncService {
         Set<String> matchedDbIds = new HashSet<>();
         Set<ParsedChampion> matchedCsv = Collections.newSetFromMap(new IdentityHashMap<>());
 
-        // 3. Greedy Matching
         for (MatchEdge edge : allEdges) {
             if (!matchedDbIds.contains(edge.db.getId()) && !matchedCsv.contains(edge.csv)) {
                 matchedDbIds.add(edge.db.getId());
@@ -170,7 +177,6 @@ public class RosterSyncService {
             }
         }
 
-        // 4. Handle Removes
         for (OwnedChampion db : dbInstances) {
             if (!matchedDbIds.contains(db.getId())) {
                 String name = resolveName(masterId);
@@ -192,7 +198,6 @@ public class RosterSyncService {
             }
         }
 
-        // 5. Handle Adds
         for (ParsedChampion csv : csvInstances) {
             if (!matchedCsv.contains(csv)) {
                 diffResult.getChanges().add(ProposedChange.builder()
@@ -209,8 +214,6 @@ public class RosterSyncService {
             }
         }
     }
-
-    // --- Phase 5: Persistence (The Commit) ---
 
     @Transactional
     public void applySync(String discordId, ClanmemberEntity member, List<Integer> selectedIndices, Authentication authentication) throws IOException {
@@ -266,10 +269,6 @@ public class RosterSyncService {
                 });
     }
 
-    /**
-     * Removes the champion from the roster and detaches it from any teams.
-     * @return true if a removal actually occurred
-     */
     private boolean handleRemoval(ClanmemberEntity member, ProposedChange change) {
         boolean removed = member.getRoster().removeIf(oc -> oc.getId().equals(change.getInstanceId()));
         if (removed) {
@@ -278,10 +277,6 @@ public class RosterSyncService {
         return removed;
     }
 
-    /**
-     * THE FIX: Sets specific team slots to null instead of deleting the whole team.
-     * Used for both CSV Sync and Manual Deletion.
-     */
     private void detachChampionFromTeams(ClanmemberEntity member, String instanceId) {
         if (member.getKnownTeams() == null) return;
 
@@ -312,9 +307,9 @@ public class RosterSyncService {
         );
 
         deleteSyncFile(discordId);
+        deleteJsonFile(discordId);
     }
 
-    // --- Helpers ---
     private List<String> findAffectedTeams(ClanmemberEntity member, String instanceId) {
         if (member.getKnownTeams() == null) return Collections.emptyList();
         List<String> teamNames = new ArrayList<>();
@@ -346,7 +341,6 @@ public class RosterSyncService {
                 .replace("´", "'");
     }
 
-    // --- Parsing & Storage ---
     public SyncParseResult parseUpload(String discordId) throws IOException {
         File file = getExistingSyncFile(discordId);
         if (file == null) throw new IOException("No sync file found.");
@@ -365,7 +359,7 @@ public class RosterSyncService {
             boolean isFirstLine = true;
 
             while ((line = br.readLine()) != null) {
-                line = line.replace("\uFEFF", ""); // BOM fix
+                line = line.replace("\uFEFF", "");
                 if (isFirstLine) { isFirstLine = false; continue; }
                 if (!StringUtils.hasText(line)) continue;
 
@@ -402,6 +396,115 @@ public class RosterSyncService {
 
     private int calculateTrueLevel(int rank, int level) { return ((rank - 1) * 5 * rank) + level; }
 
+    public void saveJsonPayload(String discordId, List<Map<String, Object>> champions) throws IOException {
+        if (!StringUtils.hasText(discordId)) throw new IllegalArgumentException("No ID.");
+        if (champions == null || champions.isEmpty()) throw new IllegalArgumentException("Empty payload.");
+
+        Path rootLocation = Paths.get(uploadPath);
+        if (!Files.exists(rootLocation)) Files.createDirectories(rootLocation);
+
+        Path dest = rootLocation.resolve(discordId + ".json");
+        objectMapper.writeValue(dest.toFile(), champions);
+        log.info("Saved JSON payload for {}: {} champions", discordId, champions.size());
+    }
+
+    public File getExistingJsonFile(String discordId) {
+        if (!StringUtils.hasText(discordId)) return null;
+        Path p = Paths.get(uploadPath).resolve(discordId + ".json");
+        return (p.toFile().exists() && p.toFile().isFile()) ? p.toFile() : null;
+    }
+
+    public SyncParseResult parseJsonUpload(String discordId) throws IOException {
+        File file = getExistingJsonFile(discordId);
+        if (file == null) throw new IOException("No JSON sync file found.");
+
+        SyncParseResult result = new SyncParseResult();
+        List<Map<String, Object>> champions = objectMapper.readValue(file, new TypeReference<>() {});
+
+        for (Map<String, Object> champ : champions) {
+            Object baseHeroIdObj = getValueIgnoreCase(champ, "baseHeroId");
+            Object nameObj = getValueIgnoreCase(champ, "name");
+            Object rankObj = getValueIgnoreCase(champ, "rank");
+            Object levelObj = getValueIgnoreCase(champ, "level");
+
+            if (baseHeroIdObj == null || rankObj == null || levelObj == null) {
+                log.warn("Skipping champion with missing required fields: {}", champ);
+                continue;
+            }
+
+            String baseHeroId = convertToCleanString(baseHeroIdObj);
+            String name = nameObj != null ? String.valueOf(nameObj) : "Unknown";
+
+            int rank;
+            int level;
+            try {
+                rank = convertToInt(rankObj);
+                level = convertToInt(levelObj);
+            } catch (NumberFormatException e) {
+                log.warn("Invalid number format for champion: {}", champ);
+                continue;
+            }
+
+            Optional<ChampionEntity> masterOpt = championRepository.findByBaseHeroId(baseHeroId);
+
+            if (masterOpt.isEmpty()) {
+                if (StringUtils.hasText(name) && !result.getUnknownNames().contains(name)) {
+                    result.getUnknownNames().add(name + " (ID: " + baseHeroId + ")");
+                }
+                continue;
+            }
+
+            ChampionEntity master = masterOpt.get();
+            int trueLevel = calculateTrueLevel(rank, level);
+
+            result.getValidEntries().add(ParsedChampion.builder()
+                    .masterId(master.getId().toHexString())
+                    .name(master.getName())
+                    .rank(rank)
+                    .level(level)
+                    .trueLevel(trueLevel)
+                    .build());
+        }
+
+        return result;
+    }
+
+    private String convertToCleanString(Object obj) {
+        if (obj instanceof Number) {
+            long val = ((Number) obj).longValue();
+            return String.valueOf(val);
+        }
+        String str = String.valueOf(obj).trim();
+        if (str.endsWith(".0")) {
+            str = str.substring(0, str.length() - 2);
+        }
+        return str;
+    }
+
+    private int convertToInt(Object obj) {
+        if (obj instanceof Number) {
+            return ((Number) obj).intValue();
+        }
+        return Integer.parseInt(String.valueOf(obj).trim());
+    }
+
+    private Object getValueIgnoreCase(Map<String, Object> map, String key) {
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            if (entry.getKey().equalsIgnoreCase(key)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    public void deleteJsonFile(String discordId) {
+        try {
+            Files.deleteIfExists(Paths.get(uploadPath).resolve(discordId + ".json"));
+        } catch (IOException e) {
+            log.warn("Delete JSON failed", e);
+        }
+    }
+
     public void saveUpload(MultipartFile file, String discordId) throws IOException {
         if (file.isEmpty()) throw new IllegalArgumentException("Empty file.");
         if (!StringUtils.hasText(discordId)) throw new IllegalArgumentException("No ID.");
@@ -418,8 +521,14 @@ public class RosterSyncService {
     }
 
     public LocalDateTime getFileLastModified(String discordId) {
-        File f = getExistingSyncFile(discordId);
-        return f == null ? null : LocalDateTime.ofInstant(Instant.ofEpochMilli(f.lastModified()), ZoneId.systemDefault());
+        File csvFile = getExistingSyncFile(discordId);
+        File jsonFile = getExistingJsonFile(discordId);
+
+        long csvTime = csvFile != null ? csvFile.lastModified() : 0;
+        long jsonTime = jsonFile != null ? jsonFile.lastModified() : 0;
+
+        long latestTime = Math.max(csvTime, jsonTime);
+        return latestTime > 0 ? LocalDateTime.ofInstant(Instant.ofEpochMilli(latestTime), ZoneId.systemDefault()) : null;
     }
 
     public void deleteSyncFile(String discordId) {

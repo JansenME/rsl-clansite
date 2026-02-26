@@ -25,6 +25,7 @@ public class ChampionEntity {
     @Indexed(unique = true)
     private String name;
 
+    private String baseHeroId;  // <-- NEW: HellHades ID for mapping
     private Rarity rarity;
     private Type type;
     private Affinity affinity;

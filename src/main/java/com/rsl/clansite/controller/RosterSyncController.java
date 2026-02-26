@@ -104,8 +104,10 @@ public class RosterSyncController {
         ClanmemberEntity activeMember = clanmemberRepository.findById(sessionMember.getId()).orElse(sessionMember);
 
         try {
-            if (rosterSyncService.getExistingSyncFile(activeMember.getDiscordId()) == null) {
-                redirectAttributes.addFlashAttribute("errorMessage", "No uploaded file found. Please upload your RSL Helper CSV.");
+            // Check for both JSON and CSV files
+            if (rosterSyncService.getExistingJsonFile(activeMember.getDiscordId()) == null
+                    && rosterSyncService.getExistingSyncFile(activeMember.getDiscordId()) == null) {
+                redirectAttributes.addFlashAttribute("errorMessage", "No uploaded file found. Please upload your RSL Helper CSV or use the KloepieBot app.");
                 return "redirect:/sync";
             }
 

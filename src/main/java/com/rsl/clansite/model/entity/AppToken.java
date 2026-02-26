@@ -1,38 +1,28 @@
 package com.rsl.clansite.model.entity;
 
+import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.Instant;
 import java.util.List;
 
 @Data
-@NoArgsConstructor
+@Builder
 @Document(collection = "app_tokens")
 public class AppToken {
 
     @Id
     private String id;
 
-    @Indexed(unique = true)
     private String token;
 
-    @Indexed
     private String discordId;
-
-    private String globalName;
 
     private List<String> roles;
 
-    private long createdDate;
+    private String sessionId;
 
-    public AppToken(String token, String discordId, List<String> roles, String globalName) {
-        this.token = token;
-        this.discordId = discordId;
-        this.roles = roles;
-        this.globalName = globalName;
-        this.createdDate = System.currentTimeMillis();
-    }
+    private Instant createdAt;
 }

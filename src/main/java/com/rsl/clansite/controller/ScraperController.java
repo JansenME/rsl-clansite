@@ -185,6 +185,7 @@ public class ScraperController {
 
         for (ChampionEntity c : allChampions) {
             List<String> issues = new ArrayList<>();
+            if (c.getBaseHeroId() == null || c.getBaseHeroId().equalsIgnoreCase("0")) issues.add("Missing Base Hero ID");
             if (c.getType() == null) issues.add("Missing Type");
             if (c.getAffinity() == null) issues.add("Missing Affinity");
             if (c.getRarity() == null) issues.add("Missing Rarity");

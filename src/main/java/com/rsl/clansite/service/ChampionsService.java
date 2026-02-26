@@ -267,6 +267,7 @@ public class ChampionsService {
         return new ChampionEntity(
                 ObjectId.get(),
                 dto.getName(),
+                null,
                 dto.getRarity(),
                 dto.getType(),
                 dto.getAffinity(),

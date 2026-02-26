@@ -13,7 +13,6 @@ public class OwnedChampion {
     private String championId;
     private int level;
     private int rank;
-    private String externalId; // Reserved for RSL Helper ID
 
     public OwnedChampion(String championId, int level, int rank) {
         this.championId = championId;

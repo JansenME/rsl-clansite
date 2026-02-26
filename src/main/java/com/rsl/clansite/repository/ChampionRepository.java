@@ -14,4 +14,5 @@ public interface ChampionRepository extends MongoRepository<ChampionEntity, Obje
     Optional<ChampionEntity> findByNameIgnoreCase(String name);
     List<ChampionEntity> findByNameContainingIgnoreCase(String name);
     int countByRarity(Rarity rarity);
+    Optional<ChampionEntity> findByBaseHeroId(String baseHeroId);
 }

@@ -4,10 +4,10 @@ import lombok.Getter;
 
 @Getter
 public enum SiegeStructureType {
-    STRONGHOLD("Stronghold", 1200, 1300, 12, 16, 16, 16, 16, 16),
-    SHRINE("Mana Shrine", 450, 550, 6, 6, 6, 6, 6, 6),
-    MAGIC_TOWER("Magic Tower", 275, 275, 2, 2, 2, 2, 2, 2),
-    DEFENSE_TOWER("Defense Tower", 150, 150, 2, 2, 2, 2, 2, 2),
+    STRONGHOLD("Stronghold", 1200, 1300, 12, 16, 18, 22, 16, 16),
+    SHRINE("Mana Shrine", 450, 550, 6, 7, 6, 6, 6, 6),
+    MAGIC_TOWER("Magic Tower", 275, 275, 2, 3, 2, 2, 2, 2),
+    DEFENSE_TOWER("Defense Tower", 150, 150, 2, 3, 2, 2, 2, 2),
     POST("Post", 50, 50, 1, 1, 1, 1, 1, 1);
 
     private final String displayName;

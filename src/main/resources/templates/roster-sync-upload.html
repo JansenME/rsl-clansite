@@ -32,6 +32,144 @@
 				</div>
 			</div>
 
+			<section sec:authorize="isAuthenticated()">
+				<div class="container">
+					<div style="background: #f0f8ff; border: 2px solid #4a90e2; padding: 25px; border-radius: 8px; text-align: center;">
+						<h3 style="margin: 0 0 15px 0; color: #2c5282;">
+							<i class="fa fa-rocket"></i> New: Automatic Sync
+						</h3>
+						<p style="margin: 0 0 20px 0; color: #555;">
+							Launch the KloepieBot app to automatically sync your champions directly—no CSV upload needed!
+						</p>
+						<button id="launchAppBtn" class="button primary icon solid fa-play" style="background-color: #4a90e2;">
+							Launch Sync App
+						</button>
+						<div id="launchStatus" style="margin-top: 15px; font-size: 0.9em; color: #666;"></div>
+					</div>
+				</div>
+
+				<script>
+					document.getElementById('launchAppBtn').addEventListener('click', function() {
+                        const btn = this;
+                        btn.disabled = true;
+
+                        // Open popup for polling
+                        const popup = window.open('', 'KloepieBotSync', 'width=500,height=300,top=100,left=100');
+                        popup.document.write(`
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <title>KloepieBot - Collecting Data</title>
+                                <style>
+                                    body {
+                                        font-family: Arial, sans-serif;
+                                        text-align: center;
+                                        padding: 40px 20px;
+                                        background: #1a1a2e;
+                                        color: #eee;
+                                    }
+                                    .spinner {
+                                        border: 4px solid #f3f3f3;
+                                        border-top: 4px solid #4a90e2;
+                                        border-radius: 50%;
+                                        width: 40px;
+                                        height: 40px;
+                                        animation: spin 1s linear infinite;
+                                        margin: 20px auto;
+                                    }
+                                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                                    h2 { color: #4a90e2; }
+                                    .timeout-msg {
+                                        display: none;
+                                        color: #ff6b6b;
+                                        margin-top: 20px;
+                                        padding: 15px;
+                                        border: 1px solid #ff6b6b;
+                                        border-radius: 5px;
+                                    }
+                                </style>
+                            </head>
+                            <body>
+                                <h2>🎮 KloepieBot is Working...</h2>
+                                <div class="spinner"></div>
+                                <p>Collecting your champion data...</p>
+                                <p style="font-size: 0.9em; color: #888;">This window will close automatically</p>
+                                <div class="timeout-msg" id="timeoutMsg">
+                                    <strong>Taking too long?</strong><br>
+                                    Please close this popup, reload the page and try again.
+                                </div>
+                            </body>
+                            </html>
+                        `);
+
+                        // Fetch token and launch app
+                        fetch('/api/app/token/generate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'same-origin'
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Launch app via hidden iframe (keeps main page open)
+                                const iframe = document.createElement('iframe');
+                                iframe.style.display = 'none';
+                                iframe.src = data.launchUrl;
+                                document.body.appendChild(iframe);
+
+                                // Start polling in popup
+                                let attempts = 0;
+                                const maxAttempts = 600;
+
+                                const checkData = setInterval(() => {
+                                    attempts++;
+
+                                    fetch('/api/app/champions/status', {
+                                        credentials: 'same-origin'
+                                    })
+                                    .then(r => r.json())
+                                    .then(status => {
+                                        if (status.hasData) {
+                                            clearInterval(checkData);
+                                            popup.close();
+                                            // Remove iframe
+                                            if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+                                            window.location.href = '/sync/preview';
+                                        }
+                                    })
+                                    .catch(e => {
+                                        // Ignore errors, keep polling
+                                    });
+
+                                    if (attempts === 60) {
+                                        try {
+                                            const timeoutDiv = popup.document.getElementById('timeoutMsg');
+                                            if (timeoutDiv) timeoutDiv.style.display = 'block';
+                                        } catch(e) {
+                                            // Popup might be blocked/closed
+                                        }
+                                    }
+
+                                    if (attempts >= maxAttempts) {
+                                        clearInterval(checkData);
+                                    }
+                                }, 2000);
+
+                            } else {
+                                popup.close();
+                                alert('Failed to generate token: ' + data.message);
+                                btn.disabled = false;
+                            }
+                        })
+                        .catch(error => {
+                            popup.close();
+                            alert('Error: ' + error.message);
+                            btn.disabled = false;
+                        });
+                    });
+				</script>
+			</section>
+
 			<section>
 				<header class="main">
 					<h2>Roster Sync (RSL Helper)</h2>

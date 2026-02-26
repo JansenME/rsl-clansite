@@ -12,6 +12,7 @@ public class ScrapedChampion {
     private String name;
     private String url;
     private String imageUrl;
+    private String baseHeroId;  // <-- NEW: HellHades ID for mapping
 
     private Rarity rarity;
     private Type type;

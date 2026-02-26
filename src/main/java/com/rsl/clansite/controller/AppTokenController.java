@@ -1,97 +1,143 @@
 package com.rsl.clansite.controller;
 
-import com.rsl.clansite.model.entity.AppToken;
-import com.rsl.clansite.repository.AppTokenRepository;
+import com.rsl.clansite.service.AppTokenService;
+import com.rsl.clansite.service.RosterSyncService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.stereotype.Controller;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriUtils;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Slf4j
-@Controller
+@RestController
+@RequestMapping("/api/app")
 @RequiredArgsConstructor
 public class AppTokenController {
 
-    private final AppTokenRepository appTokenRepository;
+    private final AppTokenService appTokenService;
+    private final RosterSyncService rosterSyncService;
 
-    // 1. GENERATE TOKEN (Browser -> Deep Link)
-    @GetMapping("/profile/connect-app")
-    public RedirectView connectDesktopApp(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof OAuth2User)) {
-            return new RedirectView("/login");
+    @PostMapping("/token/generate")
+    public ResponseEntity<?> generateToken(Authentication authentication,
+                                           HttpServletRequest request,
+                                           HttpSession session) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body(Map.of(
+                    "success", false,
+                    "message", "Not authenticated"
+            ));
         }
 
-        OAuth2User user = (OAuth2User) authentication.getPrincipal();
-        String discordId = user.getName();
+        if (!(authentication.getPrincipal() instanceof OAuth2User oauth2User)) {
+            return ResponseEntity.status(401).body(Map.of(
+                    "success", false,
+                    "message", "Invalid authentication type"
+            ));
+        }
 
-        String globalName = user.getAttribute("global_name");
-        String username = user.getAttribute("username");
+        String discordId = oauth2User.getName();
 
-        String discordName = !StringUtils.hasText(globalName) ? username : globalName;
+        String discordName = oauth2User.getAttribute("username");
+        if (discordName == null) {
+            discordName = oauth2User.getAttribute("login");
+        }
+        if (discordName == null) {
+            discordName = oauth2User.getAttribute("global_name");
+        }
+        if (discordName == null) {
+            discordName = discordId;
+        }
 
-        List<String> roles = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
+        String origin = request.getRequestURL().toString()
+                .replace(request.getRequestURI(), "");
 
-        String token = UUID.randomUUID().toString();
+        String sessionId = session.getId();
 
-        // Save to Database
-        AppToken appToken = new AppToken(token, discordId, roles, discordName);
-        appTokenRepository.save(appToken);
+        String token = appTokenService.generateToken(authentication, sessionId);
 
-        log.info("Generated App Token for: {} ({})", discordName, discordId);
+        String launchUrl = String.format(
+                "kloepiebot://sync?token=%s&user=%s&origin=%s",
+                token,
+                UriUtils.encodePathSegment(discordName, StandardCharsets.UTF_8),
+                origin
+        );
 
-        // SECURE CHANGE: We only send the Token and Name (for UI display).
-        // Roles are NOT sent. The app must fetch them using the token.
-        String encodedName = UriUtils.encode(discordName, StandardCharsets.UTF_8);
+        log.info("Generated app token for user: {} ({})", discordName, discordId);
 
-        return new RedirectView("clansite://auth?key=" + token + "&name=" + encodedName);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "token", token,
+                "origin", origin,
+                "launchUrl", launchUrl
+        ));
     }
 
-    // 2. VERIFY TOKEN (Desktop App -> JSON Response)
-    @GetMapping("/api/app/session")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> verifySession(@RequestHeader("Authorization") String authHeader) {
-        // Basic Bearer Validation
-        if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    @PostMapping("/champions/sync")
+    public ResponseEntity<?> syncChampions(@RequestBody Map<String, Object> payload,
+                                           Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            log.warn("Champions sync attempted without authentication");
+            return ResponseEntity.status(401).body(Map.of(
+                    "success", false,
+                    "message", "Invalid or expired token"
+            ));
         }
 
-        String token = authHeader.substring(7); // Remove "Bearer "
+        String discordId = authentication.getName();
+        log.info("Received champion sync from Discord ID: {}", discordId);
 
-        // Find the token in the DB (Source of Truth)
-        Optional<AppToken> appTokenOpt = appTokenRepository.findByToken(token);
-
-        if (appTokenOpt.isEmpty()) {
-            log.warn("App attempted login with invalid token");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        Object championsObj = payload.get("Champions");
+        if (championsObj == null) {
+            championsObj = payload.get("champions");
         }
 
-        AppToken appToken = appTokenOpt.get();
+        if (!(championsObj instanceof List)) {
+            log.error("Invalid payload structure: Champions not found or not a list");
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Invalid payload structure"
+            ));
+        }
 
-        // Construct the Secure Response
-        Map<String, Object> response = new HashMap<>();
-        response.put("globalName", appToken.getGlobalName());
-        response.put("roles", appToken.getRoles()); // The App must trust THIS list
+        List<Map<String, Object>> champions = (List<Map<String, Object>>) championsObj;
 
-        return ResponseEntity.ok(response);
+        try {
+            rosterSyncService.saveJsonPayload(discordId, champions);
+
+            log.info("Saved {} champions for {}", champions.size(), discordId);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Champions received. Visit /sync/preview to review changes.",
+                    "discordId", discordId,
+                    "receivedChampionCount", champions.size(),
+                    "previewUrl", "/sync/preview"
+            ));
+        } catch (Exception e) {
+            log.error("Failed to save champions", e);
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", "Failed to process champions: " + e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/champions/status")
+    public ResponseEntity<?> checkSyncStatus(Authentication authentication) {
+        String discordId = authentication.getName();
+        boolean hasData = rosterSyncService.getExistingJsonFile(discordId) != null;
+        return ResponseEntity.ok(Map.of("hasData", hasData));
     }
 }

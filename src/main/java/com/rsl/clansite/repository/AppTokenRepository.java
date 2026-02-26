@@ -8,6 +8,10 @@ import java.util.Optional;
 
 @Repository
 public interface AppTokenRepository extends MongoRepository<AppToken, String> {
+
     Optional<AppToken> findByToken(String token);
+
     void deleteByDiscordId(String discordId);
+
+    boolean existsByToken(String token);
 }

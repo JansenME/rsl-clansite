@@ -111,6 +111,8 @@ public class HellHadesScraperService {
                 scraped.setImageUrl(ctx.getImageUrl());
                 // Ensure name matches exactly what we found in JSON
                 scraped.setName(ctx.getName());
+                // NEW: Set the baseHeroId from context
+                scraped.setBaseHeroId(ctx.getHeroId());
 
                 ctx.setScrapedData(scraped);
             } catch (Exception e) {
@@ -136,6 +138,9 @@ public class HellHadesScraperService {
 
             champion.setName(data.getName());
             champion.setFaction(faction);
+
+            // NEW: Set the baseHeroId
+            if (data.getBaseHeroId() != null) champion.setBaseHeroId(data.getBaseHeroId());
 
             if (data.getRarity() != null) champion.setRarity(data.getRarity());
             if (data.getType() != null) champion.setType(data.getType());
