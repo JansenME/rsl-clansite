@@ -1,5 +1,6 @@
 app:
   version: '@project.version@'
+  version-file-location: "/var/www/clansite/kloepiebot/version.json"
   storage:
     location:
       champion-cards: "/var/www/clansite/images/champions/"

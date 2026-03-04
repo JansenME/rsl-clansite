@@ -1,7 +1,9 @@
 package com.rsl.clansite.controller;
 
+import com.rsl.clansite.model.VersionInfo;
 import com.rsl.clansite.service.AppTokenService;
 import com.rsl.clansite.service.RosterSyncService;
+import com.rsl.clansite.service.VersionService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +32,7 @@ public class AppTokenController {
 
     private final AppTokenService appTokenService;
     private final RosterSyncService rosterSyncService;
+    private final VersionService versionService;
 
     @PostMapping("/token/generate")
     public ResponseEntity<?> generateToken(Authentication authentication,
@@ -68,11 +72,14 @@ public class AppTokenController {
 
         String token = appTokenService.generateToken(authentication, sessionId);
 
+        VersionInfo version = versionService.getCurrentVersion();
+
         String launchUrl = String.format(
-                "kloepiebot://sync?token=%s&user=%s&origin=%s",
+                "kloepiebot://sync?token=%s&user=%s&origin=%s&minVersion=%s",
                 token,
                 UriUtils.encodePathSegment(discordName, StandardCharsets.UTF_8),
-                origin
+                origin,
+                version.minVersion()
         );
 
         log.info("Generated app token for user: {} ({})", discordName, discordId);

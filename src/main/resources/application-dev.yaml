@@ -1,4 +1,5 @@
 app:
+  version-file-location: "C:/Development/images-rsl-clansite/version.json"
   storage:
     location:
       champion-cards: "C:/Development/images-rsl-clansite/champion-cards"
