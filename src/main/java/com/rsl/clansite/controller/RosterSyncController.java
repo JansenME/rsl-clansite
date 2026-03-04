@@ -174,4 +174,9 @@ public class RosterSyncController {
         redirectAttributes.addFlashAttribute("infoMessage", "Sync cancelled and file discarded.");
         return "redirect:/profile";
     }
+
+    @GetMapping("/notify-complete")
+    public String notifyComplete() {
+        return "notify-complete";
+    }
 }

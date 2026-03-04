@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Sync Complete</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 40px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        .success {
+            color: #4a90e2;
+            font-size: 1.2em;
+        }
+    </style>
+    <script th:inline="javascript">
+        // Send message to main window
+        if (window.opener) {
+            window.opener.postMessage('upload_complete', '*');
+        }
+
+        // Also try BroadcastChannel for same-origin tabs
+        try {
+            const channel = new BroadcastChannel('kloepiebot_sync');
+            channel.postMessage('upload_complete');
+        } catch(e) {
+            // BroadcastChannel not supported
+        }
+
+        // Close after short delay so user sees the success message
+        setTimeout(function() {
+            window.close();
+        }, 1500); // 1.5 seconds
+    </script>
+</head>
+<body>
+<div class="success">✓ Upload Complete!</div>
+<p>Redirecting you to the preview page...</p>
+<p style="font-size: 0.8em; color: #888;">You can close this window if it doesn't close automatically.</p>
+</body>
+</html>

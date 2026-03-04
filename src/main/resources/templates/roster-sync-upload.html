@@ -49,17 +49,47 @@
 				</div>
 
 				<script>
-					document.getElementById('launchAppBtn').addEventListener('click', function() {
+					let syncPopup = null;
+
+                    // Listen for message from popup
+                    window.addEventListener('message', (event) => {
+                        if (event.data === 'upload_complete') {
+                            // Close the waiting popup if still open
+                            if (syncPopup && !syncPopup.closed) {
+                                syncPopup.close();
+                            }
+                            window.location.href = '/sync/preview';
+                        }
+                    });
+
+                    // Also listen via BroadcastChannel (backup)
+                    try {
+                        const channel = new BroadcastChannel('kloepiebot_sync');
+                        channel.addEventListener('message', (event) => {
+                            if (event.data === 'upload_complete') {
+                                // Close the waiting popup if still open
+                                if (syncPopup && !syncPopup.closed) {
+                                    syncPopup.close();
+                                }
+                                window.location.href = '/sync/preview';
+                            }
+                        });
+                    } catch(e) {
+                        // BroadcastChannel not supported
+                    }
+
+                    // Button click handler
+                    document.getElementById('launchAppBtn').addEventListener('click', function() {
                         const btn = this;
                         btn.disabled = true;
 
-                        // Open popup for polling
-                        const popup = window.open('', 'KloepieBotSync', 'width=500,height=300,top=100,left=100');
-                        popup.document.write(`
+                        // Simple popup that just waits (no polling)
+                        syncPopup = window.open('', 'KloepieBotSync', 'width=400,height=300,top=100,left=100');
+                        syncPopup.document.write(`
                             <!DOCTYPE html>
                             <html>
                             <head>
-                                <title>KloepieBot - Collecting Data</title>
+                                <title>KloepieBot - Waiting</title>
                                 <style>
                                     body {
                                         font-family: Arial, sans-serif;
@@ -78,26 +108,16 @@
                                         margin: 20px auto;
                                     }
                                     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                                    h2 { color: #4a90e2; }
-                                    .timeout-msg {
-                                        display: none;
-                                        color: #ff6b6b;
-                                        margin-top: 20px;
-                                        padding: 15px;
-                                        border: 1px solid #ff6b6b;
-                                        border-radius: 5px;
-                                    }
+                                    h2 { color: #4a90e2; margin-bottom: 10px; }
+                                    p { margin: 10px 0; }
+                                    .hint { font-size: 0.85em; color: #888; margin-top: 30px; }
                                 </style>
                             </head>
                             <body>
-                                <h2>🎮 KloepieBot is Working...</h2>
+                                <h2>🎮 KloepieBot is Open</h2>
                                 <div class="spinner"></div>
-                                <p>Collecting your champion data...</p>
-                                <p style="font-size: 0.9em; color: #888;">This window will close automatically</p>
-                                <div class="timeout-msg" id="timeoutMsg">
-                                    <strong>Taking too long?</strong><br>
-                                    Please close this popup, reload the page and try again.
-                                </div>
+                                <p>Waiting for you to upload your data...</p>
+                                <p class="hint">This window will close automatically after upload.</p>
                             </body>
                             </html>
                         `);
@@ -111,58 +131,23 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
-                                // Launch app via hidden iframe (keeps main page open)
+                                // Launch app via hidden iframe
                                 const iframe = document.createElement('iframe');
                                 iframe.style.display = 'none';
                                 iframe.src = data.launchUrl;
                                 document.body.appendChild(iframe);
 
-                                // Start polling in popup
-                                let attempts = 0;
-                                const maxAttempts = 600;
-
-                                const checkData = setInterval(() => {
-                                    attempts++;
-
-                                    fetch('/api/app/champions/status', {
-                                        credentials: 'same-origin'
-                                    })
-                                    .then(r => r.json())
-                                    .then(status => {
-                                        if (status.hasData) {
-                                            clearInterval(checkData);
-                                            popup.close();
-                                            // Remove iframe
-                                            if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-                                            window.location.href = '/sync/preview';
-                                        }
-                                    })
-                                    .catch(e => {
-                                        // Ignore errors, keep polling
-                                    });
-
-                                    if (attempts === 60) {
-                                        try {
-                                            const timeoutDiv = popup.document.getElementById('timeoutMsg');
-                                            if (timeoutDiv) timeoutDiv.style.display = 'block';
-                                        } catch(e) {
-                                            // Popup might be blocked/closed
-                                        }
-                                    }
-
-                                    if (attempts >= maxAttempts) {
-                                        clearInterval(checkData);
-                                    }
-                                }, 2000);
+                                // Popup stays open, waiting for app to signal completion
+                                // No polling needed - message event will handle redirect
 
                             } else {
-                                popup.close();
+                                syncPopup.close();
                                 alert('Failed to generate token: ' + data.message);
                                 btn.disabled = false;
                             }
                         })
                         .catch(error => {
-                            popup.close();
+                            syncPopup.close();
                             alert('Error: ' + error.message);
                             btn.disabled = false;
                         });
@@ -170,7 +155,7 @@
 				</script>
 			</section>
 
-			<section>
+			<!--<section>
 				<header class="main">
 					<h2>Roster Sync (RSL Helper)</h2>
 				</header>
@@ -203,7 +188,7 @@
 						</form>
 					</div>
 				</div>
-			</section>
+			</section>-->
 		</div>
 	</section>
 

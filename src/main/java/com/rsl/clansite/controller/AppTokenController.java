@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriUtils;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -135,9 +136,29 @@ public class AppTokenController {
     }
 
     @GetMapping("/champions/status")
-    public ResponseEntity<?> checkSyncStatus(Authentication authentication) {
+    public ResponseEntity<?> checkSyncStatus(Authentication authentication, HttpSession session) {
         String discordId = authentication.getName();
-        boolean hasData = rosterSyncService.getExistingJsonFile(discordId) != null;
+
+        File jsonFile = rosterSyncService.getExistingJsonFile(discordId);
+
+        boolean hasData = false;
+        if (jsonFile != null && jsonFile.exists()) {
+            Long uploadTimestamp = (Long) session.getAttribute("championsUploadedAt");
+            if (uploadTimestamp != null) {
+                long minutesSinceUpload = (System.currentTimeMillis() - uploadTimestamp) / (1000 * 60);
+                hasData = minutesSinceUpload < 5;
+            }
+        }
+
         return ResponseEntity.ok(Map.of("hasData", hasData));
+    }
+
+    @PostMapping("/champions/uploaded")
+    public ResponseEntity<?> markChampionsUploaded(Authentication authentication, HttpSession session) {
+        String discordId = authentication.getName();
+
+        session.setAttribute("championsUploadedAt", System.currentTimeMillis());
+
+        return ResponseEntity.ok(Map.of("success", true));
     }
 }
