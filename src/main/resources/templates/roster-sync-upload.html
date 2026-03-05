@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html lang="en" xmlns:th="http://www.thymeleaf.org " xmlns:sec="http://www.thymeleaf.org/extras/spring-security ">
 <head th:replace="~{inserts/head :: head(pageTitle='Roster Sync')}">
 </head>
 <body>
@@ -38,8 +38,8 @@
 						<h3 style="margin: 0 0 15px 0; color: #2c5282;">
 							<i class="fa fa-rocket"></i> New: Automatic Sync
 						</h3>
-						<p style="margin: 0 0 20px 0; color: #555;">
-							Launch the KloepieBot app to automatically sync your champions directly—no CSV upload needed!
+						<p>
+							Launch the KloepieBot app to automatically sync your champions directly. Make sure that RSL Helper did run before!
 						</p>
 						<button id="launchAppBtn" class="button primary icon solid fa-play" style="background-color: #4a90e2;">
 							Launch Sync App
@@ -50,11 +50,15 @@
 
 				<script>
 					let syncPopup = null;
+                    let currentToken = null;
+                    let launchUrl = null;
+                    let isLaunching = false;
 
-                    // Listen for message from popup
+                    // Listen for message from popup/app
                     window.addEventListener('message', (event) => {
+                        console.log('Received message:', event.data);
                         if (event.data === 'upload_complete') {
-                            // Close the waiting popup if still open
+                            closeModal();
                             if (syncPopup && !syncPopup.closed) {
                                 syncPopup.close();
                             }
@@ -62,12 +66,12 @@
                         }
                     });
 
-                    // Also listen via BroadcastChannel (backup)
+                    // BroadcastChannel backup
                     try {
                         const channel = new BroadcastChannel('kloepiebot_sync');
                         channel.addEventListener('message', (event) => {
                             if (event.data === 'upload_complete') {
-                                // Close the waiting popup if still open
+                                closeModal();
                                 if (syncPopup && !syncPopup.closed) {
                                     syncPopup.close();
                                 }
@@ -75,89 +79,339 @@
                             }
                         });
                     } catch(e) {
-                        // BroadcastChannel not supported
+                        console.log('BroadcastChannel not supported');
                     }
 
-                    // Button click handler
-                    document.getElementById('launchAppBtn').addEventListener('click', function() {
+                    function showModal(type, callbacks = {}) {
+                        closeModal();
+
+                        const modal = document.createElement('div');
+                        modal.id = 'kloepiebot-modal';
+                        modal.style.cssText = `
+                            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                            background: rgba(0,0,0,0.85); z-index: 9999; display: flex;
+                            justify-content: center; align-items: center; font-family: system-ui, -apple-system, sans-serif;
+                        `;
+
+                        let content = '';
+
+                        switch(type) {
+                            case 'launching':
+                                content = `
+                                    <div style="background: #1a1a2e; color: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 400px; border: 1px solid #16213e; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                                        <div style="width: 50px; height: 50px; border: 4px solid #333; border-top: 4px solid #4a90e2; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+                                        <h2 style="margin: 0 0 10px 0; font-size: 1.5em;">Opening KloepieBot...</h2>
+                                        <p style="color: #888; margin: 0; font-size: 0.95em;">Connecting to desktop app</p>
+                                        <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
+                                    </div>
+                                `;
+                                break;
+
+                            case 'download':
+                                content = `
+                                    <div style="background: #1a1a2e; color: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 450px; border: 2px solid #e94560; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                                        <div style="font-size: 48px; margin-bottom: 20px;">💻</div>
+                                        <h2 style="margin: 0 0 15px 0; color: #e94560; font-size: 1.8em;">KloepieBot Required</h2>
+                                        <p style="color: #ccc; margin-bottom: 25px; line-height: 1.5; font-size: 0.95em;">
+                                            The desktop app is needed to sync your champions.<br>
+                                            <small style="color: #666; display: block; margin-top: 8px;">Windows 10/11 • ~5MB download</small>
+                                        </p>
+                                        <button id="kb-download-btn" style="background: #e94560; color: white; border: none; padding: 15px 30px; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; transition: background 0.3s;">
+                                            <i class="fa fa-download"></i> Download Installer
+                                        </button>
+                                        <button id="kb-retry-btn" style="background: transparent; color: #888; border: 1px solid #555; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; font-size: 0.9em;">
+                                            Already installed? Try again
+                                        </button>
+                                        <p style="color: #666; font-size: 12px; margin-top: 20px; margin-bottom: 0;">
+                                            Windows may show a security warning.<br>Click "More info" → "Run anyway" to install.
+                                        </p>
+                                    </div>
+                                `;
+                                break;
+
+                            case 'installing':
+                                content = `
+                                    <div style="background: #1a1a2e; color: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 450px; border: 1px solid #0f3460; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                                        <div style="font-size: 48px; margin-bottom: 20px;">⚙️</div>
+                                        <h2 style="margin: 0 0 15px 0; color: #fff; font-size: 1.8em;">Complete Installation</h2>
+                                        <div style="text-align: left; background: #0f0f1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; color: #aaa; font-size: 14px; line-height: 1.6; border: 1px solid #1a1a3e;">
+                                            <p style="margin: 0 0 10px 0;"><strong style="color: #4a90e2;">1.</strong> Open <strong style="color: #fff;">KloepieBotSetup.msi</strong> from your downloads</p>
+                                            <p style="margin: 0 0 10px 0;"><strong style="color: #4a90e2;">2.</strong> Follow the installation wizard<br><small style="color: #666;">(Click "More info" → "Run anyway" if Windows warns)</small></p>
+                                            <p style="margin: 0;"><strong style="color: #4a90e2;">3.</strong> Click below when done</p>
+                                        </div>
+                                        <button id="kb-launch-btn" style="background: #0f3460; color: white; border: 2px solid #4a90e2; padding: 15px 30px; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; width: 100%; transition: all 0.3s;">
+                                            <i class="fa fa-rocket"></i> Launch KloepieBot
+                                        </button>
+                                    </div>
+                                `;
+                                break;
+                        }
+
+                        modal.innerHTML = content;
+                        document.body.appendChild(modal);
+
+                        if (callbacks.onDownload) {
+                            document.getElementById('kb-download-btn')?.addEventListener('click', callbacks.onDownload);
+                        }
+                        if (callbacks.onRetry) {
+                            document.getElementById('kb-retry-btn')?.addEventListener('click', callbacks.onRetry);
+                        }
+                        if (callbacks.onLaunch) {
+                            document.getElementById('kb-launch-btn')?.addEventListener('click', callbacks.onLaunch);
+                        }
+                    }
+
+                    function closeModal() {
+                        const existing = document.getElementById('kloepiebot-modal');
+                        if (existing) existing.remove();
+                    }
+
+                    async function attemptProtocolLaunch(url) {
+                        return new Promise((resolve) => {
+                            let blurred = false;
+                            let resolved = false;
+
+                            const handleVisibility = () => {
+                                if (document.hidden && !resolved) {
+                                    console.log('App detected (visibility change)');
+                                    blurred = true;
+                                    resolved = true;
+                                    cleanup();
+                                    resolve(true);
+                                }
+                            };
+
+                            const handleBlur = () => {
+                                if (!resolved) {
+                                    console.log('App detected (window blur)');
+                                    blurred = true;
+                                    resolved = true;
+                                    cleanup();
+                                    resolve(true);
+                                }
+                            };
+
+                            const cleanup = () => {
+                                document.removeEventListener('visibilitychange', handleVisibility);
+                                window.removeEventListener('blur', handleBlur);
+                            };
+
+                            document.addEventListener('visibilitychange', handleVisibility);
+                            window.addEventListener('blur', handleBlur);
+
+                            // Launch via hidden iframe
+                            console.log('Attempting protocol launch:', url);
+                            const iframe = document.createElement('iframe');
+                            iframe.style.display = 'none';
+                            iframe.src = url;
+                            document.body.appendChild(iframe);
+
+                            setTimeout(() => {
+                                if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+                            }, 1000);
+
+                            // Timeout after 3 seconds
+                            setTimeout(() => {
+                                if (!resolved) {
+                                    console.log('Protocol timeout - app not detected');
+                                    resolved = true;
+                                    cleanup();
+                                    resolve(false);
+                                }
+                            }, 3000);
+                        });
+                    }
+
+                    function openWaitingPopup() {
+                        // Close existing popup if any
+                        if (syncPopup && !syncPopup.closed) {
+                            syncPopup.close();
+                        }
+
+                        syncPopup = window.open('', 'KloepieBotSync', 'width=400,height=300,top=100,left=100');
+                        if (syncPopup) {
+                            const popupContent = `
+                                <!DOCTYPE html>
+                                <html>
+                                <head>
+                                    <title>KloepieBot - Waiting</title>
+                                    <style>
+                                        body {
+                                            font-family: Arial, sans-serif;
+                                            text-align: center;
+                                            padding: 40px 20px;
+                                            background: #1a1a2e;
+                                            color: #eee;
+                                            margin: 0;
+                                        }
+                                        .spinner {
+                                            border: 4px solid #f3f3f3;
+                                            border-top: 4px solid #4a90e2;
+                                            border-radius: 50%;
+                                            width: 40px;
+                                            height: 40px;
+                                            animation: spin 1s linear infinite;
+                                            margin: 20px auto;
+                                        }
+                                        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                                        h2 { color: #4a90e2; margin-bottom: 10px; font-size: 1.5em; }
+                                        p { margin: 10px 0; color: #ccc; }
+                                        .hint { font-size: 0.85em; color: #888; margin-top: 30px; }
+                                    </style>
+                                </head>
+                                <body>
+                                    <h2>🎮 KloepieBot is Open</h2>
+                                    <div class="spinner"></div>
+                                    <p>Waiting for you to upload your data...</p>
+                                    <p class="hint">This window will close automatically after upload.</p>
+                                </body>
+                                </html>
+                            `;
+                            syncPopup.document.write(popupContent);
+                            syncPopup.document.close();
+                        } else {
+                            console.error('Popup blocked!');
+                            alert('Please allow popups for this site to see the sync status.');
+                        }
+                    }
+
+                    // Main click handler
+                    document.getElementById('launchAppBtn').addEventListener('click', async function() {
+                        console.log('Launch button clicked');
                         const btn = this;
+
+                        // Prevent double-clicks while processing
+                        if (isLaunching) {
+                            console.log('Already launching, ignoring click');
+                            return;
+                        }
+
+                        // Check if we have a popup already open - close it to start fresh
+                        if (syncPopup && !syncPopup.closed) {
+                            console.log('Closing existing popup to start fresh');
+                            syncPopup.close();
+                            syncPopup = null;
+                        }
+
+                        isLaunching = true;
                         btn.disabled = true;
 
-                        // Simple popup that just waits (no polling)
-                        syncPopup = window.open('', 'KloepieBotSync', 'width=400,height=300,top=100,left=100');
-                        syncPopup.document.write(`
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <title>KloepieBot - Waiting</title>
-                                <style>
-                                    body {
-                                        font-family: Arial, sans-serif;
-                                        text-align: center;
-                                        padding: 40px 20px;
-                                        background: #1a1a2e;
-                                        color: #eee;
-                                    }
-                                    .spinner {
-                                        border: 4px solid #f3f3f3;
-                                        border-top: 4px solid #4a90e2;
-                                        border-radius: 50%;
-                                        width: 40px;
-                                        height: 40px;
-                                        animation: spin 1s linear infinite;
-                                        margin: 20px auto;
-                                    }
-                                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                                    h2 { color: #4a90e2; margin-bottom: 10px; }
-                                    p { margin: 10px 0; }
-                                    .hint { font-size: 0.85em; color: #888; margin-top: 30px; }
-                                </style>
-                            </head>
-                            <body>
-                                <h2>🎮 KloepieBot is Open</h2>
-                                <div class="spinner"></div>
-                                <p>Waiting for you to upload your data...</p>
-                                <p class="hint">This window will close automatically after upload.</p>
-                            </body>
-                            </html>
-                        `);
+                        try {
+                            console.log('Fetching token...');
+                            const response = await fetch('/api/app/token/generate', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'same-origin'
+                            });
 
-                        // Fetch token and launch app
-                        fetch('/api/app/token/generate', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            credentials: 'same-origin'
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                // Launch app via hidden iframe
-                                const iframe = document.createElement('iframe');
-                                iframe.style.display = 'none';
-                                iframe.src = data.launchUrl;
-                                document.body.appendChild(iframe);
-
-                                // Popup stays open, waiting for app to signal completion
-                                // No polling needed - message event will handle redirect
-
-                            } else {
-                                syncPopup.close();
-                                alert('Failed to generate token: ' + data.message);
-                                btn.disabled = false;
+                            if (!response.ok) {
+                                throw new Error('HTTP error! status: ' + response.status);
                             }
-                        })
-                        .catch(error => {
-                            syncPopup.close();
+
+                            const data = await response.json();
+                            console.log('Token response:', data);
+
+                            if (!data.success) {
+                                throw new Error(data.message || 'Failed to generate token');
+                            }
+
+                            currentToken = data.token;
+                            launchUrl = data.launchUrl;
+
+                            // Show launching modal
+                            showModal('launching');
+
+                            // Try to launch app
+                            const appOpened = await attemptProtocolLaunch(launchUrl);
+
+                            if (appOpened) {
+                                console.log('App opened successfully');
+                                closeModal();
+                                openWaitingPopup();
+                                // CRITICAL FIX: Re-enable button so they can click again if they close everything
+                                btn.disabled = false;
+                                isLaunching = false;
+                            } else {
+                                console.log('App not installed, showing download');
+                                showModal('download', {
+                                    onDownload: () => {
+                                        console.log('Starting download...');
+                                        window.location.href = '/api/download/installer';
+
+                                        showModal('installing', {
+                                            onLaunch: () => {
+                                                console.log('Retrying launch after install...');
+                                                closeModal();
+                                                setTimeout(async () => {
+                                                    showModal('launching');
+                                                    const success = await attemptProtocolLaunch(launchUrl);
+                                                    if (success) {
+                                                        closeModal();
+                                                        openWaitingPopup();
+                                                        btn.disabled = false;
+                                                        isLaunching = false;
+                                                    } else {
+                                                        closeModal();
+                                                        alert('App still not detected. Please ensure installation completed and try again.');
+                                                        btn.disabled = false;
+                                                        isLaunching = false;
+                                                    }
+                                                }, 500);
+                                            }
+                                        });
+                                    },
+                                    onRetry: () => {
+                                        console.log('Retrying launch...');
+                                        closeModal();
+                                        setTimeout(async () => {
+                                            showModal('launching');
+                                            const success = await attemptProtocolLaunch(launchUrl);
+                                            if (success) {
+                                                closeModal();
+                                                openWaitingPopup();
+                                                btn.disabled = false;
+                                                isLaunching = false;
+                                            } else {
+                                                closeModal();
+                                                showModal('download', {
+                                                    onDownload: () => {
+                                                        window.location.href = '/api/download/installer';
+                                                        showModal('installing', {
+                                                            onLaunch: () => {
+                                                                closeModal();
+                                                                btn.click();
+                                                            }
+                                                        });
+                                                    },
+                                                    onRetry: () => {
+                                                        closeModal();
+                                                        btn.click();
+                                                    }
+                                                });
+                                            }
+                                        }, 500);
+                                    }
+                                });
+                            }
+
+                        } catch (error) {
+                            console.error('Launch error:', error);
+                            closeModal();
                             alert('Error: ' + error.message);
                             btn.disabled = false;
-                        });
+                            isLaunching = false;
+                        }
                     });
+
+                    // Ensure button starts enabled
+                    document.getElementById('launchAppBtn').disabled = false;
 				</script>
 			</section>
 
-			<!--<section>
+			<section>
 				<header class="main">
 					<h2>Roster Sync (RSL Helper)</h2>
+					<p>If the above automatic method does not work, you can follow this path to get your roster as well.</p>
 				</header>
 
 				<div class="row gtr-200">
@@ -188,7 +442,7 @@
 						</form>
 					</div>
 				</div>
-			</section>-->
+			</section>
 		</div>
 	</section>
 

@@ -1,6 +1,9 @@
 app:
   version: '@project.version@'
   version-file-location: "/var/www/clansite/kloepiebot/version.json"
+  kloepiebot:
+    installer-path: "/var/kloepiebot/KloepieBotInstaller.msi"
+    installer-filename: "KloepieBotInstaller.msi"
   storage:
     location:
       champion-cards: "/var/www/clansite/images/champions/"

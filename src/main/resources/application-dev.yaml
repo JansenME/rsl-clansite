@@ -1,5 +1,8 @@
 app:
   version-file-location: "C:/Development/images-rsl-clansite/version.json"
+  kloepiebot:
+    installer-path: "C:/Development/C applications/projects/KloepieBot.Scraper/KloepieBotInstaller/Debug/KloepieBotInstaller.msi"
+    installer-filename: "KloepieBotInstaller.msi"
   storage:
     location:
       champion-cards: "C:/Development/images-rsl-clansite/champion-cards"
