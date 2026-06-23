@@ -8,7 +8,7 @@
     "common": 4
   },
   "High Elves": {
-    "mythical": 1,
+    "mythical": 2,
     "legendary": 22,
     "epic": 17,
     "rare": 13,
@@ -33,7 +33,7 @@
   },
   "Ogryn Tribes": {
     "mythical": 1,
-    "legendary": 23,
+    "legendary": 24,
     "epic": 20,
     "rare": 15,
     "uncommon": 5,
@@ -41,7 +41,7 @@
   },
   "Lizardmen": {
     "mythical": 2,
-    "legendary": 20,
+    "legendary": 22,
     "epic": 15,
     "rare": 13,
     "uncommon": 4,
@@ -72,7 +72,7 @@
     "common": 0
   },
   "Undead Hordes": {
-    "mythical": 2,
+    "mythical": 3,
     "legendary": 24,
     "epic": 18,
     "rare": 18,
@@ -81,7 +81,7 @@
   },
   "Dark Elves": {
     "mythical": 2,
-    "legendary": 24,
+    "legendary": 26,
     "epic": 18,
     "rare": 14,
     "uncommon": 3,
@@ -96,7 +96,7 @@
     "common": 1
   },
   "Dwarves": {
-    "mythical": 2,
+    "mythical": 3,
     "legendary": 22,
     "epic": 17,
     "rare": 20,
@@ -105,7 +105,7 @@
   },
   "Shadowkin": {
     "mythical": 2,
-    "legendary": 25,
+    "legendary": 26,
     "epic": 20,
     "rare": 9,
     "uncommon": 2,
@@ -113,7 +113,7 @@
   },
   "Sylvan Watchers": {
     "mythical": 3,
-    "legendary": 21,
+    "legendary": 22,
     "epic": 17,
     "rare": 11,
     "uncommon": 2,
@@ -121,9 +121,9 @@
   },
   "Argonites": {
     "mythical": 0,
-    "legendary": 1,
-    "epic": 0,
-    "rare": 0,
+    "legendary": 9,
+    "epic": 4,
+    "rare": 4,
     "uncommon": 0,
     "common": 0
   }

@@ -26,7 +26,7 @@ discord:
 spring:
   data:
     mongodb:
-      uri: ${MONGO_URI:mongodb://localhost:27017/furyOfTheFallen}
+      uri: ${MONGO_URI:mongodb://localhost:27017/meme}
       database: furyOfTheFallen
       auto-index-creation: true
   session:

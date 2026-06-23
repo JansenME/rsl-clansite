@@ -8,12 +8,12 @@
 		<version>4.0.2</version>
 		<relativePath/>
 	</parent>
-	<packaging>war</packaging>
+	<packaging>jar</packaging>
 	<groupId>com.rsl</groupId>
 	<artifactId>clansite</artifactId>
 	<version>1.0-SNAPSHOT</version>
-	<name>Clansite Fury of the Fallen</name>
-	<description>Clansite Fury of the Fallen</description>
+	<name>Clansite for Raid Shadow Legends</name>
+	<description>Clansite for Raid Shadow Legends</description>
 
 	<properties>
 		<java.version>17</java.version>

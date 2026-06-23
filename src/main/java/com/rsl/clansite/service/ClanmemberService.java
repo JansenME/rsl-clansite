@@ -820,7 +820,7 @@ public class ClanmemberService {
 
     public ClanmemberEntity getMemberById(String id) {
         if (id == null || !ObjectId.isValid(id)) {
-            throw new IllegalArgumentException("Invalid Member ID provided");
+            throw new IllegalArgumentException("Invalid Member ID provided, ID: " + id);
         }
         return clanmemberRepository.findById(new ObjectId(id))
                 .orElseThrow(() -> new UnlinkedAccountException("Member not found with ID: " + id));
