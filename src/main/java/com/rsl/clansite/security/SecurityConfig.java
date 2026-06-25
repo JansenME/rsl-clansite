@@ -101,7 +101,7 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )
-                        .successHandler(new SavedRequestAwareAuthenticationSuccessHandler())
+                        .successHandler(appAuthenticationSuccessHandler)
                         .failureHandler(failureHandler)
                 )
                 .logout(logout -> logout
