@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
+@Slf4j
 @Component
 public class AppAuthenticationSuccessHandler extends SavedRequestAwareAuthenticationSuccessHandler {
 
@@ -32,15 +34,18 @@ public class AppAuthenticationSuccessHandler extends SavedRequestAwareAuthentica
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws ServletException, IOException {
 
+        log.info("[KLOEPIEBOT-AUTH] Discord OAuth2 login successful. SuccessHandler triggered.");
+
         boolean isAppLogin = false;
         Cookie[] cookies = request.getCookies();
 
         if (cookies != null) {
+            log.info("[KLOEPIEBOT-AUTH] Scanning {} cookies attached to the request...", cookies.length);
             for (Cookie cookie : cookies) {
+                log.info("[KLOEPIEBOT-AUTH] Found Cookie -> Name: '{}', Value: '{}'", cookie.getName(), cookie.getValue());
                 if ("APP_LOGIN_FLAG".equals(cookie.getName()) && "true".equals(cookie.getValue())) {
                     isAppLogin = true;
 
-                    // Clean up the cookie so it doesn't pollute future normal web logins
                     ResponseCookie clearCookie = ResponseCookie.from("APP_LOGIN_FLAG", "")
                             .path("/")
                             .maxAge(0)
@@ -51,15 +56,16 @@ public class AppAuthenticationSuccessHandler extends SavedRequestAwareAuthentica
                     break;
                 }
             }
+        } else {
+            log.info("[KLOEPIEBOT-AUTH] The browser sent ZERO cookies back to the server.");
         }
 
         if (isAppLogin) {
+            log.info("[KLOEPIEBOT-AUTH] Desktop app flag VERIFIED. Generating JWT and redirecting to 127.0.0.1...");
+
             OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
             String discordId = oAuth2User.getAttribute("id");
-
-            if (discordId == null) {
-                discordId = oAuth2User.getName();
-            }
+            if (discordId == null) discordId = oAuth2User.getName();
 
             String accessToken = jwtService.generateAccessToken(discordId, authentication.getAuthorities());
             String refreshTokenString = jwtService.generateRefreshTokenString();
@@ -73,10 +79,10 @@ public class AppAuthenticationSuccessHandler extends SavedRequestAwareAuthentica
             refreshTokenRepository.deleteByDiscordId(discordId);
             refreshTokenRepository.save(refreshToken);
 
-            // Redirect back to the local C# web server listener
             String targetUrl = "http://127.0.0.1:45321/auth-success?token=" + accessToken + "&refreshToken=" + refreshTokenString;
             getRedirectStrategy().sendRedirect(request, response, targetUrl);
         } else {
+            log.info("[KLOEPIEBOT-AUTH] Desktop app flag MISSING. Falling back to normal website homepage redirect.");
             super.onAuthenticationSuccess(request, response, authentication);
         }
     }

@@ -4,6 +4,7 @@ import com.rsl.clansite.model.entity.UserRefreshToken;
 import com.rsl.clansite.repository.UserRefreshTokenRepository;
 import com.rsl.clansite.security.JwtService;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -16,6 +17,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/app")
 public class AppAuthController {
@@ -30,17 +32,19 @@ public class AppAuthController {
 
     @GetMapping("/login")
     public ResponseEntity<Void> initiateAppLogin(HttpServletResponse response) {
-        // Use Spring's ResponseCookie to enforce HTTPS and Cross-Origin survival
+        log.info("[KLOEPIEBOT-AUTH] /api/app/login endpoint hit. Setting APP_LOGIN_FLAG cookie...");
+
         ResponseCookie cookie = ResponseCookie.from("APP_LOGIN_FLAG", "true")
                 .path("/")
-                .maxAge(300) // 5 minutes to complete Discord login
+                .maxAge(300)
                 .httpOnly(true)
-                .secure(true) // Crucial: Forces the cookie to stay alive over HTTPS
-                .sameSite("Lax") // Crucial: Allows the cookie to be sent when Discord redirects back
+                .secure(true)
+                .sameSite("Lax")
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
+        log.info("[KLOEPIEBOT-AUTH] Redirecting browser to Discord OAuth2...");
         return ResponseEntity.status(HttpStatus.FOUND)
                 .header("Location", "/oauth2/authorization/discord")
                 .build();
