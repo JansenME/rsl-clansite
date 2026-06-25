@@ -30,8 +30,12 @@ public class AppAuthController {
     }
 
     @GetMapping("/login")
-    public ResponseEntity<Void> initiateAppLogin(HttpSession session) {
-        session.setAttribute("APP_LOGIN_FLAG", true);
+    public ResponseEntity<Void> initiateAppLogin(jakarta.servlet.http.HttpServletResponse response) {
+        jakarta.servlet.http.Cookie appLoginCookie = new jakarta.servlet.http.Cookie("APP_LOGIN_FLAG", "true");
+        appLoginCookie.setPath("/");
+        appLoginCookie.setMaxAge(300); // 5 minutes to complete Discord login
+        appLoginCookie.setHttpOnly(true);
+        response.addCookie(appLoginCookie);
 
         return ResponseEntity.status(HttpStatus.FOUND)
                 .header("Location", "/oauth2/authorization/discord")

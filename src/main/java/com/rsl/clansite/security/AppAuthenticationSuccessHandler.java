@@ -3,6 +3,7 @@ package com.rsl.clansite.security;
 import com.rsl.clansite.model.entity.UserRefreshToken;
 import com.rsl.clansite.repository.UserRefreshTokenRepository;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
@@ -29,12 +30,25 @@ public class AppAuthenticationSuccessHandler extends SavedRequestAwareAuthentica
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws ServletException, IOException {
 
-        Boolean isAppLogin = (Boolean) request.getSession().getAttribute("APP_LOGIN_FLAG");
+        boolean isAppLogin = false;
+        Cookie[] cookies = request.getCookies();
 
-        if (Boolean.TRUE.equals(isAppLogin)) {
-            // Clean up the session flag so it doesn't pollute future web logins
-            request.getSession().removeAttribute("APP_LOGIN_FLAG");
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("APP_LOGIN_FLAG".equals(cookie.getName()) && "true".equals(cookie.getValue())) {
+                    isAppLogin = true;
 
+                    // Clean up the cookie so it doesn't pollute future normal web logins
+                    jakarta.servlet.http.Cookie clearCookie = new jakarta.servlet.http.Cookie("APP_LOGIN_FLAG", "");
+                    clearCookie.setPath("/");
+                    clearCookie.setMaxAge(0);
+                    response.addCookie(clearCookie);
+                    break;
+                }
+            }
+        }
+
+        if (isAppLogin) {
             OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
             // Discord provides the user's unique ID under the "id" attribute
             String discordId = oAuth2User.getAttribute("id");
