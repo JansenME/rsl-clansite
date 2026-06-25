@@ -6,6 +6,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
@@ -17,13 +19,13 @@ import java.time.temporal.ChronoUnit;
 
 @Component
 public class AppAuthenticationSuccessHandler extends SavedRequestAwareAuthenticationSuccessHandler {
+
     private final JwtService jwtService;
     private final UserRefreshTokenRepository refreshTokenRepository;
 
     public AppAuthenticationSuccessHandler(JwtService jwtService, UserRefreshTokenRepository refreshTokenRepository) {
         this.jwtService = jwtService;
         this.refreshTokenRepository = refreshTokenRepository;
-        // This ensures normal web users go to the index/profile if there isn't a saved request
         setDefaultTargetUrl("/");
     }
 
@@ -39,10 +41,13 @@ public class AppAuthenticationSuccessHandler extends SavedRequestAwareAuthentica
                     isAppLogin = true;
 
                     // Clean up the cookie so it doesn't pollute future normal web logins
-                    jakarta.servlet.http.Cookie clearCookie = new jakarta.servlet.http.Cookie("APP_LOGIN_FLAG", "");
-                    clearCookie.setPath("/");
-                    clearCookie.setMaxAge(0);
-                    response.addCookie(clearCookie);
+                    ResponseCookie clearCookie = ResponseCookie.from("APP_LOGIN_FLAG", "")
+                            .path("/")
+                            .maxAge(0)
+                            .secure(true)
+                            .sameSite("Lax")
+                            .build();
+                    response.addHeader(HttpHeaders.SET_COOKIE, clearCookie.toString());
                     break;
                 }
             }
@@ -50,7 +55,6 @@ public class AppAuthenticationSuccessHandler extends SavedRequestAwareAuthentica
 
         if (isAppLogin) {
             OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-            // Discord provides the user's unique ID under the "id" attribute
             String discordId = oAuth2User.getAttribute("id");
 
             if (discordId == null) {
@@ -66,7 +70,6 @@ public class AppAuthenticationSuccessHandler extends SavedRequestAwareAuthentica
                     .expiryDate(Instant.now().plus(30, ChronoUnit.DAYS))
                     .build();
 
-            // Invalidate any previous desktop sessions for this user to enforce single active session
             refreshTokenRepository.deleteByDiscordId(discordId);
             refreshTokenRepository.save(refreshToken);
 
@@ -74,7 +77,6 @@ public class AppAuthenticationSuccessHandler extends SavedRequestAwareAuthentica
             String targetUrl = "http://127.0.0.1:45321/auth-success?token=" + accessToken + "&refreshToken=" + refreshTokenString;
             getRedirectStrategy().sendRedirect(request, response, targetUrl);
         } else {
-            // Standard website login flow
             super.onAuthenticationSuccess(request, response, authentication);
         }
     }

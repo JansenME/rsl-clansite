@@ -11,7 +11,7 @@
 	<packaging>jar</packaging>
 	<groupId>com.rsl</groupId>
 	<artifactId>clansite</artifactId>
-	<version>1.0-SNAPSHOT</version>
+	<version>0.1-SNAPSHOT</version>
 	<name>Clansite for Raid Shadow Legends</name>
 	<description>Clansite for Raid Shadow Legends</description>
 

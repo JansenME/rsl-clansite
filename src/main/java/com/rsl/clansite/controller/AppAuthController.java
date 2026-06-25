@@ -3,15 +3,13 @@ package com.rsl.clansite.controller;
 import com.rsl.clansite.model.entity.UserRefreshToken;
 import com.rsl.clansite.repository.UserRefreshTokenRepository;
 import com.rsl.clansite.security.JwtService;
-import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -21,6 +19,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/app")
 public class AppAuthController {
+
     private final JwtService jwtService;
     private final UserRefreshTokenRepository refreshTokenRepository;
 
@@ -30,12 +29,17 @@ public class AppAuthController {
     }
 
     @GetMapping("/login")
-    public ResponseEntity<Void> initiateAppLogin(jakarta.servlet.http.HttpServletResponse response) {
-        jakarta.servlet.http.Cookie appLoginCookie = new jakarta.servlet.http.Cookie("APP_LOGIN_FLAG", "true");
-        appLoginCookie.setPath("/");
-        appLoginCookie.setMaxAge(300); // 5 minutes to complete Discord login
-        appLoginCookie.setHttpOnly(true);
-        response.addCookie(appLoginCookie);
+    public ResponseEntity<Void> initiateAppLogin(HttpServletResponse response) {
+        // Use Spring's ResponseCookie to enforce HTTPS and Cross-Origin survival
+        ResponseCookie cookie = ResponseCookie.from("APP_LOGIN_FLAG", "true")
+                .path("/")
+                .maxAge(300) // 5 minutes to complete Discord login
+                .httpOnly(true)
+                .secure(true) // Crucial: Forces the cookie to stay alive over HTTPS
+                .sameSite("Lax") // Crucial: Allows the cookie to be sent when Discord redirects back
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
         return ResponseEntity.status(HttpStatus.FOUND)
                 .header("Location", "/oauth2/authorization/discord")
@@ -44,6 +48,7 @@ public class AppAuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshAccessToken(@RequestBody Map<String, String> request) {
+        // ... (Keep your existing refresh logic exactly the same)
         String refreshTokenString = request.get("refreshToken");
 
         if (refreshTokenString == null || refreshTokenString.isBlank()) {
@@ -60,10 +65,6 @@ public class AppAuthController {
                     }
 
                     String discordId = storedToken.getDiscordId();
-
-                    // Defaulting to base user authority for the app session sync.
-                    // If you require dynamic roles during refresh, you can wire in your
-                    // ClanmemberRepository or SecurityService here to fetch updated roles.
                     List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
 
                     String newAccessToken = jwtService.generateAccessToken(discordId, authorities);
