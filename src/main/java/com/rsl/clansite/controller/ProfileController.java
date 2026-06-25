@@ -18,6 +18,7 @@ import com.rsl.clansite.service.ClanmemberService;
 import com.rsl.clansite.service.CommonsService;
 import com.rsl.clansite.service.SiegeConditionService;
 import jakarta.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Controller
 @RequestMapping("/profile")
 public class ProfileController {
@@ -98,6 +100,7 @@ public class ProfileController {
                                     HttpSession session) {
         commonsService.fillModel(model, authentication, session);
 
+        log.info("Member ID provided is ID: {}", id);
         ClanmemberEntity targetMember = clanmemberService.getMemberById(id);
 
         String currentDiscordId = getDiscordIdFromAuthentication(authentication);
