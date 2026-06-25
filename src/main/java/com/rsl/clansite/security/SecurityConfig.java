@@ -1,5 +1,6 @@
 package com.rsl.clansite.security;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,16 +29,19 @@ public class SecurityConfig {
     private final OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService;
     private final CustomAuthenticationFailureHandler failureHandler;
     private final SessionSecurityFilter sessionSecurityFilter;
-    private final AppTokenAuthenticationFilter appTokenAuthenticationFilter;
+    private final AppAuthenticationSuccessHandler appAuthenticationSuccessHandler;
+    private final JwtService jwtService;
 
     public SecurityConfig(OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService,
                           CustomAuthenticationFailureHandler failureHandler,
                           SessionSecurityFilter sessionSecurityFilter,
-                          AppTokenAuthenticationFilter appTokenAuthenticationFilter) {
+                          AppAuthenticationSuccessHandler appAuthenticationSuccessHandler,
+                          JwtService jwtService) {
         this.customOAuth2UserService = customOAuth2UserService;
         this.failureHandler = failureHandler;
         this.sessionSecurityFilter = sessionSecurityFilter;
-        this.appTokenAuthenticationFilter = appTokenAuthenticationFilter;
+        this.appAuthenticationSuccessHandler = appAuthenticationSuccessHandler;
+        this.jwtService = jwtService;
     }
 
     @Bean
@@ -54,6 +58,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtService);
         http
                 .securityContext(context -> context
                         .requireExplicitSave(false)
@@ -69,19 +74,22 @@ public class SecurityConfig {
                                 "/champions", "/champions/",
                                 "/clanmembers", "/clanmembers/"
                         ).permitAll()
+                        .requestMatchers("/api/app/login", "/api/app/refresh").permitAll()
+                        .requestMatchers("/api/app/**").authenticated()
                         .requestMatchers("/admin/masquerade").authenticated()
                         .requestMatchers("/profile", "/champions/**", "/clanmembers/**").hasRole("USER")
                         .anyRequest().hasRole("USER")
                 )
-                // App token filter first (for C# app requests), then session filter (for web requests)
-                .addFilterBefore(appTokenAuthenticationFilter, AuthorizationFilter.class)
+                .addFilterBefore(jwtAuthenticationFilter, AuthorizationFilter.class)
                 .addFilterBefore(sessionSecurityFilter, AuthorizationFilter.class)
                 .exceptionHandling(exception -> exception
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.sendRedirect("/error/403");
                         })
                         .authenticationEntryPoint((request, response, authException) -> {
-                            if (request.getUserPrincipal() != null) {
+                            if (request.getRequestURI().startsWith("/api/app/")) {
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                            } else if (request.getUserPrincipal() != null) {
                                 response.sendRedirect("/error/403");
                             } else {
                                 response.sendRedirect("/login");
