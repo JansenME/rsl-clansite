@@ -109,10 +109,6 @@ public class DiscordBotService extends ListenerAdapter {
             event.reply("Beep Baap Boop! I... AM... A... ROBOT...")
                     .setEphemeral(false)
                     .queue();
-        } else if (commandName.equals("website")) {
-            event.reply("Clanwebsite! https://fotf-raid.com/")
-                    .setEphemeral(false)
-                    .queue();
         } else if (commandName.equals("siege-score")) {
             handleSiegeScoreCommand(event);
         } else if (commandName.equals("eventhub")) {

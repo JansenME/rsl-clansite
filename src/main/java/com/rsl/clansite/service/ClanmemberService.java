@@ -818,7 +818,8 @@ public class ClanmemberService {
         );
     }
 
-    public ClanmemberEntity getMemberById(String id) {
+    public ClanmemberEntity getMemberById(final String id) {
+        log.info("Member ID arrived in getMemberId is ID: {}", id);
         if (id == null || !ObjectId.isValid(id)) {
             throw new IllegalArgumentException("Invalid Member ID provided, ID: " + id);
         }

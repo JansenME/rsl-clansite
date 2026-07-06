@@ -26,8 +26,8 @@ discord:
 spring:
   data:
     mongodb:
-      uri: ${MONGO_URI:mongodb://localhost:27017/meme}
-      database: furyOfTheFallen
+      uri: ${MONGO_URI:mongodb://localhost:27017/kloepiebot}
+      database: kloepiebot
       auto-index-creation: true
   session:
     store-type: mongodb
@@ -52,7 +52,7 @@ spring:
             user-info-uri: https://discord.com/api/users/@me
             user-name-attribute: id
   application:
-    name: Clansite Fury of the Fallen
+    name: Website for KloepieBot
 server:
   forward-headers-strategy: native
   servlet:
