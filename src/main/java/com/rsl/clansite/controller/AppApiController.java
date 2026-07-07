@@ -2,6 +2,7 @@ package com.rsl.clansite.controller;
 
 import com.rsl.clansite.model.entity.RaidUser;
 import com.rsl.clansite.repository.RaidUserRepository;
+import com.rsl.clansite.security.JwtService;
 import com.rsl.clansite.service.AppTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -22,11 +23,11 @@ import java.util.stream.Collectors;
 public class AppApiController {
     private static final String TOKEN_HEADER = "X-Sync-Token";
 
-    private final AppTokenService appTokenService;
+    private final JwtService jwtService;
     private final RaidUserRepository raidUserRepository;
 
-    public AppApiController(AppTokenService appTokenService, RaidUserRepository raidUserRepository) {
-        this.appTokenService = appTokenService;
+    public AppApiController(JwtService jwtService, RaidUserRepository raidUserRepository) {
+        this.jwtService = jwtService;
         this.raidUserRepository = raidUserRepository;
     }
 
@@ -49,9 +50,25 @@ public class AppApiController {
         String tokenHeader = request.getHeader(TOKEN_HEADER);
 
         if (tokenHeader == null || tokenHeader.isBlank()) {
+            log.warn("[API SYNC] Missing token header.");
             return false;
         }
 
-        return appTokenService.validateToken(tokenHeader).isPresent();
+        if (tokenHeader.startsWith("Bearer ")) {
+            tokenHeader = tokenHeader.substring(7);
+        }
+
+        try {
+            boolean isValid = jwtService.isTokenValid(tokenHeader);
+
+            if (!isValid) {
+                log.warn("[API SYNC] Provided JWT is expired or invalid.");
+            }
+
+            return isValid;
+        } catch (Exception e) {
+            log.warn("[API SYNC] JWT parsing crashed: {}", e.getMessage());
+            return false;
+        }
     }
 }

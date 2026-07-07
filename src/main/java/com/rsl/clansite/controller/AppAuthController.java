@@ -52,7 +52,6 @@ public class AppAuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshAccessToken(@RequestBody Map<String, String> request) {
-        // ... (Keep your existing refresh logic exactly the same)
         String refreshTokenString = request.get("refreshToken");
 
         if (refreshTokenString == null || refreshTokenString.isBlank()) {
