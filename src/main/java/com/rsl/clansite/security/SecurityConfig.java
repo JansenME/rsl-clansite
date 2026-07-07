@@ -75,7 +75,7 @@ public class SecurityConfig {
                                 "/clanmembers", "/clanmembers/"
                         ).permitAll()
                         .requestMatchers("/api/app/login", "/api/app/refresh").permitAll()
-                        .requestMatchers("/api/app/**").authenticated()
+                        .requestMatchers("/api/app/**").permitAll()
                         .requestMatchers("/admin/masquerade").authenticated()
                         .requestMatchers("/profile", "/champions/**", "/clanmembers/**").hasRole("USER")
                         .anyRequest().hasRole("USER")
