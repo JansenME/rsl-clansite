@@ -50,7 +50,7 @@ public class AppApiController {
         String tokenHeader = request.getHeader(TOKEN_HEADER);
 
         if (tokenHeader == null || tokenHeader.isBlank()) {
-            log.warn("[API SYNC] Missing token header.");
+            log.warn("[API SYNC] Request blocked: X-Sync-Token header is missing.");
             return false;
         }
 
@@ -58,17 +58,11 @@ public class AppApiController {
             tokenHeader = tokenHeader.substring(7);
         }
 
-        try {
-            boolean isValid = jwtService.isTokenValid(tokenHeader);
-
-            if (!isValid) {
-                log.warn("[API SYNC] Provided JWT is expired or invalid.");
-            }
-
-            return isValid;
-        } catch (Exception e) {
-            log.warn("[API SYNC] JWT parsing crashed: {}", e.getMessage());
-            return false;
+        boolean isValid = jwtService.isTokenValid(tokenHeader);
+        if (!isValid) {
+            log.warn("[API SYNC] Request blocked: Provided JWT is expired or invalid.");
         }
+
+        return isValid;
     }
 }
