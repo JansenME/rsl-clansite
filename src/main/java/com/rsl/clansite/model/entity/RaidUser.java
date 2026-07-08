@@ -20,5 +20,6 @@ public class RaidUser {
     @Indexed(unique = true)
     private Long raidId;
 
+    private String discordId;
     private String playerName;
 }
